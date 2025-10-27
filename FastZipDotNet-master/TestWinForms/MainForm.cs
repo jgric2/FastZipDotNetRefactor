@@ -123,7 +123,12 @@ namespace TestWinForms
 
                 BuildTree(_zip.ZipFileEntries);
                 NavigateTo(_root);
-                lblExtractInfo.Text = $"{Path.GetFileName(zipPath)} - {_zip.ZipFileEntries.Count} entries";
+                Invoke((MethodInvoker)delegate
+                {
+                    lblExtractInfo.Text = $"{Path.GetFileName(zipPath)} - {_zip.ZipFileEntries.Count} entries";
+                });
+
+                  
             }
             catch (Exception ex)
             {
@@ -205,51 +210,56 @@ namespace TestWinForms
 
         private void PopulateExtractList(DirNode node)
         {
-            lvExtract.BeginUpdate();
-            lvExtract.Items.Clear();
-
-            if (node.Parent != null)
+            Invoke((MethodInvoker)delegate
             {
-                var upItem = new ListViewItem(new[] { "..", "", "", "", "" })
-                {
-                    Tag = "..",
-                    ImageKey = _icons.FolderKey
-                };
-                lvExtract.Items.Add(upItem);
-            }
 
-            foreach (var kv in node.Dirs.OrderBy(d => d.Key, StringComparer.OrdinalIgnoreCase))
-            {
-                var item = new ListViewItem(new[]
+                lvExtract.BeginUpdate();
+                lvExtract.Items.Clear();
+
+                if (node.Parent != null)
                 {
+                    var upItem = new ListViewItem(new[] { "..", "", "", "", "" })
+                    {
+                        Tag = "..",
+                        ImageKey = _icons.FolderKey
+                    };
+                    lvExtract.Items.Add(upItem);
+                }
+
+                foreach (var kv in node.Dirs.OrderBy(d => d.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    var item = new ListViewItem(new[]
+                    {
                     kv.Key, "", "", "Folder", ""
                 })
-                {
-                    Tag = kv.Value,
-                    ImageKey = _icons.FolderKey
-                };
-                lvExtract.Items.Add(item);
-            }
+                    {
+                        Tag = kv.Value,
+                        ImageKey = _icons.FolderKey
+                    };
+                    lvExtract.Items.Add(item);
+                }
 
-            foreach (var f in node.Files.OrderBy(f => f.FilenameInZip, StringComparer.OrdinalIgnoreCase))
-            {
-                string fname = Path.GetFileName(f.FilenameInZip.Replace('\\', '/'));
-                var item = new ListViewItem(new[]
+                foreach (var f in node.Files.OrderBy(f => f.FilenameInZip, StringComparer.OrdinalIgnoreCase))
                 {
+                    string fname = Path.GetFileName(f.FilenameInZip.Replace('\\', '/'));
+                    var item = new ListViewItem(new[]
+                    {
                     fname,
                     FormatBytes((long)f.FileSize),
                     FormatBytes((long)f.CompressedSize),
                     f.Method.ToString(),
                     f.ModifyTime.ToString("yyyy-MM-dd HH:mm:ss")
                 })
-                {
-                    Tag = f,
-                    ImageKey = _icons.GetFileIconKeyByExtension(Path.GetExtension(fname))
-                };
-                lvExtract.Items.Add(item);
-            }
+                    {
+                        Tag = f,
+                        ImageKey = _icons.GetFileIconKeyByExtension(Path.GetExtension(fname))
+                    };
+                    lvExtract.Items.Add(item);
+                }
 
-            lvExtract.EndUpdate();
+                lvExtract.EndUpdate();
+            });
+
         }
 
 
@@ -474,7 +484,11 @@ namespace TestWinForms
             using var pf = new ProgressForm("Updating archive...");
             pf.Show(this);
             await Task.Run(() => _zip.Close());
-            pf.Close();
+          //  pf.Close();
+            Invoke((MethodInvoker)delegate
+            {
+                pf.Close();
+            });
 
             OpenArchive(_zip.ZipFileName);
             NavigateTo(FindNodeByPath(_currentPath));
@@ -555,7 +569,13 @@ namespace TestWinForms
                 NavigateTo(FindNodeByPath(_currentPath));
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Add files error"); }
-            finally { pf.Close(); }
+            finally {
+                Invoke((MethodInvoker)delegate
+                {
+                    pf.Close();
+                });
+                
+            }
         }
 
         private async Task AddFolderIntoArchiveAtCurrentPathAsync(string folder)
@@ -633,7 +653,7 @@ namespace TestWinForms
                 NavigateTo(FindNodeByPath(_currentPath));
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Add folder error"); }
-            finally { pf.Close(); }
+            finally { Invoke((MethodInvoker)delegate { pf.Close(); }); }
         }
 
         private string GetCurrentVirtualPathPrefix()
@@ -681,7 +701,7 @@ namespace TestWinForms
                 NavigateTo(_root);
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Compact error"); }
-            finally { pf.Close(); }
+            finally { Invoke((MethodInvoker)delegate { pf.Close(); }); }
         }
 
         // Test & Repair & Info
@@ -699,7 +719,7 @@ namespace TestWinForms
                 MessageBox.Show(this, ok ? "Test completed successfully." : "Test failed or cancelled.", "Test");
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Test error"); }
-            finally { pf.Close(); }
+            finally { Invoke((MethodInvoker)delegate { pf.Close(); }); }
         }
 
         private async void btnRepair_Click(object sender, EventArgs e)
@@ -895,7 +915,7 @@ namespace TestWinForms
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Build error"); }
-            finally { pf.Close(); }
+            finally { Invoke((MethodInvoker)delegate { pf.Close(); }); }
         }
 
         // ============ Directory Model & IconCache ============

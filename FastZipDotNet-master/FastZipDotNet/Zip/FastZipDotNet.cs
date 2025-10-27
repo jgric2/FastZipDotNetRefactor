@@ -394,23 +394,7 @@ namespace FastZipDotNet.Zip
 
 
         #region Adding Files
-        //public async Task<bool> AddFilesToArchiveAsync(string directoryToAdd, int compressionlevel = 6)
-        //{
-        //    return await ZipDataWriter.AddFilesToArchiveAsync(directoryToAdd, Threads, compressionlevel);
-        //}
 
-        //public bool AddFilesToArchive(string directoryToAdd, int compressionlevel = 6)
-        //{
-        //    return ZipDataWriter.AddFilesToArchiveAsync(directoryToAdd, Threads, compressionlevel).Result;
-        //}
-
-        /// <summary>
-        /// Add a file to the ZIP archive.
-        /// </summary>
-        //public long AddFile(string pathFilename, string filenameInZip, string fileComment = "")
-        //{
-        //    return ZipDataWriter.AddFile(pathFilename, filenameInZip, CompressionLevelValue, fileComment);
-        //}
 
         #endregion
 
@@ -428,11 +412,11 @@ namespace FastZipDotNet.Zip
                 return;
             }
 
-            // existing single-part write logic
-            if (PartSize != 0)
-            {
-                // multi-part write path (if you keep it)
-            }
+            //// existing single-part write logic
+            //if (PartSize != 0)
+            //{
+            //    // multi-part write path (if you keep it)
+            //}
 
             ZipFileStream.Seek(AppendOffset, SeekOrigin.Begin);
 
@@ -530,105 +514,7 @@ namespace FastZipDotNet.Zip
                 throw new Exception(ex.Message + "\r\nIn ZipWritersHeaders.Close");
             }
         }
-        //public void Close(ZipReadersInfo.ZipInfoStruct zipInfo, Stream zipFileStream, string zipComment = "")
-        //{
-        //    try
-        //    {
-        //        // Before writing the central directory, switch to the last part (the .zip file) if not already there
-        //        if (CurrentDiskNumber != zipInfo.TotalDisks - 1)
-        //        {
-        //            // Close current part
-        //            zipFileStream.Flush();
-        //            zipFileStream.Dispose();
-
-        //            // Open the last part (.zip file)
-        //            CurrentDiskNumber = zipInfo.TotalDisks - 1;
-        //            string lastPartName = GetPartFileName(CurrentDiskNumber);
-        //            zipFileStream = new FileStream(lastPartName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-        //            zipFileStream.Seek(0, SeekOrigin.End);
-        //        }
-
-        //        ulong centralOffset = (ulong)zipFileStream.Position;
-        //        ulong centralSize = 0;
-
-        //        // Write central directory records for all entries
-        //        foreach (var file in zipInfo.ZipFileEntries)
-        //        {
-        //            long pos = zipFileStream.Position;
-        //            ZipWritersHeaders.WriteCentralDirRecord(file, zipFileStream);
-        //            centralSize += (ulong)(zipFileStream.Position - pos);
-        //        }
-
-        //        bool zip64 = centralOffset >= uint.MaxValue || centralSize >= uint.MaxValue ||
-        //                     zipInfo.ZipFileEntries.Count >= ushort.MaxValue || zipInfo.TotalDisks > ushort.MaxValue;
-
-        //        // Record the offset of the Zip64 End of Central Directory Record
-        //        ulong zip64EndOfCentralDirOffset = (ulong)zipFileStream.Position;
-
-        //        if (zip64)
-        //        {
-        //            // Write Zip64 End of Central Directory Record
-        //            zipFileStream.Write(new byte[] { 0x50, 0x4b, 0x06, 0x06 }, 0, 4); // PK\006\006
-        //            zipFileStream.Write(BitConverter.GetBytes((ulong)44), 0, 8); // Size of Zip64 EOCD record minus 12 bytes
-        //            zipFileStream.Write(BitConverter.GetBytes((ushort)45), 0, 2); // Version made by
-        //            zipFileStream.Write(BitConverter.GetBytes((ushort)45), 0, 2); // Version needed to extract
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)CurrentDiskNumber), 0, 4); // Number of this disk
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)CurrentDiskNumber), 0, 4); // Number of the disk with the start
-        //            zipFileStream.Write(BitConverter.GetBytes((ulong)zipInfo.ZipFileEntries.Count), 0, 8); // Total entries on this disk
-        //            zipFileStream.Write(BitConverter.GetBytes((ulong)zipInfo.ZipFileEntries.Count), 0, 8); // Total entries
-        //            zipFileStream.Write(BitConverter.GetBytes(centralSize), 0, 8); // Size of the central directory
-        //            zipFileStream.Write(BitConverter.GetBytes(centralOffset), 0, 8); // Offset of central directory
-
-        //            // Write Zip64 End of Central Directory Locator
-        //            zipFileStream.Write(new byte[] { 0x50, 0x4b, 0x06, 0x07 }, 0, 4); // PK\006\007
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)CurrentDiskNumber), 0, 4); // Number of the disk with the start of the zip64 end of central directory
-        //            zipFileStream.Write(BitConverter.GetBytes(zip64EndOfCentralDirOffset), 0, 8); // Offset of Zip64 EOCD
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)zipInfo.TotalDisks), 0, 4); // Total number of disks
-        //        }
-
-        //        // Write End of Central Directory Record
-        //        zipFileStream.Write(new byte[] { 0x50, 0x4b, 0x05, 0x06 }, 0, 4); // PK\005\006
-        //        zipFileStream.Write(BitConverter.GetBytes((ushort)CurrentDiskNumber), 0, 2); // Number of this disk
-        //        zipFileStream.Write(BitConverter.GetBytes((ushort)CurrentDiskNumber), 0, 2); // Disk with central directory
-
-        //        if (zipInfo.ZipFileEntries.Count >= ushort.MaxValue || zipInfo.TotalDisks > ushort.MaxValue)
-        //        {
-        //            // Indicate Zip64 usage
-        //            zipFileStream.Write(BitConverter.GetBytes((ushort)0xFFFF), 0, 2); // Total entries on this disk
-        //            zipFileStream.Write(BitConverter.GetBytes((ushort)0xFFFF), 0, 2); // Total entries
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)0xFFFFFFFF), 0, 4); // Size of the central directory
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)0xFFFFFFFF), 0, 4); // Offset of central directory
-        //        }
-        //        else
-        //        {
-        //            zipFileStream.Write(BitConverter.GetBytes((ushort)zipInfo.ZipFileEntries.Count), 0, 2); // Total entries on this disk
-        //            zipFileStream.Write(BitConverter.GetBytes((ushort)zipInfo.ZipFileEntries.Count), 0, 2); // Total entries
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)centralSize), 0, 4); // Size of the central directory
-        //            zipFileStream.Write(BitConverter.GetBytes((uint)centralOffset), 0, 4); // Offset of central directory
-        //        }
-
-        //        byte[] encodedComment = Encoding.UTF8.GetBytes(zipInfo.ZipComment);
-        //        zipFileStream.Write(BitConverter.GetBytes((ushort)encodedComment.Length), 0, 2); // Comment length
-        //        zipFileStream.Write(encodedComment, 0, encodedComment.Length); // Comment
-
-        //        // Flush and close the stream
-        //        if (zipFileStream != null)
-        //        {
-        //            zipFileStream.Flush();
-        //            zipFileStream.Dispose();
-        //            zipFileStream = null;
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw new Exception(ex.Message + "\r\nIn ZipWritersHeaders.Close");
-        //    }
-        //}
-        //public void Close()
-        //{
-        //    ZipInfoStruct.ZipFileEntries = ZipFileEntries;
-        //    ZipWritersHeaders.Close(ZipInfoStruct, ZipFileStream);
-        //}
+        
 
         #region IDisposable Members
         bool isDisposed = false;
