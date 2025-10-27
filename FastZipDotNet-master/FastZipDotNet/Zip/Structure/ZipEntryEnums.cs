@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FastZipDotNet.Zip.Structure
+﻿namespace FastZipDotNet.Zip.Structure
 {
     public static class ZipEntryEnums
     {
@@ -14,7 +8,5 @@ namespace FastZipDotNet.Zip.Structure
             Deflate = 8,
             Zstd = 93
         }
-
-
     }
 }

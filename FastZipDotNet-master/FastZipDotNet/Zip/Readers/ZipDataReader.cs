@@ -4,7 +4,6 @@ using FastZipDotNet.Zip.Helpers;
 using FastZipDotNet.Zip.ZStd;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.IO.Pipes;
 using System.Text;
 using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 using static FastZipDotNet.Zip.Structure.ZipEntryStructs;
@@ -13,14 +12,11 @@ namespace FastZipDotNet.Zip.Readers
 {
     public class ZipDataReader
     {
-        public ZipDataReader(FastZipDotNet fastZipDotNet, object lockObj)
+        public ZipDataReader(FastZipDotNet fastZipDotNet)
         {
             FastZipDotNet = fastZipDotNet;
-            LockObj = lockObj;
         }
 
-        private string Blocked = null;
-        object LockObj;
         FastZipDotNet FastZipDotNet;
 
 

@@ -3,7 +3,6 @@ using FastZipDotNet.Zip.Readers;
 using FastZipDotNet.Zip.Writers;
 using FastZipDotNet.Zip.ZStd;
 using System.IO.Compression;
-using System.IO.Pipes;
 using System.Text;
 using static FastZipDotNet.Zip.Readers.ZipReadersInfo;
 using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
@@ -31,7 +30,7 @@ namespace FastZipDotNet.Zip
         public bool LimitRam = false;
         public bool Pause = false;
         public bool EncodeUTF8 = false;
-        public object lockObj = new object();
+       // public object lockObj = new object();
         public int CompressionLevelValue = 6;
 
         public Compression MethodCompress;
@@ -74,21 +73,10 @@ namespace FastZipDotNet.Zip
             return Zip.Recovery.ZipRepair.RepairToNewArchiveAsync(ZipFileName, repairedZipPath, compressionLevel, Threads, progress, ct);
         }
 
-
-        //private int DetermineCurrentPartNumber(string baseFileName)
-        //{
-        //    int partNumber = 0;
-        //    while (File.Exists(GetPartFileName(partNumber)))
-        //    {
-        //        partNumber++;
-        //    }
-        //    return partNumber > 0 ? partNumber - 1 : 0;
-        //}
         public Task<bool> ExtractArchiveAsync(string outputDirectory, IProgress<ZipProgress> progress, CancellationToken ct = default)
         {
             return ZipDataReader.ExtractArchiveAsync(outputDirectory, Threads, progress, ct);
         }
-
 
         internal long Reserve(long bytes)
         {
@@ -129,8 +117,6 @@ namespace FastZipDotNet.Zip
             ZipFileStream.Dispose();
             ZipFileStream = null;
         }
-
-
 
         private int DetermineCurrentPartNumber(string baseFileName)
         {
@@ -241,8 +227,8 @@ namespace FastZipDotNet.Zip
             }
 
 
-            ZipDataWriter = new ZipDataWriter(this, lockObj);
-            ZipDataReader = new ZipDataReader(this, lockObj);
+            ZipDataWriter = new ZipDataWriter(this);
+            ZipDataReader = new ZipDataReader(this);
 
             this.PartSize = partSize;
             this.CurrentDiskNumber = 0; // Start with disk number 0
@@ -306,8 +292,8 @@ namespace FastZipDotNet.Zip
                 Threads = threads;
             }
 
-            ZipDataWriter = new ZipDataWriter(this, lockObj);
-            ZipDataReader = new ZipDataReader(this, lockObj);
+            ZipDataWriter = new ZipDataWriter(this);
+            ZipDataReader = new ZipDataReader(this);
 
             this.PartSize = partSize;
 
@@ -381,23 +367,23 @@ namespace FastZipDotNet.Zip
 
 
         #region Adding Files
-        public async Task<bool> AddFilesToArchiveAsync(string directoryToAdd, int compressionlevel = 6)
-        {
-            return await ZipDataWriter.AddFilesToArchiveAsync(directoryToAdd, Threads, compressionlevel);
-        }
+        //public async Task<bool> AddFilesToArchiveAsync(string directoryToAdd, int compressionlevel = 6)
+        //{
+        //    return await ZipDataWriter.AddFilesToArchiveAsync(directoryToAdd, Threads, compressionlevel);
+        //}
 
-        public bool AddFilesToArchive(string directoryToAdd, int compressionlevel = 6)
-        {
-            return ZipDataWriter.AddFilesToArchiveAsync(directoryToAdd, Threads, compressionlevel).Result;
-        }
+        //public bool AddFilesToArchive(string directoryToAdd, int compressionlevel = 6)
+        //{
+        //    return ZipDataWriter.AddFilesToArchiveAsync(directoryToAdd, Threads, compressionlevel).Result;
+        //}
 
         /// <summary>
         /// Add a file to the ZIP archive.
         /// </summary>
-        public long AddFile(string pathFilename, string filenameInZip, string fileComment = "")
-        {
-            return ZipDataWriter.AddFile(pathFilename, filenameInZip, CompressionLevelValue, fileComment);
-        }
+        //public long AddFile(string pathFilename, string filenameInZip, string fileComment = "")
+        //{
+        //    return ZipDataWriter.AddFile(pathFilename, filenameInZip, CompressionLevelValue, fileComment);
+        //}
 
         #endregion
 

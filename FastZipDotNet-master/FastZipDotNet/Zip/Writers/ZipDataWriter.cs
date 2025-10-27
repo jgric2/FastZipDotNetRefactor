@@ -13,33 +13,15 @@ namespace FastZipDotNet.Zip.Writers
 {
     public class ZipDataWriter
     {
-        public ZipDataWriter(FastZipDotNet fastZipDotNet, object lockObj)
+        public ZipDataWriter(FastZipDotNet fastZipDotNet)
         {
             FastZipDotNet = fastZipDotNet;
-            LockObj = lockObj;
-        }
-
-        private void CheckAndSwitchToNewPart()
-        {
-            if (FastZipDotNet.PartSize > 0 && FastZipDotNet.ZipFileStream.Position >= FastZipDotNet.PartSize)
-            {
-                // Close the current part
-                FastZipDotNet.ZipFileStream.Flush();
-                FastZipDotNet.ZipFileStream.Dispose();
-
-                // Increment the disk number
-                FastZipDotNet.CurrentDiskNumber++;
-                FastZipDotNet.ZipInfoStruct.TotalDisks = FastZipDotNet.CurrentDiskNumber + 1;
-
-                // Open a new part file
-                string newPartName = FastZipDotNet.GetPartFileName(FastZipDotNet.CurrentDiskNumber);
-                FastZipDotNet.ZipFileStream = new FileStream(newPartName, FileMode.Create, FileAccess.Write, FileShare.None);
-            }
+        
         }
 
 
         private string Blocked = null;
-        object LockObj;
+       // object LockObj;
         FastZipDotNet FastZipDotNet;
         // ZipWritersHeaders zipHeaderWriter = new ZipWritersHeaders();
 
@@ -107,53 +89,7 @@ namespace FastZipDotNet.Zip.Writers
             }
         }
 
-        // Write a byte[] at an absolute file offset using a short-lived handle
-        private void WriteAt(byte[] data, long fileOffset)
-        {
-            // Open/or create and allow others to read/write at the same time
-            using (var fs = new FileStream(FastZipDotNet.ZipFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, Consts.ChunkSize, FileOptions.SequentialScan))
-            {
-                fs.Position = fileOffset;
-
-                int offset = 0;
-                while (offset < data.Length)
-                {
-                    WaitWhilePaused();
-
-                    int toWrite = Math.Min(Consts.ChunkSize, data.Length - offset);
-                    fs.Write(data, offset, toWrite);
-                    offset += toWrite;
-
-                    Interlocked.Add(ref FastZipDotNet.BytesWritten, toWrite);
-                    Interlocked.Add(ref FastZipDotNet.BytesPerSecond, toWrite);
-                }
-                fs.Flush();
-            }
-        }
-
-        // Copy from a Stream to an absolute file offset
-        private void WriteStreamAt(Stream source, long destOffset)
-        {
-            using (var fs = new FileStream(FastZipDotNet.ZipFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite, Consts.ChunkSize, FileOptions.SequentialScan))
-            {
-                fs.Position = destOffset;
-
-                byte[] buffer = new byte[Consts.ChunkSize];
-                int read;
-                while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    WaitWhilePaused();
-
-                    fs.Write(buffer, 0, read);
-
-                    Interlocked.Add(ref FastZipDotNet.BytesWritten, read);
-                    Interlocked.Add(ref FastZipDotNet.BytesPerSecond, read);
-                }
-                fs.Flush();
-            }
-        }
-
-
+   
         public static List<FileSystemInfo> GetFilesAndFoldersLevelByLevel(string rootDirectory)
         {
             var directoriesToProcess = new Queue<DirectoryInfo>();
@@ -203,121 +139,121 @@ namespace FastZipDotNet.Zip.Writers
             return resultList;
         }
 
-        public async Task<bool> AddFilesToArchiveAsync(string directoryToAdd, int threads = 6, int compressionLevel = 6)
-        {
-            try
-            {
-                var filesList = GetFilesAndFoldersLevelByLevel(directoryToAdd);//new DirectoryInfo(directoryToAdd).GetFiles("*.*", SearchOption.AllDirectories).ToList();
-                var lenB = directoryToAdd.Length;//item.FullPath.Length - item.InternalPath.Length;
-                //var procCount = Environment.ProcessorCount;
-                var semaphore = new AdjustableSemaphore(threads);
-                var tasks = new List<Task>();
-                var cts = new CancellationTokenSource();
-                //AddFilesToZipAsync(filesList,)
-                foreach (var itemrec in filesList)
-                {
-                    // Wait on semaphore with cancellation support
-                    semaphore.WaitOne(cts.Token);
+        //public async Task<bool> AddFilesToArchiveAsync(string directoryToAdd, int threads = 6, int compressionLevel = 6)
+        //{
+        //    try
+        //    {
+        //        var filesList = GetFilesAndFoldersLevelByLevel(directoryToAdd);//new DirectoryInfo(directoryToAdd).GetFiles("*.*", SearchOption.AllDirectories).ToList();
+        //        var lenB = directoryToAdd.Length;//item.FullPath.Length - item.InternalPath.Length;
+        //        //var procCount = Environment.ProcessorCount;
+        //        var semaphore = new AdjustableSemaphore(threads);
+        //        var tasks = new List<Task>();
+        //        var cts = new CancellationTokenSource();
+        //        //AddFilesToZipAsync(filesList,)
+        //        foreach (var itemrec in filesList)
+        //        {
+        //            // Wait on semaphore with cancellation support
+        //            semaphore.WaitOne(cts.Token);
 
-                    var task = Task.Run(() =>
-                    {
-                        try
-                        {
-                            string actualInternal = itemrec.FullName.Substring(lenB);
-                            long compressedSize = AddFile(itemrec.FullName, actualInternal, compressionLevel);
-                        }
-                        finally
-                        {
-                            semaphore.Release();
-                        }
-                    }, cts.Token);
+        //            var task = Task.Run(() =>
+        //            {
+        //                try
+        //                {
+        //                    string actualInternal = itemrec.FullName.Substring(lenB);
+        //                    long compressedSize = AddFile(itemrec.FullName, actualInternal, compressionLevel);
+        //                }
+        //                finally
+        //                {
+        //                    semaphore.Release();
+        //                }
+        //            }, cts.Token);
 
-                    tasks.Add(task);
-                }
-                await Task.WhenAll(tasks);
-                return true;
+        //            tasks.Add(task);
+        //        }
+        //        await Task.WhenAll(tasks);
+        //        return true;
 
-            }
-            catch (Exception ex)
-            {
-                // Handle exception if extraction fails
-                return false;
-            }
-        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Handle exception if extraction fails
+        //        return false;
+        //    }
+        //}
 
-        public void AddEmptyFolder(string folderNameInZip, string fileComment = "")
-        {
-            try
-            {
-                if (!folderNameInZip.EndsWith("/"))
-                {
-                    folderNameInZip += "/";
-                }
+        //public void AddEmptyFolder(string folderNameInZip, string fileComment = "")
+        //{
+        //    try
+        //    {
+        //        if (!folderNameInZip.EndsWith("/"))
+        //        {
+        //            folderNameInZip += "/";
+        //        }
 
-                // Prepare the ZipFileEntry with zero size
-                ZipFileEntry zfe = new ZipFileEntry
-                {
-                    FilenameInZip = IOHelpers.NormalizedFilename(folderNameInZip),
-                    Comment = "",
-                    Method = Compression.Store, // No compression for folders
-                    EncodeUTF8 = FastZipDotNet.EncodeUTF8,
-                    FileSize = 0,
-                    CompressedSize = 0,
-                    Crc32 = 0, // No CRC for empty folder
-                    ModifyTime = DateTime.Now,
+        //        // Prepare the ZipFileEntry with zero size
+        //        ZipFileEntry zfe = new ZipFileEntry
+        //        {
+        //            FilenameInZip = IOHelpers.NormalizedFilename(folderNameInZip),
+        //            Comment = "",
+        //            Method = Compression.Store, // No compression for folders
+        //            EncodeUTF8 = FastZipDotNet.EncodeUTF8,
+        //            FileSize = 0,
+        //            CompressedSize = 0,
+        //            Crc32 = 0, // No CRC for empty folder
+        //            ModifyTime = DateTime.Now,
 
-                    ExternalFileAttr = (uint)((1 << 4) | 0x10) // Directory attribute
-                };
+        //            ExternalFileAttr = (uint)((1 << 4) | 0x10) // Directory attribute
+        //        };
 
-                lock (LockObj)
-                {
-                    zfe.HeaderOffset = (ulong)FastZipDotNet.ZipFileStream.Position;
-                    ZipWritersHeaders.WriteLocalHeader(ref zfe, FastZipDotNet.ZipFileStream);
+        //        lock (LockObj)
+        //        {
+        //            zfe.HeaderOffset = (ulong)FastZipDotNet.ZipFileStream.Position;
+        //            ZipWritersHeaders.WriteLocalHeader(ref zfe, FastZipDotNet.ZipFileStream);
 
-                    // Update HeaderSize
-                    zfe.HeaderSize = (ulong)(30 + zfe.FilenameInZip.Length);
-                    FastZipDotNet.ZipFileEntries.Add(zfe);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message + "\r\nIn BrutalZipEngine.AddEmptyFolder");
-            }
-        }
+        //            // Update HeaderSize
+        //            zfe.HeaderSize = (ulong)(30 + zfe.FilenameInZip.Length);
+        //            FastZipDotNet.ZipFileEntries.Add(zfe);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception(ex.Message + "\r\nIn BrutalZipEngine.AddEmptyFolder");
+        //    }
+        //}
 
         /// <summary>
         /// Add a file to the ZIP archive.
         /// </summary>
-        public long AddFile(string pathFilename, string filenameInZip, int CompressionLevelValue = 6, string fileComment = "")
-        {
+        //public long AddFile(string pathFilename, string filenameInZip, int CompressionLevelValue = 6, string fileComment = "")
+        //{
            
 
-            var finfo = new System.IO.FileInfo(pathFilename);
-            if (finfo.Attributes.HasFlag(FileAttributes.Directory))
-            {
-                if (Directory.Exists(pathFilename))
-                {
-                    var dinfo = new System.IO.DirectoryInfo(pathFilename);
-                    //if (!filenameInZip.EndsWith("\\", StringComparison.CurrentCulture))
-                    //{
-                    //    filenameInZip = filenameInZip + "\\";
-                    //}
-                    AddEmptyFolder(filenameInZip, fileComment);
-                    return 0;
-                }
-            }
+        //    var finfo = new System.IO.FileInfo(pathFilename);
+        //    if (finfo.Attributes.HasFlag(FileAttributes.Directory))
+        //    {
+        //        if (Directory.Exists(pathFilename))
+        //        {
+        //            var dinfo = new System.IO.DirectoryInfo(pathFilename);
+        //            //if (!filenameInZip.EndsWith("\\", StringComparison.CurrentCulture))
+        //            //{
+        //            //    filenameInZip = filenameInZip + "\\";
+        //            //}
+        //            AddEmptyFolder(filenameInZip, fileComment);
+        //            return 0;
+        //        }
+        //    }
 
-            if (FastZipDotNet.LimitRam || finfo.Length > Consts.MaxSizeFileSwitch)
-            {
-                // Handle large files
-                return AddFileInnerLarge(pathFilename, filenameInZip, CompressionLevelValue, fileComment);
-            }
-            else
-            {
-                // Handle small files
-                return AddFileInner(pathFilename, filenameInZip, CompressionLevelValue, finfo.Length, finfo.LastWriteTimeUtc, fileComment);
-            }
-        }
+        //    if (FastZipDotNet.LimitRam || finfo.Length > Consts.MaxSizeFileSwitch)
+        //    {
+        //        // Handle large files
+        //        return AddFileInnerLarge(pathFilename, filenameInZip, CompressionLevelValue, fileComment);
+        //    }
+        //    else
+        //    {
+        //        // Handle small files
+        //        return AddFileInner(pathFilename, filenameInZip, CompressionLevelValue, finfo.Length, finfo.LastWriteTimeUtc, fileComment);
+        //    }
+        //}
 
         public long AddFileInner(string pathFilename, string filenameInZip, int compressionLevel, long fSize, DateTime modifyTime, string fileComment = "")
         {
@@ -376,8 +312,6 @@ namespace FastZipDotNet.Zip.Writers
 
             return compressedSize;
         }
-
-
 
 
         // Progress-capable AddBuffer
@@ -803,11 +737,7 @@ namespace FastZipDotNet.Zip.Writers
             }
         }
 
-        public async Task<bool> UpdateArchiveFromDirectoryAsync(string directoryToSync,
-                                                        int threads,
-                                                        int compressionLevel,
-                                                        IProgress<ZipProgress> progress,
-                                                        CancellationToken ct = default)
+        public async Task<bool> UpdateArchiveFromDirectoryAsync(string directoryToSync, int threads, int compressionLevel, IProgress<ZipProgress> progress, CancellationToken ct = default)
         {
             try
             {
@@ -964,10 +894,7 @@ namespace FastZipDotNet.Zip.Writers
         }
 
 
-        public long AddFileWithProgress(string pathFilename, string filenameInZip, int compressionLevel,
-                                string fileComment,
-                                Action<long> onUncompressedRead,
-                                Action<long> onCompressedWrite)
+        public long AddFileWithProgress(string pathFilename, string filenameInZip, int compressionLevel, string fileComment, Action<long> onUncompressedRead, Action<long> onCompressedWrite)
         {
             using (var fs = new FileStream(pathFilename, FileMode.Open, FileAccess.Read, FileShare.Read, Consts.ChunkSize, FileOptions.SequentialScan))
             {
@@ -995,431 +922,6 @@ namespace FastZipDotNet.Zip.Writers
             }
         }
 
-        private void WaitForAccess(string filenameInZip)
-        {
-            while (Blocked != filenameInZip)
-            {
-                if (Blocked == null)
-                {
-                    Blocked = filenameInZip;
-                }
-                else
-                {
-                    Thread.Sleep(5);
-                }
-            }
-        }
-
-        private void CopyStreamWithProgress(Stream source, Stream destination)
-        {
-            var buffer = new byte[Consts.ChunkSize];
-            int bytesRead;
-            while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                WaitWhilePaused();
-
-                int offset = 0;
-                while (offset < bytesRead)
-                {
-                    // Check if we're about to exceed the part size
-                    if (FastZipDotNet.PartSize > 0 && (destination.Position >= FastZipDotNet.PartSize))
-                    {
-                        // Switch to new part
-                        destination.Flush();
-                        destination.Dispose();
-                        FastZipDotNet.CurrentDiskNumber++;
-                        FastZipDotNet.ZipInfoStruct.TotalDisks = FastZipDotNet.CurrentDiskNumber + 1;
-                        string newPartName = FastZipDotNet.GetPartFileName(FastZipDotNet.CurrentDiskNumber);
-                        destination = new FileStream(newPartName, FileMode.Create, FileAccess.Write, FileShare.None);
-                        FastZipDotNet.ZipFileStream = destination;
-                    }
-
-                    int bytesToWrite = bytesRead - offset;
-                    if (FastZipDotNet.PartSize > 0 && (destination.Position + bytesToWrite) > FastZipDotNet.PartSize)
-                    {
-                        bytesToWrite = (int)(FastZipDotNet.PartSize - destination.Position);
-                    }
-
-                    destination.Write(buffer, offset, bytesToWrite);
-                    offset += bytesToWrite;
-
-                    Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesToWrite);
-                    Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesToWrite);
-                }
-            }
-        }
-        //private void CopyStreamWithProgress(Stream source, Stream destination)
-        //{
-        //    var buffer = new byte[Consts.ChunkSize];
-        //    int bytesRead;
-        //    while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
-        //    {
-        //        WaitWhilePaused();
-        //        destination.Write(buffer, 0, bytesRead);
-        //        Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
-        //        Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
-        //    }
-        //}
-
-        private void WriteBufferWithProgress(byte[] buffer)
-        {
-            int offset = 0;
-            int remaining = buffer.Length;
-            while (remaining > 0)
-            {
-                // Check if we're about to exceed the part size
-                if (FastZipDotNet.PartSize > 0 && (FastZipDotNet.ZipFileStream.Position >= FastZipDotNet.PartSize))
-                {
-                    // Switch to new part
-                    FastZipDotNet.ZipFileStream.Flush();
-                    FastZipDotNet.ZipFileStream.Dispose();
-                    FastZipDotNet.CurrentDiskNumber++;
-                    FastZipDotNet.ZipInfoStruct.TotalDisks = FastZipDotNet.CurrentDiskNumber + 1;
-                    string newPartName = FastZipDotNet.GetPartFileName(FastZipDotNet.CurrentDiskNumber);
-                    FastZipDotNet.ZipFileStream = new FileStream(newPartName, FileMode.Create, FileAccess.Write, FileShare.None);
-                }
-
-                int bytesToWrite = Math.Min(remaining, Consts.MaxBufferSize);
-                if (FastZipDotNet.PartSize > 0 && (FastZipDotNet.ZipFileStream.Position + bytesToWrite) > FastZipDotNet.PartSize)
-                {
-                    bytesToWrite = (int)(FastZipDotNet.PartSize - FastZipDotNet.ZipFileStream.Position);
-                    if (bytesToWrite == 0)
-                    {
-                        continue;
-                    }
-                }
-
-                FastZipDotNet.ZipFileStream.Write(buffer, offset, bytesToWrite);
-                offset += bytesToWrite;
-                remaining -= bytesToWrite;
-
-                Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesToWrite);
-                Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesToWrite);
-            }
-        }
-        //private void WriteBufferWithProgress(byte[] buffer)
-        //{
-        //    int offset = 0;
-        //    int remaining = buffer.Length;
-        //    while (remaining > 0)
-        //    {
-        //        int chunkSize = Math.Min(Consts.MaxBufferSize, remaining);
-        //        FastZipDotNet.ZipFileStream.Write(buffer, offset, chunkSize);
-        //        offset += chunkSize;
-        //        remaining -= chunkSize;
-        //        Interlocked.Add(ref FastZipDotNet.BytesWritten, chunkSize);
-        //        Interlocked.Add(ref FastZipDotNet.BytesPerSecond, chunkSize);
-        //    }
-        //}
-        //public long AddStream(Stream inStream, string filenameInZip, DateTime modifyTime, int compressionLevel = 6, string fileComment = "")
-        //{
-        //    long compressedSize = 0;
-        //    try
-        //    {
-        //        inStream.Position = 0;
-
-        //        ZipFileEntry zfe = new ZipFileEntry
-        //        {
-        //            FileSize = (ulong)inStream.Length,
-        //            EncodeUTF8 = FastZipDotNet.EncodeUTF8,
-        //            FilenameInZip = IOHelpers.NormalizedFilename(filenameInZip),
-        //            Comment = fileComment,
-        //            ModifyTime = modifyTime,
-        //            Method = (compressionLevel == 0 || inStream.Length == 0) ? Compression.Store : FastZipDotNet.MethodCompress
-        //        };
-
-        //        // Precompute CRC32
-        //        zfe.Crc32 = Crc32Helpers.ComputeCrc32(inStream);
-        //        inStream.Position = 0;
-
-        //        string tempFilePath = Path.GetTempFileName();
-
-        //        bool shouldUseTempFile = false;
-        //        while (FastZipDotNet.Pause)
-        //        {
-        //            Thread.Sleep(50);
-        //        }
-
-        //        try
-        //        {
-        //            if (compressionLevel != 0 && inStream.Length != 0)
-        //            {
-        //                using (FileStream tempFileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, Consts.ChunkSize, FileOptions.SequentialScan))
-        //                {
-        //                    if (zfe.Method == Compression.Deflate)
-        //                    {
-        //                        // Compress the input stream directly into the temp file stream
-
-        //                        using (DeflateStream deflateStream = new DeflateStream(tempFileStream, FastZipDotNet.CurrentCompression,true))//CompressionLevel.Optimal
-        //                        {
-        //                            // Copy the input stream to the deflate stream
-        //                            inStream.CopyTo(deflateStream);
-        //                        }
-
-        //                        //_compressor.Compress(inStream, tempFileStream);
-        //                        zfe.CompressedSize = (ulong)tempFileStream.Length;
-
-        //                        // Check if compressed size is larger than original
-        //                        if (zfe.CompressedSize < (ulong)inStream.Length)
-        //                        {
-        //                            shouldUseTempFile = true;
-        //                        }
-        //                        else
-        //                        {
-        //                            zfe.Method = Compression.Store;
-        //                            zfe.CompressedSize = zfe.FileSize;
-        //                        }
-        //                    }
-        //                    else if (zfe.Method == Compression.Zstd)
-        //                    {
-
-        //                        using (CompressionStream zStdStream = new CompressionStream(tempFileStream, FastZipDotNet.CompressionOptionsZstd))
-        //                        {
-        //                            inStream.CopyTo(zStdStream);
-        //                        }
-        //                            //zStdStream.Compress(inStream, tempFileStream);
-
-
-        //                        zfe.CompressedSize = (ulong)tempFileStream.Length;
-
-        //                        // Check if compressed size is larger than original
-        //                        if (zfe.CompressedSize < (ulong)inStream.Length)
-        //                        {
-        //                            shouldUseTempFile = true;
-        //                        }
-        //                        else
-        //                        {
-        //                            zfe.Method = Compression.Store;
-        //                            zfe.CompressedSize = zfe.FileSize;
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //            else
-        //            {
-        //                zfe.Method = Compression.Store;
-        //                zfe.CompressedSize = zfe.FileSize;
-        //            }
-
-        //            while (FastZipDotNet.Pause)
-        //            {
-        //                Thread.Sleep(50);
-        //            }
-
-        //            //TODO might not need this
-        //            while (Blocked != zfe.FilenameInZip)
-        //            {
-        //                if (Blocked == null)
-        //                {
-        //                    Blocked = zfe.FilenameInZip;
-        //                }
-        //                else
-        //                {
-        //                    Thread.Sleep(5);
-        //                }
-        //            }
-
-        //            lock (LockObj)
-        //            {
-        //                zfe.HeaderOffset = (ulong)FastZipDotNet.ZipFileStream.Position;
-        //                ZipWritersHeaders.WriteLocalHeader(ref zfe, FastZipDotNet.ZipFileStream);
-
-        //                if ((zfe.Method == Compression.Deflate || zfe.Method == Compression.Zstd) && tempFilePath != null)
-        //                {
-        //                    using (FileStream tempFileStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.None, Consts.ChunkSize, FileOptions.SequentialScan))
-        //                    {
-        //                        byte[] buffer = new byte[Consts.ChunkSize];
-        //                        int bytesRead;
-        //                        while ((bytesRead = tempFileStream.Read(buffer, 0, buffer.Length)) > 0)
-        //                        {
-        //                            while (FastZipDotNet.Pause)
-        //                            {
-        //                                Thread.Sleep(50);
-        //                            }
-
-        //                            FastZipDotNet.ZipFileStream.Write(buffer, 0, bytesRead);
-        //                            Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
-        //                            Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
-        //                        }
-        //                    }
-        //                }
-        //                else
-        //                {
-        //                    inStream.Position = 0;
-        //                    byte[] buffer = new byte[Consts.ChunkSize];
-        //                    int bytesRead;
-        //                    while ((bytesRead = inStream.Read(buffer, 0, buffer.Length)) > 0)
-        //                    {
-        //                        while (FastZipDotNet.Pause)
-        //                        {
-        //                            Thread.Sleep(50);
-        //                        }
-
-        //                        FastZipDotNet.ZipFileStream.Write(buffer, 0, bytesRead);
-        //                        Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
-        //                        Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
-        //                    }
-        //                }
-
-        //                Interlocked.Increment(ref FastZipDotNet.FilesWritten);
-        //                Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
-        //                FastZipDotNet.ZipFileEntries.Add(zfe);
-        //                Blocked = null;
-        //            }
-
-        //        }
-        //        finally
-        //        {
-        //            File.Delete(tempFilePath); // Ensure the temporary file is deleted
-        //        }
-
-        //        compressedSize = (long)zfe.CompressedSize;
-
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw new Exception(ex.Message + "\r\nIn BrutalZip.AddStream");
-        //    }
-        //    // Ensure memory clean-up
-        //    GC.WaitForPendingFinalizers();
-        //    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-        //    return compressedSize;
-        //}
-
-
-        //public long AddBuffer(byte[] inBuffer, string filenameInZip, DateTime modifyTime, int compressionLevel = 6, string fileComment = "")
-        //{
-        //    long compressedSize = 0;
-        //    try
-        //    {
-        //        byte[] outBuffer = null;
-
-        //        // Prepare the ZipFileEntry
-        //        ZipFileEntry zfe = new ZipFileEntry();
-        //        zfe.FileSize = (uint)inBuffer.Length;
-        //        zfe.EncodeUTF8 = FastZipDotNet.EncodeUTF8;
-        //        zfe.FilenameInZip = IOHelpers.NormalizedFilename(filenameInZip);
-        //        zfe.Comment = fileComment;
-        //        zfe.ModifyTime = modifyTime;
-        //        zfe.Method = FastZipDotNet.MethodCompress;
-        //        zfe.Crc32 = Crc32Helpers.ComputeCrc32(inBuffer);
-
-        //        if (compressionLevel == 0 || inBuffer.Length == 0)
-        //        {
-        //            zfe.Method = Compression.Store;
-        //            zfe.CompressedSize = zfe.FileSize;
-        //        }
-        //        else
-        //        {
-        //            // Compress the data
-        //            if (zfe.Method == Compression.Deflate)
-        //            {
-        //                LibDeflateWrapper.Libdeflate(inBuffer, compressionLevel, false, out outBuffer, out zfe.CompressedSize, out zfe.Crc32);
-        //            }
-        //            else if (zfe.Method == Compression.Zstd)
-        //            {
-        //                using var compressor = new Compressor(FastZipDotNet.CompressionOptionsZstd);
-        //                outBuffer = compressor.Wrap(inBuffer);
-
-        //               // outBuffer = _compressorZStd.Compress(inBuffer);
-        //                zfe.CompressedSize = (ulong)outBuffer.Length;
-
-        //                if (zfe.CompressedSize >= (ulong)inBuffer.Length)
-        //                {
-        //                    zfe.Method = Compression.Store;
-        //                    zfe.CompressedSize = zfe.FileSize;
-        //                }
-        //            }
-
-        //            if (zfe.CompressedSize == 0)
-        //            {
-        //                zfe.Method = Compression.Store;
-        //                zfe.CompressedSize = zfe.FileSize;
-        //            }
-        //        }
-        //        while (FastZipDotNet.Pause)
-        //        {
-        //            Thread.Sleep(50);
-        //        }
-
-        //        // Wait for idle ZipFile stream
-        //        while (Blocked != filenameInZip)
-        //        {
-        //            if (Blocked == null)
-        //                Blocked = filenameInZip;
-        //            else
-        //            {
-        //                Thread.Sleep(5);
-        //            }
-        //        }
-
-        //        lock (LockObj)
-        //        {
-        //            // Write local header
-        //            var pos = (ulong)FastZipDotNet.ZipFileStream.Position;
-        //            zfe.HeaderOffset = pos;
-
-        //            while (FastZipDotNet.Pause)
-        //            {
-        //                Thread.Sleep(50);
-        //            }
-
-        //            ZipWritersHeaders.WriteLocalHeader(ref zfe, FastZipDotNet.ZipFileStream);
-
-        //            // Write compressed data or original data
-        //            if (zfe.Method == Compression.Deflate || zfe.Method == Compression.Zstd)
-        //            {
-        //                int bytesRemaining = (int)zfe.CompressedSize;
-        //                int offset = 0;
-        //                while (bytesRemaining > 0)
-        //                {
-        //                    int bytesToWrite = Math.Min(Consts.MaxBufferSize, bytesRemaining);
-        //                    FastZipDotNet.ZipFileStream.Write(outBuffer, offset, bytesToWrite);
-
-        //                    offset += bytesToWrite;
-        //                    bytesRemaining -= bytesToWrite;
-
-        //                    Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesToWrite);
-        //                    Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesToWrite);
-        //                }
-        //            }
-        //            else
-        //            {
-        //                int bytesRemaining = (int)inBuffer.Length;
-        //                int offset = 0;
-        //                while (bytesRemaining > 0)
-        //                {
-        //                    int bytesToWrite = Math.Min(Consts.MaxBufferSize, bytesRemaining);
-        //                    FastZipDotNet.ZipFileStream.Write(inBuffer, offset, bytesToWrite);
-
-        //                    offset += bytesToWrite;
-        //                    bytesRemaining -= bytesToWrite;
-
-        //                    Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesToWrite);
-        //                    Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesToWrite);
-        //                }
-        //            }
-
-        //            Interlocked.Increment(ref FastZipDotNet.FilesWritten);
-        //            Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
-
-        //            // Add file to the Zip Directory struct
-        //            FastZipDotNet.ZipFileEntries.Add(zfe);
-        //        }
-
-        //        inBuffer = null;
-        //        compressedSize = (long)zfe.CompressedSize;
-        //        // Unblock zip file
-        //        Blocked = null;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        throw new Exception(ex.Message + "\r\nIn BrutalZip.AddBuffer");
-        //    }
-        //    GC.WaitForPendingFinalizers();
-        //    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
-        //    return compressedSize;
-        //}
 
         // Remove an entry from the ZipFileEntries list
         public void RemoveEntry(string filenameInZip)

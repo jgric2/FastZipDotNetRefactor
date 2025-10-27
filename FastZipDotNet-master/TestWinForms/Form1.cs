@@ -130,19 +130,19 @@ namespace TestWinForms
 
         private async void button2_Click(object sender, EventArgs e)
         {
-            Stopwatch stpw = new Stopwatch();
-            stpw.Start();
+            //Stopwatch stpw = new Stopwatch();
+            //stpw.Start();
 
-            using (FastZipDotNet.Zip.FastZipDotNet zip = new FastZipDotNet.Zip.FastZipDotNet(@"C:\Users\Admin\Desktop\Test\Brutal Copy Test rr21.zip", FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate, 6, 1, false, "", 0 * 1024 * 1024))//734003200
-            {
-                var task = Task.Run(async () => await zip.AddFilesToArchiveAsync(@"C:\Users\Admin\Desktop\Test\Demo Data\Brutal Copy Screenshots", 6));
-                await task;
-                //var res = zip.AddFilesToArchiveAsync(@"C:\Users\Admin\Desktop\Test\Demo Data\Brutal Copy Screenshots");
-            }
+            //using (FastZipDotNet.Zip.FastZipDotNet zip = new FastZipDotNet.Zip.FastZipDotNet(@"C:\Users\Admin\Desktop\Test\Brutal Copy Test rr21.zip", FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate, 6, 1, false, "", 0 * 1024 * 1024))//734003200
+            //{
+            //    var task = Task.Run(async () => await zip.AddFilesToArchiveAsync(@"C:\Users\Admin\Desktop\Test\Demo Data\Brutal Copy Screenshots", 6));
+            //    await task;
+            //    //var res = zip.AddFilesToArchiveAsync(@"C:\Users\Admin\Desktop\Test\Demo Data\Brutal Copy Screenshots");
+            //}
 
-            stpw.Stop();
-            var tt = stpw.Elapsed;
-            MessageBox.Show(tt.ToString());
+            //stpw.Stop();
+            //var tt = stpw.Elapsed;
+            //MessageBox.Show(tt.ToString());
             //var task = Task.Run(() => AddFilesToArchiveAsync(""));
         }
 
