@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34622.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastZipDotNet", "FastZipDotNet\FastZipDotNet.csproj", "{04E8FDC4-A8C2-43AF-A941-65B7B8D140B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestWinForms", "TestWinForms\TestWinForms.csproj", "{2C80F32E-728B-4D98-B54F-F57FE5FDAD27}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{04E8FDC4-A8C2-43AF-A941-65B7B8D140B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04E8FDC4-A8C2-43AF-A941-65B7B8D140B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04E8FDC4-A8C2-43AF-A941-65B7B8D140B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04E8FDC4-A8C2-43AF-A941-65B7B8D140B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C80F32E-728B-4D98-B54F-F57FE5FDAD27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C80F32E-728B-4D98-B54F-F57FE5FDAD27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C80F32E-728B-4D98-B54F-F57FE5FDAD27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C80F32E-728B-4D98-B54F-F57FE5FDAD27}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F832A4BB-A00A-48E1-8594-7C9405E3339C}
+	EndGlobalSection
+EndGlobal
