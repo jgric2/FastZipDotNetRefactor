@@ -72,6 +72,14 @@ namespace FastZipDotNet.MultiThreading
             }
         }
 
+        // Convenience wrapper for async code
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Task WaitAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.Run(() => WaitOne(cancellationToken), cancellationToken);
+        }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release()
         {

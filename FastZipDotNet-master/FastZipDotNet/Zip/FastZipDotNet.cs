@@ -1,4 +1,5 @@
-﻿using FastZipDotNet.Zip.Helpers;
+﻿using FastZipDotNet.MultiThreading;
+using FastZipDotNet.Zip.Helpers;
 using FastZipDotNet.Zip.Readers;
 using FastZipDotNet.Zip.Writers;
 using FastZipDotNet.Zip.ZStd;
@@ -12,6 +13,10 @@ namespace FastZipDotNet.Zip
 {
     public class FastZipDotNet : IDisposable
     {
+
+        public AdjustableSemaphore ConcurrencyLimiter { get; }
+        // Internal: have we written anything new?
+        private volatile bool _dirty = false;
 
         public Stream ZipFileStream;
         public List<ZipFileEntry> ZipFileEntries = new List<ZipFileEntry>();         // List of files data
@@ -80,7 +85,16 @@ namespace FastZipDotNet.Zip
 
         internal long Reserve(long bytes)
         {
+            _dirty = true; // mark archive as modified
             return Interlocked.Add(ref AppendOffset, bytes) - bytes;
+        }
+
+
+        public void SetMaxConcurrency(int max)
+        {
+            if (max < 0) throw new ArgumentOutOfRangeException(nameof(max));
+            Threads = max;
+            ConcurrencyLimiter.MaximumCount = max;
         }
 
         public void InitializeAppendOffsetForSinglePart()
@@ -99,13 +113,18 @@ namespace FastZipDotNet.Zip
         // Close for single-part archives (writes the central directory at AppendOffset)
         public void CloseSinglePart()
         {
-            if (ZipFileStream == null)
+            if (ZipFileStream == null) return;
+
+            if (!_dirty)
+            {
+                ZipFileStream.Dispose();
+                ZipFileStream = null;
                 return;
+            }
 
             if (PartSize != 0)
-                throw new InvalidOperationException("CloseSinglePart is for single-part archives only (PartSize must be 0).");
+                throw new InvalidOperationException("CloseSinglePart is for single-part archives only.");
 
-            // Write central directory right after the last entry region
             ZipFileStream.Seek(AppendOffset, SeekOrigin.Begin);
 
             ZipInfoStruct.TotalDisks = 1;
@@ -113,8 +132,6 @@ namespace FastZipDotNet.Zip
             ZipInfoStruct.ZipComment = _zipComment;
 
             Close(ZipInfoStruct, ZipFileStream);
-
-            ZipFileStream.Dispose();
             ZipFileStream = null;
         }
 
@@ -227,6 +244,11 @@ namespace FastZipDotNet.Zip
             }
 
 
+            int dop = (threads == -1) ? Environment.ProcessorCount : Math.Max(1, threads);
+            Threads = dop;
+
+            ConcurrencyLimiter = new AdjustableSemaphore(dop);
+
             ZipDataWriter = new ZipDataWriter(this);
             ZipDataReader = new ZipDataReader(this);
 
@@ -291,6 +313,11 @@ namespace FastZipDotNet.Zip
             {
                 Threads = threads;
             }
+
+            int dop = (threads == -1) ? Environment.ProcessorCount : Math.Max(1, threads);
+            Threads = dop;
+
+            ConcurrencyLimiter = new AdjustableSemaphore(dop);
 
             ZipDataWriter = new ZipDataWriter(this);
             ZipDataReader = new ZipDataReader(this);
@@ -392,16 +419,21 @@ namespace FastZipDotNet.Zip
 
         public void Close()
         {
-            if (ZipFileStream == null)
-                return;
+            if (ZipFileStream == null) return;
 
-            if (PartSize != 0)
+            if (!_dirty)
             {
-                // If you still need multi-part support, keep your existing multi-part Close here.
-                // For single-part only just proceed.
+                ZipFileStream.Dispose();
+                ZipFileStream = null;
+                return;
             }
 
-            // Write central directory starting at the end of the last written entry
+            // existing single-part write logic
+            if (PartSize != 0)
+            {
+                // multi-part write path (if you keep it)
+            }
+
             ZipFileStream.Seek(AppendOffset, SeekOrigin.Begin);
 
             ZipInfoStruct.TotalDisks = 1;
