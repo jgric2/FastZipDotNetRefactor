@@ -4,8 +4,6 @@ namespace FastZipDotNet.Zip.Structure
 {
     public class ZipEntryStructs
     {
-    
-
         public struct ZipFileEntry
         {
             public Compression Method;

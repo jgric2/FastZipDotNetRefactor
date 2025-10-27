@@ -54,5 +54,10 @@ namespace TestWinForms
             }
             return $"{size:F1} {units[unit]}";
         }
+
+        private void ProgressForm_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

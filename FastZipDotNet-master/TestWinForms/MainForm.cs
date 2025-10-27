@@ -416,13 +416,13 @@ namespace TestWinForms
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Extract error"); }
-            finally 
+            finally
             {
                 Invoke((MethodInvoker)delegate
                 {
                     pf.Close();
                 });
-               
+
             }
         }
 
@@ -978,6 +978,16 @@ namespace TestWinForms
 
             [DllImport("user32.dll", SetLastError = true)]
             private static extern bool DestroyIcon(IntPtr hIcon);
+        }
+
+        private void tabCreate_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tabCreate_Click_1(object sender, EventArgs e)
+        {
+
         }
     }
 }

@@ -16,44 +16,55 @@
 
         private void InitializeComponent()
         {
-            this.progressBar1 = new ProgressBar();
-            this.labelStatus = new Label();
-            this.btnCancel = new Button();
-            this.SuspendLayout();
-
-            this.progressBar1.Dock = DockStyle.Top;
-            this.progressBar1.Location = new System.Drawing.Point(0, 0);
-            this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(600, 24);
-            this.progressBar1.Style = ProgressBarStyle.Continuous;
-
-            this.labelStatus.Dock = DockStyle.Fill;
-            this.labelStatus.Location = new System.Drawing.Point(0, 24);
-            this.labelStatus.Name = "labelStatus";
-            this.labelStatus.Size = new System.Drawing.Size(600, 78);
-            this.labelStatus.Text = "";
-            this.labelStatus.Padding = new Padding(8);
-
-            this.btnCancel.Dock = DockStyle.Bottom;
-            this.btnCancel.Location = new System.Drawing.Point(0, 102);
-            this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(600, 30);
-            this.btnCancel.Text = "Cancel";
-            this.btnCancel.UseVisualStyleBackColor = true;
-
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(600, 132);
-            this.Controls.Add(this.labelStatus);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.progressBar1);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.Name = "ProgressForm";
-            this.StartPosition = FormStartPosition.CenterParent;
-            this.Text = "Progress";
-            this.ResumeLayout(false);
+            progressBar1 = new ProgressBar();
+            labelStatus = new Label();
+            btnCancel = new Button();
+            SuspendLayout();
+            // 
+            // progressBar1
+            // 
+            progressBar1.Dock = DockStyle.Top;
+            progressBar1.Location = new Point(0, 0);
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(600, 24);
+            progressBar1.Style = ProgressBarStyle.Continuous;
+            progressBar1.TabIndex = 2;
+            // 
+            // labelStatus
+            // 
+            labelStatus.Dock = DockStyle.Fill;
+            labelStatus.Location = new Point(0, 24);
+            labelStatus.Name = "labelStatus";
+            labelStatus.Padding = new Padding(8);
+            labelStatus.Size = new Size(600, 78);
+            labelStatus.TabIndex = 0;
+            // 
+            // btnCancel
+            // 
+            btnCancel.Dock = DockStyle.Bottom;
+            btnCancel.Location = new Point(0, 102);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(600, 30);
+            btnCancel.TabIndex = 1;
+            btnCancel.Text = "Cancel";
+            btnCancel.UseVisualStyleBackColor = true;
+            // 
+            // ProgressForm
+            // 
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(600, 132);
+            Controls.Add(labelStatus);
+            Controls.Add(btnCancel);
+            Controls.Add(progressBar1);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "ProgressForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Progress";
+            Load += ProgressForm_Load;
+            ResumeLayout(false);
         }
     }
 }

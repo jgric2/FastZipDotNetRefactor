@@ -29,8 +29,6 @@
         private ListView lvCreate;
         private Button btnCreateAddFiles;
         private Button btnCreateAddFolder;
-        private Label lblMethod;
-        private ComboBox cmbMethod;
         private Label lblLevel;
         private NumericUpDown numLevel;
         private Button btnBuildArchive;
@@ -89,11 +87,11 @@
             mnuCreate_Clear = new ToolStripMenuItem();
             btnCreateAddFiles = new Button();
             btnCreateAddFolder = new Button();
-            lblMethod = new Label();
-            cmbMethod = new ComboBox();
             lblLevel = new Label();
             numLevel = new NumericUpDown();
             btnBuildArchive = new Button();
+            cmbMethod = new ComboBox();
+            lblMethod = new Label();
             tabControlMain.SuspendLayout();
             tabExtract.SuspendLayout();
             cmsExtract.SuspendLayout();
@@ -181,7 +179,7 @@
             // 
             cmsExtract.Items.AddRange(new ToolStripItem[] { mnuExtract_Open, mnuExtract_ExtractSelected, mnuExtract_AddFiles, mnuExtract_AddFolder, mnuExtract_DeleteSelected, mnuExtract_Info });
             cmsExtract.Name = "cmsExtract";
-            cmsExtract.Size = new Size(166, 154);
+            cmsExtract.Size = new Size(166, 136);
             // 
             // mnuExtract_Open
             // 
@@ -342,6 +340,7 @@
             tabCreate.TabIndex = 1;
             tabCreate.Text = "Create";
             tabCreate.UseVisualStyleBackColor = true;
+            tabCreate.Click += tabCreate_Click_1;
             // 
             // lblCreateInfo
             // 
@@ -383,7 +382,7 @@
             // 
             // btnCreateAddFiles
             // 
-            btnCreateAddFiles.Location = new Point(8, 604);
+            btnCreateAddFiles.Location = new Point(8, 602);
             btnCreateAddFiles.Name = "btnCreateAddFiles";
             btnCreateAddFiles.Size = new Size(100, 28);
             btnCreateAddFiles.TabIndex = 2;
@@ -401,26 +400,9 @@
             btnCreateAddFolder.UseVisualStyleBackColor = true;
             btnCreateAddFolder.Click += btnCreateAddFolder_Click;
             // 
-            // lblMethod
-            // 
-            lblMethod.Location = new Point(8, 604);
-            lblMethod.Name = "lblMethod";
-            lblMethod.Size = new Size(60, 20);
-            lblMethod.TabIndex = 4;
-            lblMethod.Text = "Method:";
-            // 
-            // cmbMethod
-            // 
-            cmbMethod.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
-            cmbMethod.Location = new Point(8, 604);
-            cmbMethod.Name = "cmbMethod";
-            cmbMethod.Size = new Size(100, 23);
-            cmbMethod.TabIndex = 5;
-            // 
             // lblLevel
             // 
-            lblLevel.Location = new Point(8, 604);
+            lblLevel.Location = new Point(503, 634);
             lblLevel.Name = "lblLevel";
             lblLevel.Size = new Size(45, 20);
             lblLevel.TabIndex = 6;
@@ -428,7 +410,7 @@
             // 
             // numLevel
             // 
-            numLevel.Location = new Point(8, 604);
+            numLevel.Location = new Point(569, 631);
             numLevel.Maximum = new decimal(new int[] { 22, 0, 0, 0 });
             numLevel.Name = "numLevel";
             numLevel.Size = new Size(60, 23);
@@ -444,6 +426,23 @@
             btnBuildArchive.Text = "Build Archive...";
             btnBuildArchive.UseVisualStyleBackColor = true;
             btnBuildArchive.Click += btnBuildArchive_Click;
+            // 
+            // cmbMethod
+            // 
+            cmbMethod.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
+            cmbMethod.Location = new Point(569, 602);
+            cmbMethod.Name = "cmbMethod";
+            cmbMethod.Size = new Size(100, 23);
+            cmbMethod.TabIndex = 5;
+            // 
+            // lblMethod
+            // 
+            lblMethod.Location = new Point(503, 604);
+            lblMethod.Name = "lblMethod";
+            lblMethod.Size = new Size(60, 20);
+            lblMethod.TabIndex = 4;
+            lblMethod.Text = "Method:";
             // 
             // MainForm
             // 
@@ -461,5 +460,7 @@
             ((System.ComponentModel.ISupportInitialize)numLevel).EndInit();
             ResumeLayout(false);
         }
+        private Label lblMethod;
+        private ComboBox cmbMethod;
     }
 }

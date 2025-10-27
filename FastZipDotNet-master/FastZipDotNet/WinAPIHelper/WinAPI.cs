@@ -64,7 +64,12 @@ namespace FastZipDotNet.WinAPIHelper
         public static extern bool ReadFile(nint hFile, [Out] byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, nint lpOverlapped);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool ReadFile(nint hFile, [Out] Span<byte> lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, nint lpOverlapped);
+        public static extern bool ReadFile(
+    nint hFile,
+    IntPtr lpBuffer,
+    uint nNumberOfBytesToRead,
+    out uint lpNumberOfBytesRead,
+    nint lpOverlapped);
 
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]

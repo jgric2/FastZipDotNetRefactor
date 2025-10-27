@@ -11,8 +11,6 @@ namespace FastZipDotNet.Zip.Recovery
 {
     public static class ZipRecoveryHelper
     {
-
-
         public static RecoveryModeResult RecoverCorruptedZipFile(string zipPath, string outputDirectory)
         {
             if (File.Exists(zipPath))
@@ -24,7 +22,6 @@ namespace FastZipDotNet.Zip.Recovery
 
             return new RecoveryModeResult();
         }
-
 
         public static RecoveryModeResult RecoverCorruptedZipStream(Stream zipStream, string outputDirectory)
         {
@@ -55,9 +52,7 @@ namespace FastZipDotNet.Zip.Recovery
                 }
                 catch (Exception ex)
                 {
-                    //Debug.WriteLine($"Error extracting {entry.FilenameInZip}: {ex.Message}");
                     CorruptedEntries.Add(entry);
-                    //result.CorruptedEntries.Add(entry); // Optionally log these as corrupted
                 }
             });
 
