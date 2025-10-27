@@ -195,9 +195,15 @@ namespace FastZipDotNet.Zip.Writers
         }
 
 
-        // Progress-capable AddBuffer
-        public long AddBuffer(byte[] inBuffer, string filenameInZip, DateTime modifyTime, int compressionLevel, string fileComment,
-     Action<long> onUncompressedProgress, Action<long> onCompressedWrite)
+
+        public long AddBuffer(
+byte[] inBuffer,
+string filenameInZip,
+DateTime modifyTime,
+int compressionLevel,
+string fileComment,
+Action<long> onUncompressedProgress,
+Action<long> onCompressedWrite)
         {
             if (FastZipDotNet.PartSize != 0)
                 throw new InvalidOperationException("Single-part only (PartSize must be 0).");
@@ -218,10 +224,18 @@ namespace FastZipDotNet.Zip.Writers
             if (zfe.Method == Compression.Deflate)
             {
                 LibDeflateWrapper.Libdeflate(inBuffer, compressionLevel, false, out outBuffer, out zfe.CompressedSize, out zfe.Crc32);
+
+                // IMPORTANT: trim outBuffer to the actual compressed size so we don't write uninitialized tail
+                if (outBuffer != null && (ulong)outBuffer.Length != zfe.CompressedSize)
+                {
+                    Array.Resize(ref outBuffer, (int)zfe.CompressedSize);
+                }
+
                 if (zfe.CompressedSize == 0 || zfe.CompressedSize >= zfe.FileSize)
                 {
                     zfe.Method = Compression.Store;
                     zfe.CompressedSize = zfe.FileSize;
+                    outBuffer = null; // will write the original input
                 }
             }
             else if (zfe.Method == Compression.Zstd)
@@ -234,6 +248,7 @@ namespace FastZipDotNet.Zip.Writers
                 {
                     zfe.Method = Compression.Store;
                     zfe.CompressedSize = zfe.FileSize;
+                    outBuffer = null;
                 }
             }
             else
@@ -253,17 +268,17 @@ namespace FastZipDotNet.Zip.Writers
 
             if (zfe.Method == Compression.Store)
             {
-                // For store, uncompressed progress equals compressed write bytes
                 Action<long> onCompWrapped = n =>
                 {
                     onCompressedWrite?.Invoke(n);
                     onUncompressedProgress?.Invoke(n);
                 };
                 WriteAt(inBuffer, start + localHeader.Length, onCompWrapped);
+                // Alternative using count:
+                //WriteAt(inBuffer, (int)zfe.FileSize, start + localHeader.Length, onCompWrapped);
             }
             else
             {
-                // Compressed: report uncompressed-equivalent during write
                 double invRatio = zfe.CompressedSize > 0 ? (double)zfe.FileSize / (double)zfe.CompressedSize : 0.0;
                 long uncSent = 0;
 
@@ -284,6 +299,8 @@ namespace FastZipDotNet.Zip.Writers
 
                 if (outBuffer == null) outBuffer = Array.Empty<byte>();
                 WriteAt(outBuffer, start + localHeader.Length, onCompWrapped);
+                // Alternative using count:
+                //WriteAt(outBuffer, (int)zfe.CompressedSize, start + localHeader.Length, onCompWrapped);
 
                 long finalRem = (long)zfe.FileSize - uncSent;
                 if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
@@ -297,6 +314,109 @@ namespace FastZipDotNet.Zip.Writers
 
             return (long)zfe.CompressedSize;
         }
+
+        ////   // Progress-capable AddBuffer
+        ////   public long AddBuffer(byte[] inBuffer, string filenameInZip, DateTime modifyTime, int compressionLevel, string fileComment,
+        ////Action<long> onUncompressedProgress, Action<long> onCompressedWrite)
+        ////   {
+        ////       if (FastZipDotNet.PartSize != 0)
+        ////           throw new InvalidOperationException("Single-part only (PartSize must be 0).");
+
+        ////       byte[] outBuffer = null;
+
+        ////       var zfe = new ZipFileEntry
+        ////       {
+        ////           FileSize = (ulong)inBuffer.Length,
+        ////           EncodeUTF8 = FastZipDotNet.EncodeUTF8,
+        ////           FilenameInZip = IOHelpers.NormalizedFilename(filenameInZip),
+        ////           Comment = fileComment,
+        ////           ModifyTime = modifyTime,
+        ////           Method = (compressionLevel == 0 || inBuffer.Length == 0) ? Compression.Store : FastZipDotNet.MethodCompress,
+        ////           Crc32 = Crc32Helpers.ComputeCrc32(inBuffer)
+        ////       };
+
+        ////       if (zfe.Method == Compression.Deflate)
+        ////       {
+        ////           LibDeflateWrapper.Libdeflate(inBuffer, compressionLevel, false, out outBuffer, out zfe.CompressedSize, out zfe.Crc32);
+        ////           if (zfe.CompressedSize == 0 || zfe.CompressedSize >= zfe.FileSize)
+        ////           {
+        ////               zfe.Method = Compression.Store;
+        ////               zfe.CompressedSize = zfe.FileSize;
+        ////           }
+        ////       }
+        ////       else if (zfe.Method == Compression.Zstd)
+        ////       {
+        ////           using (var compressor = new Compressor(FastZipDotNet.CompressionOptionsZstd))
+        ////               outBuffer = compressor.Wrap(inBuffer);
+
+        ////           zfe.CompressedSize = (ulong)outBuffer.Length;
+        ////           if (zfe.CompressedSize >= zfe.FileSize)
+        ////           {
+        ////               zfe.Method = Compression.Store;
+        ////               zfe.CompressedSize = zfe.FileSize;
+        ////           }
+        ////       }
+        ////       else
+        ////       {
+        ////           zfe.CompressedSize = zfe.FileSize; // Store
+        ////       }
+
+        ////       var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
+
+        ////       long totalLen = localHeader.Length + (long)zfe.CompressedSize;
+        ////       long start = FastZipDotNet.Reserve(totalLen);
+
+        ////       zfe.HeaderOffset = (ulong)start;
+        ////       zfe.DiskNumberStart = 0;
+
+        ////       WriteAt(localHeader, start, onCompressedWrite);
+
+        ////       if (zfe.Method == Compression.Store)
+        ////       {
+        ////           // For store, uncompressed progress equals compressed write bytes
+        ////           Action<long> onCompWrapped = n =>
+        ////           {
+        ////               onCompressedWrite?.Invoke(n);
+        ////               onUncompressedProgress?.Invoke(n);
+        ////           };
+        ////           WriteAt(inBuffer, start + localHeader.Length, onCompWrapped);
+        ////       }
+        ////       else
+        ////       {
+        ////           // Compressed: report uncompressed-equivalent during write
+        ////           double invRatio = zfe.CompressedSize > 0 ? (double)zfe.FileSize / (double)zfe.CompressedSize : 0.0;
+        ////           long uncSent = 0;
+
+        ////           Action<long> onCompWrapped = n =>
+        ////           {
+        ////               onCompressedWrite?.Invoke(n);
+
+        ////               if (invRatio <= 0) return;
+        ////               long add = (long)Math.Round(n * invRatio);
+        ////               long remaining = (long)zfe.FileSize - uncSent;
+        ////               if (add > remaining) add = remaining;
+        ////               if (add > 0)
+        ////               {
+        ////                   onUncompressedProgress?.Invoke(add);
+        ////                   uncSent += add;
+        ////               }
+        ////           };
+
+        ////           if (outBuffer == null) outBuffer = Array.Empty<byte>();
+        ////           WriteAt(outBuffer, start + localHeader.Length, onCompWrapped);
+
+        ////           long finalRem = (long)zfe.FileSize - uncSent;
+        ////           if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
+        ////       }
+
+        ////       lock (FastZipDotNet.ZipFileEntries)
+        ////           FastZipDotNet.ZipFileEntries.Add(zfe);
+
+        ////       Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+        ////       Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+
+        ////       return (long)zfe.CompressedSize;
+        ////   }
 
         public long AddStream(Stream inStream, string filenameInZip, DateTime modifyTime, int compressionLevel, string fileComment,
         Action<long> onUncompressedProgress, Action<long> onCompressedWrite)
@@ -886,14 +1006,15 @@ namespace FastZipDotNet.Zip.Writers
 
         private const long DefaultBufferThreshold = 16L * 1024 * 1024; // 16 MB
 
+
         public long AddFileWithProgress(
-    string pathFilename,
-    string filenameInZip,
-    int compressionLevel,
-    string fileComment,
-    Action<long> onUncompressedRead,
-    Action<long> onCompressedWrite,
-    long bufferThresholdBytes = DefaultBufferThreshold)
+string pathFilename,
+string filenameInZip,
+int compressionLevel,
+string fileComment,
+Action<long> onUncompressedRead,
+Action<long> onCompressedWrite,
+long bufferThresholdBytes = DefaultBufferThreshold)
         {
             var fi = new FileInfo(pathFilename);
 
@@ -911,44 +1032,127 @@ namespace FastZipDotNet.Zip.Writers
             // Zero-length file
             if (fi.Length == 0)
             {
-                return AddBuffer(Array.Empty<byte>(), filenameInZip, modifyTime, compressionLevel, fileComment, onUncompressedRead, onCompressedWrite);
+                return AddBuffer(Array.Empty<byte>(),
+                                 filenameInZip,
+                                 modifyTime,
+                                 compressionLevel,
+                                 fileComment,
+                                 onUncompressedRead,
+                                 onCompressedWrite);
             }
 
             // Large files or RAM-constrained => streaming path
             if (FastZipDotNet.LimitRam || fi.Length > bufferThresholdBytes)
             {
-                using var fs = new FileStream(
-                    pathFilename,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    Consts.ChunkSize,
-                    FileOptions.SequentialScan);
+                using var fs = new FileStream(pathFilename,
+                                              FileMode.Open,
+                                              FileAccess.Read,
+                                              FileShare.Read,
+                                              Consts.ChunkSize,
+                                              FileOptions.SequentialScan);
 
-                return AddStream(fs, filenameInZip, modifyTime, compressionLevel, fileComment, onUncompressedRead, onCompressedWrite);
+                return AddStream(fs,
+                                 filenameInZip,
+                                 modifyTime,
+                                 compressionLevel,
+                                 fileComment,
+                                 onUncompressedRead,
+                                 onCompressedWrite);
             }
             else
             {
-                // Small/medium file: WinAPI fast read to memory
-                byte[] inBuffer = ReadAllBytesWinApi(pathFilename, fi.Length);
-                if (inBuffer == null)
+                // Small/medium file => WinAPI fast path to memory, then AddBuffer
+                byte[] inBuffer = new byte[fi.Length];
+                using var fs = new FileStream(pathFilename,
+                                              FileMode.Open,
+                                              FileAccess.Read,
+                                              FileShare.Read,
+                                              1 << 20,
+                                              FileOptions.SequentialScan);
+                int readTotal = 0;
+                while (readTotal < inBuffer.Length)
                 {
-                    // Fallback to FileStream read if WinAPI path fails
-                    inBuffer = new byte[fi.Length];
-                    using var fs = new FileStream(pathFilename, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
-                    int readTotal = 0;
-                    while (readTotal < inBuffer.Length)
-                    {
-                        int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
-                        if (r <= 0)
-                            throw new EndOfStreamException($"Unexpected EOF while reading '{pathFilename}'.");
-                        readTotal += r;
-                    }
+                    int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
+                    if (r <= 0)
+                        throw new EndOfStreamException($"Unexpected end of file while reading '{pathFilename}'.");
+                    readTotal += r;
                 }
 
-                return AddBuffer(inBuffer, filenameInZip, modifyTime, compressionLevel, fileComment, onUncompressedRead, onCompressedWrite);
+
+                return AddBuffer(inBuffer,
+                                 filenameInZip,
+                                 modifyTime,
+                                 compressionLevel,
+                                 fileComment,
+                                 onUncompressedRead,
+                                 onCompressedWrite);
             }
         }
+
+
+        ////    public long AddFileWithProgress(
+        ////string pathFilename,
+        ////string filenameInZip,
+        ////int compressionLevel,
+        ////string fileComment,
+        ////Action<long> onUncompressedRead,
+        ////Action<long> onCompressedWrite,
+        ////long bufferThresholdBytes = DefaultBufferThreshold)
+        ////    {
+        ////        var fi = new FileInfo(pathFilename);
+
+        ////        // Directory?
+        ////        if ((fi.Attributes & FileAttributes.Directory) != 0)
+        ////        {
+        ////            string folderInZip = IOHelpers.NormalizedFilename(filenameInZip);
+        ////            if (!folderInZip.EndsWith("/")) folderInZip += "/";
+        ////            AddEmptyFolder(folderInZip, fileComment);
+        ////            return 0;
+        ////        }
+
+        ////        DateTime modifyTime = fi.LastWriteTime;
+
+        ////        // Zero-length file
+        ////        if (fi.Length == 0)
+        ////        {
+        ////            return AddBuffer(Array.Empty<byte>(), filenameInZip, modifyTime, compressionLevel, fileComment, onUncompressedRead, onCompressedWrite);
+        ////        }
+
+        ////        // Large files or RAM-constrained => streaming path
+        ////        if (FastZipDotNet.LimitRam || fi.Length > bufferThresholdBytes)
+        ////        {
+        ////            using var fs = new FileStream(
+        ////                pathFilename,
+        ////                FileMode.Open,
+        ////                FileAccess.Read,
+        ////                FileShare.Read,
+        ////                Consts.ChunkSize,
+        ////                FileOptions.SequentialScan);
+
+        ////            return AddStream(fs, filenameInZip, modifyTime, compressionLevel, fileComment, onUncompressedRead, onCompressedWrite);
+        ////        }
+        ////        else
+        ////        {
+        ////            // Small/medium file: WinAPI fast read to memory
+        ////            byte[] inBuffer = ReadAllBytesWinApi(pathFilename, fi.Length);
+        ////            if (inBuffer == null)
+        ////            {
+        ////                // Fallback to FileStream read if WinAPI path fails
+        ////                inBuffer = new byte[fi.Length];
+        ////                using var fs = new FileStream(pathFilename, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
+        ////                int readTotal = 0;
+        ////                while (readTotal < inBuffer.Length)
+        ////                {
+        ////                    int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
+        ////                    if (r <= 0)
+        ////                        throw new EndOfStreamException($"Unexpected EOF while reading '{pathFilename}'.");
+        ////                    readTotal += r;
+        ////                }
+        ////            }
+
+        ////            return AddBuffer(inBuffer, filenameInZip, modifyTime, compressionLevel, fileComment, onUncompressedRead, onCompressedWrite);
+        ////        }
+        ////    }
 
         //public long AddFileWithProgress(string pathFilename, string filenameInZip, int compressionLevel, string fileComment, Action<long> onUncompressedRead, Action<long> onCompressedWrite)
         //{
