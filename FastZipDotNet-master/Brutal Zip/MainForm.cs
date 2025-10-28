@@ -95,6 +95,31 @@ namespace Brutal_Zip
                 RefreshStagingList();
             };
 
+
+            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+            int initialThreads = Threads;
+            homeView.SetThreadSlider(maxThreads, initialThreads, SettingsService.Current.ThreadsAuto);
+
+            // When slider changed on Home screen, persist and apply to active Zip
+            homeView.ThreadsSliderChanged += n =>
+            {
+                if (!homeView.ExtractHere) { } // no-op, just example; not used
+                SettingsService.Current.ThreadsAuto = false;
+                SettingsService.Current.Threads = n;
+                try { SettingsService.Save(); } catch { }
+                try { _zip?.SetMaxConcurrency(n); } catch { }
+            };
+
+
+            // auto changed
+            homeView.ThreadsAutoChanged += auto =>
+            {
+                SettingsService.Current.ThreadsAuto = auto;
+                try { SettingsService.Save(); } catch { }
+                int n = auto ? Environment.ProcessorCount : Math.Max(1, SettingsService.Current.Threads);
+                try { _zip?.SetMaxConcurrency(n); } catch { }
+            };
+
             // Allow DnD to staging list (HomeView already raises FilesDroppedForCreate)
             homeView.StagingRemoveSelectedRequested += () => RemoveSelectedFromStaging();
             homeView.StagingClearRequested += () => { _staging.Clear(); RefreshStagingList(); };
@@ -119,7 +144,19 @@ namespace Brutal_Zip
             viewerView.lvArchive.SmallImageList = _icons.ImageList;
             viewerView.lvArchive.UseCompatibleStateImageBehavior = false;
 
-            viewerView.lvArchive.RetrieveVirtualItem += (s, e) => e.Item = MakeItem(_rows[e.ItemIndex]);
+            viewerView.lvArchive.RetrieveVirtualItem += (s, e) =>
+            {
+                try
+                {
+                    if (_rows.Count > e.ItemIndex)
+                        e.Item = MakeItem(_rows[e.ItemIndex]);
+                }
+                catch
+                {
+                    
+                }
+                
+            };
             viewerView.lvArchive.DoubleClick += (s, e) => OpenSelected();
             viewerView.lvArchive.KeyDown += (s, e) => { if (e.KeyCode == Keys.Back) NavigateUp(); };
 
@@ -539,14 +576,15 @@ namespace Brutal_Zip
             homeView.ExtractDestination = fbd.SelectedPath;
         }
 
-        private async System.Threading.Tasks.Task DoCreateAsync()
+        private async Task DoCreateAsync()
         {
-            if (_stagedCreateItems.Count == 0)
+            if (_staging == null || _staging.Count == 0)
             {
-                MessageBox.Show(this, "Add or drop files/folders first.", "Nothing to do");
+                MessageBox.Show(this, "Add files or folders to the staging list first.", "Nothing to do");
                 return;
             }
 
+            // Destination
             var dest = homeView.CreateDestination?.Trim();
             if (string.IsNullOrEmpty(dest))
             {
@@ -555,6 +593,7 @@ namespace Brutal_Zip
                 dest = homeView.CreateDestination = sfd.FileName;
             }
 
+            // Method/level
             var method = homeView.CreateMethodIndex switch
             {
                 0 => Compression.Store,
@@ -564,47 +603,187 @@ namespace Brutal_Zip
             };
             int level = homeView.CreateLevel;
 
-            using var pf = new ProgressForm("Creating archive…");
+            // Pre-scan to get grand totals (files + bytes) for stable overall progress
+            var staged = _staging.ToArray();
+            long grandBytes = 0;
+            int grandFiles = 0;
+
+            var scanInfo = new List<(StagedItem item, int fileCount, long bytes)>(staged.Length);
+
+            foreach (var it in staged)
+            {
+                int cnt;
+                long bytes;
+                if (it.IsFolder && Directory.Exists(it.Path))
+                {
+                    ScanFolder(it.Path, out bytes, out cnt);
+                }
+                else if (!it.IsFolder && File.Exists(it.Path))
+                {
+                    cnt = 1;
+                    try { bytes = new FileInfo(it.Path).Length; } catch { bytes = 0; }
+                }
+                else
+                {
+                    // Missing path; skip
+                    cnt = 0; bytes = 0;
+                }
+
+                grandFiles += cnt;
+                grandBytes += bytes;
+                scanInfo.Add((it, cnt, bytes));
+            }
+
+            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+            int curThreads = Threads;
+
+            using var pf = new ProgressForm($"Creating archive… ({curThreads} threads)");
             var progress = pf.CreateProgress();
             pf.Show(this);
 
             try
             {
-                using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, Threads);
+                using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
 
-                foreach (var item in _staging.ToArray())
+                // Live thread control via slider
+                pf.ConfigureThreads(maxThreads, curThreads, n =>
                 {
+                    try
+                    {
+                        SettingsService.Current.ThreadsAuto = false;
+                        SettingsService.Current.Threads = n;
+                        SettingsService.Save();
+                        zip.SetMaxConcurrency(n);
+                        pf.Text = $"Creating archive… ({n} threads)";
+                    }
+                    catch { }
+                });
+
+                // Aggregated counters and reporter
+                long aggProcessedBytes = 0;
+                int aggFilesDone = 0;
+                string currentName = null;
+                var sw = Stopwatch.StartNew();
+
+                using var reportCts = new CancellationTokenSource();
+                var reporter = Task.Run(async () =>
+                {
+                    while (!reportCts.IsCancellationRequested)
+                    {
+                        long pBytes = Math.Min(Interlocked.Read(ref aggProcessedBytes), grandBytes);
+                        int pFiles = Math.Min(Volatile.Read(ref aggFilesDone), grandFiles);
+                        double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+
+                        progress.Report(new ZipProgress
+                        {
+                            Operation = ZipOperation.Build,
+                            CurrentFile = Volatile.Read(ref currentName),
+                            TotalFiles = grandFiles,
+                            TotalBytesUncompressed = grandBytes,
+                            FilesProcessed = pFiles,
+                            BytesProcessedUncompressed = pBytes,
+                            Elapsed = sw.Elapsed,
+                            SpeedBytesPerSec = speed
+                        });
+
+                        try { await Task.Delay(200, reportCts.Token); } catch { break; }
+                    }
+                });
+
+                // Process items in order (we rely on engine's own concurrency internally)
+                for (int i = 0; i < scanInfo.Count; i++)
+                {
+                    var (item, itemFiles, itemBytes) = scanInfo[i];
+
                     if (pf.Token.IsCancellationRequested) break;
 
                     if (item.IsFolder && Directory.Exists(item.Path))
                     {
-                        bool ok = await zip.ZipDataWriter.AddFilesToArchiveAsync(item.Path, Threads, level, progress, pf.Token);
+                        // Base offset for this item
+                        long baseBytes = Interlocked.Read(ref aggProcessedBytes);
+
+                        // Forward engine progress into our aggregated model
+                        var perItemProgress = new Progress<ZipProgress>(p =>
+                        {
+                            // Update current file name and processed bytes for this item
+                            Volatile.Write(ref currentName, p.CurrentFile);
+                            long combined = baseBytes + p.BytesProcessedUncompressed;
+                            Interlocked.Exchange(ref aggProcessedBytes, combined);
+                        });
+
+                        bool ok = await zip.ZipDataWriter.AddFilesToArchiveAsync(item.Path, Threads, level, perItemProgress, pf.Token);
                         if (!ok) break;
+
+                        // Item done: finalize aggregates for files/bytes
+                        Interlocked.Add(ref aggFilesDone, itemFiles);
+
+                        // Ensure bytes aggregate reaches base + itemBytes
+                        long now = Interlocked.Read(ref aggProcessedBytes);
+                        long target = baseBytes + itemBytes;
+                        if (target > now) Interlocked.Exchange(ref aggProcessedBytes, target);
                     }
                     else if (!item.IsFolder && File.Exists(item.Path))
                     {
-                        void OnUnc(long n) { }
+                        // Single file: use OnUnc to advance bytes
+                        void OnUnc(long n) => Interlocked.Add(ref aggProcessedBytes, n);
                         void OnComp(long n) { }
+                        Volatile.Write(ref currentName, Path.GetFileName(item.Path));
+
                         zip.ZipDataWriter.AddFileWithProgress(item.Path, Path.GetFileName(item.Path), level, "", OnUnc, OnComp);
+
+                        Interlocked.Increment(ref aggFilesDone);
+                    }
+                    else
+                    {
+                        // Missing; skip
                     }
                 }
 
                 zip.Close();
+                reportCts.Cancel();
+                try { await reporter; } catch { }
 
                 if (SettingsService.Current.OpenExplorerAfterCreate)
                     TryOpenExplorerSelect(dest);
 
-                // clear
                 _staging.Clear();
                 RefreshStagingList();
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
             finally { pf.Close(); }
+
+            // Local helper
+            static void ScanFolder(string folder, out long bytes, out int fileCount)
+            {
+                bytes = 0;
+                fileCount = 0;
+                try
+                {
+                    var stack = new Stack<string>();
+                    stack.Push(folder);
+                    while (stack.Count > 0)
+                    {
+                        var d = stack.Pop();
+                        try
+                        {
+                            foreach (var f in Directory.EnumerateFiles(d))
+                            {
+                                try { bytes += new FileInfo(f).Length; fileCount++; } catch { }
+                            }
+                            foreach (var sub in Directory.EnumerateDirectories(d))
+                                stack.Push(sub);
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
         }
 
-        private async System.Threading.Tasks.Task DoExtractSmartAsync()
+        private async Task DoExtractSmartAsync()
         {
+            // Pick archive if none
             if (string.IsNullOrEmpty(_zipPath))
             {
                 using var ofd = new OpenFileDialog { Filter = "Zip files|*.zip" };
@@ -612,23 +791,40 @@ namespace Brutal_Zip
                 _zipPath = ofd.FileName;
             }
 
+            // Destination policy
             string outDir;
             if (homeView.ExtractHere && !string.IsNullOrEmpty(homeView.ExtractDestination))
                 outDir = homeView.ExtractDestination;
             else if (homeView.ExtractToArchiveName || SettingsService.Current.ExtractDefault == "Smart")
                 outDir = Path.Combine(Path.GetDirectoryName(_zipPath) ?? ".", Path.GetFileNameWithoutExtension(_zipPath));
             else
-                outDir = string.IsNullOrEmpty(homeView.ExtractDestination) ? Path.GetDirectoryName(_zipPath)! : homeView.ExtractDestination;
+                outDir = string.IsNullOrEmpty(homeView.ExtractDestination) ? (Path.GetDirectoryName(_zipPath) ?? ".") : homeView.ExtractDestination;
 
             Directory.CreateDirectory(outDir);
 
-            using var zip = new FastZipDotNet.Zip.FastZipDotNet(_zipPath, Compression.Deflate, 6, Threads);
-            using var pf = new ProgressForm("Extracting…");
+            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+            int curThreads = Threads;
+
+            using var zip = new FastZipDotNet.Zip.FastZipDotNet(_zipPath, Compression.Deflate, 6, curThreads);
+            using var pf = new ProgressForm($"Extracting… ({curThreads} threads)");
             var progress = pf.CreateProgress();
             pf.Show(this);
 
             try
             {
+                pf.ConfigureThreads(maxThreads, curThreads, n =>
+                {
+                    try
+                    {
+                        SettingsService.Current.ThreadsAuto = false;
+                        SettingsService.Current.Threads = n;
+                        SettingsService.Save();
+                        zip.SetMaxConcurrency(n);
+                        pf.Text = $"Extracting… ({n} threads)";
+                    }
+                    catch { }
+                });
+
                 await zip.ExtractArchiveAsync(outDir, progress, pf.Token);
                 if (SettingsService.Current.OpenExplorerAfterExtract)
                     TryOpenExplorer(outDir);
@@ -974,22 +1170,89 @@ namespace Brutal_Zip
                 return;
             }
 
-            using var pf = new ProgressForm("Testing archive…");
-            var progress = pf.CreateProgress();
-            pf.Show(this);
+            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+            int curThreads = Threads;
+
+            // Precompute totals for stable progress
+            int totalFiles = 0;
+            long totalBytes = 0;
             try
             {
-                bool ok = await _zip.ZipDataReader.TestArchiveAsync(Threads, progress, pf.Token);
-                MessageBox.Show(this, ok ? "Test OK" : "Test failed or cancelled");
+                totalFiles = _zip.ZipFileEntries?.Count ?? 0;
+                totalBytes = _zip.ZipFileEntries?.Sum(e => (long)e.FileSize) ?? 0;
             }
-            catch (Exception ex)
+            catch
             {
-                MessageBox.Show(this, ex.Message, "Test error");
+                // Totals optional; engine will still report
             }
-            finally
+
+            using var pf = new ProgressForm($"Testing archive… ({curThreads} threads)");
+            var progressUI = pf.CreateProgress();
+            pf.Show(this);
+
+            try
             {
-                pf.Close();
+                // Live thread control
+                pf.ConfigureThreads(maxThreads, curThreads, n =>
+                {
+                    try
+                    {
+                        SettingsService.Current.ThreadsAuto = false;
+                        SettingsService.Current.Threads = n;
+                        SettingsService.Save();
+
+                        // Engine uses AdjustableSemaphore; SetMaxConcurrency takes effect mid-run
+                        _zip.SetMaxConcurrency(n);
+
+                        pf.Text = $"Testing archive… ({n} threads)";
+                    }
+                    catch { }
+                });
+
+                // Aggregator that forwards engine progress to the UI,
+                // filling in totals and smoothing elapsed/speed if needed.
+                var sw = Stopwatch.StartNew();
+                long lastBytes = 0;
+                int lastFiles = 0;
+
+                var aggregator = new Progress<ZipProgress>(p =>
+                {
+                    // Compose a UI-friendly progress payload.
+                    // Use engine values when present; fall back to our precomputed totals if needed.
+                    long bytesProcessed = Math.Max(p.BytesProcessedUncompressed, lastBytes);
+                    int filesProcessed = Math.Max(p.FilesProcessed, lastFiles);
+
+                    var ui = new ZipProgress
+                    {
+                        Operation = ZipOperation.Test,
+                        CurrentFile = p.CurrentFile,
+                        TotalFiles = (totalFiles > 0) ? totalFiles : p.TotalFiles,
+                        TotalBytesUncompressed = (totalBytes > 0) ? totalBytes : p.TotalBytesUncompressed,
+                        FilesProcessed = filesProcessed,
+                        BytesProcessedUncompressed = bytesProcessed,
+                        // Use engine elapsed if available; else use our stopwatch
+                        Elapsed = (p.Elapsed != TimeSpan.Zero) ? p.Elapsed : sw.Elapsed,
+                        // Use engine speed if provided, else derive it
+                        SpeedBytesPerSec = (p.SpeedBytesPerSec > 0)
+                            ? p.SpeedBytesPerSec
+                            : (sw.Elapsed.TotalSeconds > 0 ? bytesProcessed / sw.Elapsed.TotalSeconds : 0.0)
+                    };
+
+                    // Persist last values to ensure non-decreasing UI counters
+                    lastBytes = ui.BytesProcessedUncompressed;
+                    lastFiles = ui.FilesProcessed;
+
+                    progressUI.Report(ui);
+                });
+
+                // Call the engine test; engine will do its own multi-threaded decompression/CRC.
+                bool ok = await _zip.ZipDataReader.TestArchiveAsync(Threads, aggregator, pf.Token);
+
+                MessageBox.Show(this, ok ? "Test completed successfully." : "Test failed or cancelled.", "Test");
             }
+            catch (OperationCanceledException) { } // user pressed Cancel
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Test error"); }
+            finally { pf.Close(); }
         }
 
         private async System.Threading.Tasks.Task ExtractSelectedTo()
@@ -1016,7 +1279,7 @@ namespace Brutal_Zip
             await ExtractSelectionAsync(dir);
         }
 
-        private async System.Threading.Tasks.Task ExtractSelectionAsync(string outDir)
+        private async Task ExtractSelectionAsync(string outDir)
         {
             if (_zip == null) return;
             if (viewerView.lvArchive.SelectedIndices.Count == 0) return;
@@ -1030,56 +1293,91 @@ namespace Brutal_Zip
             }
             if (files.Count == 0) return;
 
-            using var pf = new ProgressForm("Extracting…");
+            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+            int curThreads = Threads;
+
+            using var pf = new ProgressForm($"Extracting… ({curThreads} threads)");
             var progress = pf.CreateProgress();
             pf.Show(this);
 
             try
             {
-                var sem = new System.Threading.SemaphoreSlim(Threads, Threads);
+                // Live engine thread control (affects decompression workers inside engine)
+                pf.ConfigureThreads(maxThreads, curThreads, n =>
+                {
+                    try
+                    {
+                        SettingsService.Current.ThreadsAuto = false;
+                        SettingsService.Current.Threads = n;
+                        SettingsService.Save();
+                        _zip.SetMaxConcurrency(n);
+                        pf.Text = $"Extracting… ({n} threads)";
+                    }
+                    catch { }
+                });
+
+                // Our per-file concurrency (fixed at start)
+                var sem = new System.Threading.SemaphoreSlim(curThreads, curThreads);
                 var tasks = new List<Task>();
 
+                int totalFiles = files.Count;
+                int filesDone = 0;                        // NEW: track processed files
                 long totalUnc = files.Sum(f => (long)f.FileSize);
                 long processed = 0;
+                string currentName = null;
+
                 var sw = Stopwatch.StartNew();
 
                 var reportCts = new System.Threading.CancellationTokenSource();
-                var reporter = System.Threading.Tasks.Task.Run(async () =>
+                var reporter = Task.Run(async () =>
                 {
                     while (!reportCts.IsCancellationRequested)
                     {
-                        long p = Math.Min(System.Threading.Interlocked.Read(ref processed), totalUnc);
+                        long p = Math.Min(Interlocked.Read(ref processed), totalUnc);
+                        int fd = Volatile.Read(ref filesDone);
                         double speed = sw.Elapsed.TotalSeconds > 0 ? p / sw.Elapsed.TotalSeconds : 0.0;
+
                         progress.Report(new ZipProgress
                         {
                             Operation = ZipOperation.Extract,
-                            TotalFiles = files.Count,
+                            CurrentFile = Volatile.Read(ref currentName),
+                            TotalFiles = totalFiles,
                             TotalBytesUncompressed = totalUnc,
                             BytesProcessedUncompressed = p,
+                            FilesProcessed = fd,                            // NEW
                             Elapsed = sw.Elapsed,
                             SpeedBytesPerSec = speed
                         });
-                        try { await System.Threading.Tasks.Task.Delay(200, reportCts.Token); } catch { break; }
+
+                        try { await Task.Delay(200, reportCts.Token); } catch { break; }
                     }
                 });
 
                 foreach (var e in files)
                 {
-                    await sem.WaitAsync();
-                    tasks.Add(System.Threading.Tasks.Task.Run(() =>
+                    await sem.WaitAsync(pf.Token);
+                    tasks.Add(Task.Run(() =>
                     {
                         try
                         {
                             string path = Path.Combine(outDir, e.FilenameInZip);
                             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                            void OnBytes(long n) => System.Threading.Interlocked.Add(ref processed, n);
+
+                            // Update “current file” and bytes callback
+                            Volatile.Write(ref currentName, e.FilenameInZip);
+                            void OnBytes(long n) => Interlocked.Add(ref processed, n);
+
+                            // Extract
                             _zip.ZipDataReader.ExtractFile(e, path, OnBytes);
+
+                            // Count 1 file done
+                            Interlocked.Increment(ref filesDone);          // NEW
                         }
                         finally { sem.Release(); }
                     }, pf.Token));
                 }
 
-                await System.Threading.Tasks.Task.WhenAll(tasks);
+                await Task.WhenAll(tasks);
                 reportCts.Cancel();
                 try { await reporter; } catch { }
 
@@ -1179,41 +1477,175 @@ namespace Brutal_Zip
             await AddIntoArchiveAsync(new[] { fbd.SelectedPath });
         }
 
-        private async System.Threading.Tasks.Task AddIntoArchiveAsync(IEnumerable<string> paths)
+        private async Task AddIntoArchiveAsync(IEnumerable<string> paths)
         {
             if (_zip == null) return;
-            using var pf = new ProgressForm("Adding to archive…");
+            var list = paths?.ToList();
+            if (list == null || list.Count == 0) return;
+
+            // Pre-scan for totals so progress is stable
+            long grandBytes = 0;
+            int grandFiles = 0;
+            var scanInfo = new List<(string path, bool isFolder, int fileCount, long bytes)>(list.Count);
+
+            foreach (var p in list)
+            {
+                try
+                {
+                    var full = Path.GetFullPath(p);
+                    bool isDir = Directory.Exists(full);
+                    bool isFile = File.Exists(full);
+
+                    if (!isDir && !isFile) continue;
+
+                    int cnt; long bytes;
+                    if (isDir)
+                    {
+                        ScanFolder(full, out bytes, out cnt);
+                    }
+                    else
+                    {
+                        cnt = 1;
+                        try { bytes = new FileInfo(full).Length; } catch { bytes = 0; }
+                    }
+
+                    grandFiles += cnt;
+                    grandBytes += bytes;
+                    scanInfo.Add((full, isDir, cnt, bytes));
+                }
+                catch { }
+            }
+
+            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+            int curThreads = Threads;
+
+            using var pf = new ProgressForm($"Adding to archive… ({curThreads} threads)");
             var progress = pf.CreateProgress();
             pf.Show(this);
 
             try
             {
-                foreach (var p in paths)
+                // Live engine thread control
+                pf.ConfigureThreads(maxThreads, curThreads, n =>
+                {
+                    try
+                    {
+                        SettingsService.Current.ThreadsAuto = false;
+                        SettingsService.Current.Threads = n;
+                        SettingsService.Save();
+                        _zip.SetMaxConcurrency(n);
+                        pf.Text = $"Adding to archive… ({n} threads)";
+                    }
+                    catch { }
+                });
+
+                // Aggregated counters
+                long aggProcessedBytes = 0;
+                int aggFilesDone = 0;
+                string currentName = null;
+                var sw = Stopwatch.StartNew();
+
+                using var reportCts = new CancellationTokenSource();
+                var reporter = Task.Run(async () =>
+                {
+                    while (!reportCts.IsCancellationRequested)
+                    {
+                        long pBytes = Math.Min(Interlocked.Read(ref aggProcessedBytes), grandBytes);
+                        int pFiles = Math.Min(Volatile.Read(ref aggFilesDone), grandFiles);
+                        double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+
+                        progress.Report(new ZipProgress
+                        {
+                            Operation = ZipOperation.Build,
+                            CurrentFile = Volatile.Read(ref currentName),
+                            TotalFiles = grandFiles,
+                            TotalBytesUncompressed = grandBytes,
+                            FilesProcessed = pFiles,
+                            BytesProcessedUncompressed = pBytes,
+                            Elapsed = sw.Elapsed,
+                            SpeedBytesPerSec = speed
+                        });
+
+                        try { await Task.Delay(200, reportCts.Token); } catch { break; }
+                    }
+                });
+
+                // Add items
+                foreach (var (path, isFolder, fileCount, bytes) in scanInfo)
                 {
                     if (pf.Token.IsCancellationRequested) break;
 
-                    if (Directory.Exists(p))
+                    if (isFolder)
                     {
-                        bool ok = await _zip.ZipDataWriter.AddFilesToArchiveAsync(p, Threads, _zip.CompressionLevelValue, progress, pf.Token);
+                        long baseBytes = Interlocked.Read(ref aggProcessedBytes);
+
+                        var perProgress = new Progress<ZipProgress>(p =>
+                        {
+                            Volatile.Write(ref currentName, p.CurrentFile);
+                            long combined = baseBytes + p.BytesProcessedUncompressed;
+                            Interlocked.Exchange(ref aggProcessedBytes, combined);
+                        });
+
+                        bool ok = await _zip.ZipDataWriter.AddFilesToArchiveAsync(path, Threads, _zip.CompressionLevelValue, perProgress, pf.Token);
                         if (!ok) break;
+
+                        Interlocked.Add(ref aggFilesDone, fileCount);
+                        long now = Interlocked.Read(ref aggProcessedBytes);
+                        long target = baseBytes + bytes;
+                        if (target > now) Interlocked.Exchange(ref aggProcessedBytes, target);
                     }
-                    else if (File.Exists(p))
+                    else
                     {
-                        string prefix = GetCurrentPathPrefix();
-                        string internalName = prefix.Length == 0 ? Path.GetFileName(p) : (prefix + Path.GetFileName(p));
-                        void OnUnc(long n) { }
+                        void OnUnc(long n) => Interlocked.Add(ref aggProcessedBytes, n);
                         void OnComp(long n) { }
-                        _zip.ZipDataWriter.AddFileWithProgress(p, internalName, _zip.CompressionLevelValue, "", OnUnc, OnComp);
+                        Volatile.Write(ref currentName, Path.GetFileName(path));
+
+                        string prefix = GetCurrentPathPrefix();
+                        string internalName = prefix.Length == 0 ? Path.GetFileName(path) : (prefix + Path.GetFileName(path));
+
+                        _zip.ZipDataWriter.AddFileWithProgress(path, internalName, _zip.CompressionLevelValue, "", OnUnc, OnComp);
+                        Interlocked.Increment(ref aggFilesDone);
                     }
                 }
 
-                await System.Threading.Tasks.Task.Run(() => _zip.Close());
+                reportCts.Cancel();
+                try { await reporter; } catch { }
+
+                // Commit and refresh the opened archive
+                await Task.Run(() => _zip.Close());
                 OpenArchive(_zipPath);
                 NavigateTo(_current);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Add error"); }
             finally { pf.Close(); }
+
+            // Local helper
+            static void ScanFolder(string folder, out long bytes, out int fileCount)
+            {
+                bytes = 0;
+                fileCount = 0;
+                try
+                {
+                    var stack = new Stack<string>();
+                    stack.Push(folder);
+                    while (stack.Count > 0)
+                    {
+                        var d = stack.Pop();
+                        try
+                        {
+                            foreach (var f in Directory.EnumerateFiles(d))
+                            {
+                                try { bytes += new FileInfo(f).Length; fileCount++; } catch { }
+                            }
+                            foreach (var sub in Directory.EnumerateDirectories(d))
+                                stack.Push(sub);
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
         }
 
         private void MainForm_Load_1(object sender, EventArgs e)

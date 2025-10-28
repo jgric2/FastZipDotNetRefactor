@@ -402,7 +402,7 @@ namespace FastZipDotNet.Zip.Readers
 
                 while (FastZipDotNet.Pause) Thread.Sleep(50);
 
-                output = new FileStream(outPathFilename, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, FileOptions.SequentialScan);
+                output = new FileStream(outPathFilename, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete, 1 << 20, FileOptions.SequentialScan);
 
                 bool ok = ExtractFile(zfe, output, onBytes);
                 output.Close();

@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Data;
 
 namespace Brutal_Zip.Views
 {
@@ -28,7 +20,7 @@ namespace Brutal_Zip.Views
                 FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
             };
 
-            // CREATE: staging ListView also accepts drops
+            // CREATE: staging list drop
             lvStaging.AllowDrop = true;
             lvStaging.DragEnter += (s, e) =>
             {
@@ -40,10 +32,7 @@ namespace Brutal_Zip.Views
                 FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
             };
 
-
-
-
-            // EXTRACT: big drop zone (.zip)
+            // EXTRACT: .zip drop
             pnlExtractDrop.AllowDrop = true;
             pnlExtractDrop.DragEnter += (s, e) =>
             {
@@ -54,77 +43,112 @@ namespace Brutal_Zip.Views
                 var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
                 if (paths == null || paths.Length == 0) return;
 
-                var zips = paths.Where(p => string.Equals(Path.GetExtension(p), ".zip", StringComparison.OrdinalIgnoreCase)
-                                            && File.Exists(p)).ToList();
+                var zips = paths.Where(p => string.Equals(Path.GetExtension(p), ".zip", StringComparison.OrdinalIgnoreCase) && File.Exists(p))
+                                .ToList();
                 if (zips.Count == 0) return;
 
-                if (zips.Count == 1) { ZipDroppedForExtract?.Invoke(zips[0]); return; }
-
-                // Multiple: ask
-                var dlg = MessageBox.Show(this, $"Extract {zips.Count} archives?\n\nYes = each into its own folder\nNo = pick one destination for all",
-                                          "Batch extract", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-                if (dlg == DialogResult.Cancel) return;
-
-                BatchZipsDroppedForExtract?.Invoke(zips, dlg == DialogResult.Yes);
+                if (zips.Count == 1)
+                {
+                    ZipDroppedForExtract?.Invoke(zips[0]);
+                }
+                else
+                {
+                    // Ask user if they want separate folders (Yes) or single destination (No)
+                    var dlg = MessageBox.Show(this,
+                        $"Extract {zips.Count} archives?\n\nYes = each into its own folder\nNo = choose one destination for all",
+                        "Batch extract", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+                    if (dlg == DialogResult.Cancel) return;
+                    bool separate = (dlg == DialogResult.Yes);
+                    BatchZipsDroppedForExtract?.Invoke(zips, separate);
+                }
             };
 
-            // Context menu on staging list
+            // Context menu
             mnuStagingRemove.Click += (s, e) => StagingRemoveSelectedRequested?.Invoke();
-            mnuStagingClear.Click += (s, e) => StagingClearRequested?.Invoke();
             mnuStagingRemoveMissing.Click += (s, e) => StagingRemoveMissingRequested?.Invoke();
-            // Buttons raise events (kept from earlier)
-            btnCreateQuick.Click += (s, e) => QuickCreateClicked?.Invoke();
+            mnuStagingClear.Click += (s, e) => StagingClearRequested?.Invoke();
 
+            // Buttons
             btnCreateAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
             btnCreateAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();
             btnCreateBrowse.Click += (s, e) => BrowseCreateDestinationClicked?.Invoke();
             btnCreate.Click += (s, e) => CreateClicked?.Invoke();
+            btnCreateQuick.Click += (s, e) => QuickCreateClicked?.Invoke();
 
             btnOpenArchive.Click += (s, e) => OpenArchiveClicked?.Invoke();
             btnExtractBrowse.Click += (s, e) => BrowseExtractDestinationClicked?.Invoke();
             btnExtract.Click += (s, e) => ExtractClicked?.Invoke();
+
+            // Threads slider + Auto
+            tbThreads.ValueChanged += (s, e) =>
+            {
+                lblThreadsValue.Text = tbThreads.Value.ToString();
+                ThreadsSliderChanged?.Invoke(tbThreads.Value);
+            };
+            chkThreadsAutoMain.CheckedChanged += (s, e) =>
+            {
+                tbThreads.Enabled = !chkThreadsAutoMain.Checked;
+                ThreadsAutoChanged?.Invoke(chkThreadsAutoMain.Checked);
+            };
         }
 
-        public event Action StagingRemoveMissingRequested;
-    
-
-        public event Action<List<string>, bool> BatchZipsDroppedForExtract;
-
         // Events consumed by MainForm
-        public event Action QuickCreateClicked;
         public event Action<string[]> FilesDroppedForCreate;
         public event Action AddFilesClicked;
         public event Action AddFolderClicked;
         public event Action BrowseCreateDestinationClicked;
         public event Action CreateClicked;
+        public event Action QuickCreateClicked;
 
         public event Action OpenArchiveClicked;
         public event Action BrowseExtractDestinationClicked;
         public event Action ExtractClicked;
 
-        // The missing event MainForm expects
         public event Action<string> ZipDroppedForExtract;
+        public event Action<List<string>, bool> BatchZipsDroppedForExtract; // NEW
 
-        // Staging context menu actions
         public event Action StagingRemoveSelectedRequested;
+        public event Action StagingRemoveMissingRequested;                 // NEW
         public event Action StagingClearRequested;
+
+        public event Action<int> ThreadsSliderChanged;
+        public event Action<bool> ThreadsAutoChanged;
 
         // Accessors used by MainForm
         public ListView StagingListView => lvStaging;
 
         public void SetStagingInfo(string text) => lblCreateHint.Text = text;
 
-        private void HomeView_Load(object sender, EventArgs e)
-        {
-
-        }
-
         public string CreateDestination { get => txtCreateDest.Text; set => txtCreateDest.Text = value; }
         public int CreateMethodIndex { get => cmbCreateMethod.SelectedIndex; set => cmbCreateMethod.SelectedIndex = value; }
-        public int CreateLevel { get => (int)numCreateLevel.Value; set => numCreateLevel.Value = Math.Min(Math.Max(value, 0), 22); }
+        public int CreateLevel
+        {
+            get => (int)numCreateLevel.Value;
+            set
+            {
+                if (value < (int)numCreateLevel.Minimum) value = (int)numCreateLevel.Minimum;
+                if (value > (int)numCreateLevel.Maximum) value = (int)numCreateLevel.Maximum;
+                numCreateLevel.Value = value;
+            }
+        }
 
         public bool ExtractToArchiveName => rdoExtractToFolderName.Checked;
         public bool ExtractHere => rdoExtractHere.Checked;
         public string ExtractDestination { get => txtExtractDest.Text; set => txtExtractDest.Text = value; }
+
+        public void SetThreadSlider(int max, int value, bool auto)
+        {
+            if (max < 1) max = 1;
+            if (value < 1) value = 1;
+            if (value > max) value = max;
+
+            tbThreads.Minimum = 1;
+            tbThreads.Maximum = max;
+            tbThreads.Value = value;
+            lblThreadsValue.Text = value.ToString();
+
+            chkThreadsAutoMain.Checked = auto;
+            tbThreads.Enabled = !auto;
+        }
     }
 }

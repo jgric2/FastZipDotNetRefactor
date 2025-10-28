@@ -5,15 +5,39 @@ namespace BrutalZip
     public partial class ProgressForm : Form
     {
         private readonly System.Threading.CancellationTokenSource _cts;
+        private Action<int> _onThreadsChanged;
 
         public System.Threading.CancellationToken Token => _cts.Token;
 
         public ProgressForm(string title)
         {
             InitializeComponent();
+
+            tbThreads.ValueChanged += (s, e) =>
+            {
+                lblThreadsCur.Text = tbThreads.Value.ToString();
+                _onThreadsChanged?.Invoke(tbThreads.Value);
+            };
+
             _cts = new System.Threading.CancellationTokenSource();
 
             lblTitle.Text = title;
+        }
+
+
+        public void ConfigureThreads(int max, int current, Action<int> onChange)
+        {
+            if (max < 1) max = 1;
+            _onThreadsChanged = onChange;
+
+            lblThreads.Visible = true;
+            tbThreads.Visible = true;
+            lblThreadsCur.Visible = true;
+
+            tbThreads.Minimum = 1;
+            tbThreads.Maximum = max;
+            tbThreads.Value = Math.Max(1, Math.Min(current, max));
+            lblThreadsCur.Text = tbThreads.Value.ToString();
         }
 
         private void ToggleDetails()
@@ -81,6 +105,11 @@ namespace BrutalZip
         private void btnCancel_Click(object sender, EventArgs e)
         {
             _cts.Cancel();
+        }
+
+        private void ProgressForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

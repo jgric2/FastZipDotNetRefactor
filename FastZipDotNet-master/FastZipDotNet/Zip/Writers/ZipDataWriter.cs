@@ -1067,6 +1067,7 @@ long bufferThresholdBytes = DefaultBufferThreshold)
             }
             else
             {
+                //TODO: Optimize
                 // Small/medium file => WinAPI fast path to memory, then AddBuffer
                 byte[] inBuffer = new byte[fi.Length];
                 using var fs = new FileStream(pathFilename,

@@ -13,6 +13,10 @@ namespace BrutalZip
         private Button btnCancel;
         private Panel panelDetails;
         private TextBox txtLog;
+        private Label lblThreads;
+        internal TrackBar tbThreads;
+        internal Label lblThreadsCur;
+
 
         protected override void Dispose(bool disposing)
         {
@@ -30,7 +34,11 @@ namespace BrutalZip
             btnCancel = new Button();
             panelDetails = new Panel();
             txtLog = new TextBox();
+            lblThreads = new Label();
+            tbThreads = new TrackBar();
+            lblThreadsCur = new Label();
             panelDetails.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)tbThreads).BeginInit();
             SuspendLayout();
             // 
             // lblTitle
@@ -95,11 +103,44 @@ namespace BrutalZip
             txtLog.Size = new Size(616, 180);
             txtLog.TabIndex = 0;
             // 
+            // lblThreads
+            // 
+            lblThreads.Location = new Point(112, 115);
+            lblThreads.Name = "lblThreads";
+            lblThreads.Size = new Size(60, 20);
+            lblThreads.TabIndex = 0;
+            lblThreads.Text = "Threads:";
+            lblThreads.Visible = false;
+            // 
+            // tbThreads
+            // 
+            tbThreads.LargeChange = 1;
+            tbThreads.Location = new Point(176, 108);
+            tbThreads.Maximum = 4;
+            tbThreads.Minimum = 1;
+            tbThreads.Name = "tbThreads";
+            tbThreads.Size = new Size(260, 45);
+            tbThreads.TabIndex = 1;
+            tbThreads.Value = 1;
+            tbThreads.Visible = false;
+            // 
+            // lblThreadsCur
+            // 
+            lblThreadsCur.Location = new Point(444, 115);
+            lblThreadsCur.Name = "lblThreadsCur";
+            lblThreadsCur.Size = new Size(40, 20);
+            lblThreadsCur.TabIndex = 2;
+            lblThreadsCur.Text = "1";
+            lblThreadsCur.Visible = false;
+            // 
             // ProgressForm
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(640, 190);
+            Controls.Add(lblThreads);
+            Controls.Add(tbThreads);
+            Controls.Add(lblThreadsCur);
             Controls.Add(lblTitle);
             Controls.Add(progressOverall);
             Controls.Add(lblMetrics);
@@ -112,9 +153,12 @@ namespace BrutalZip
             Name = "ProgressForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "Progress";
+            Load += ProgressForm_Load;
             panelDetails.ResumeLayout(false);
             panelDetails.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)tbThreads).EndInit();
             ResumeLayout(false);
+            PerformLayout();
         }
     }
 }
