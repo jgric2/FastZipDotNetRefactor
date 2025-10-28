@@ -128,7 +128,7 @@ namespace TestWinForms
                     lblExtractInfo.Text = $"{Path.GetFileName(zipPath)} - {_zip.ZipFileEntries.Count} entries";
                 });
 
-                  
+
             }
             catch (Exception ex)
             {
@@ -484,7 +484,7 @@ namespace TestWinForms
             using var pf = new ProgressForm("Updating archive...");
             pf.Show(this);
             await Task.Run(() => _zip.Close());
-          //  pf.Close();
+            //  pf.Close();
             Invoke((MethodInvoker)delegate
             {
                 pf.Close();
@@ -569,12 +569,13 @@ namespace TestWinForms
                 NavigateTo(FindNodeByPath(_currentPath));
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Add files error"); }
-            finally {
+            finally
+            {
                 Invoke((MethodInvoker)delegate
                 {
                     pf.Close();
                 });
-                
+
             }
         }
 
@@ -1006,6 +1007,11 @@ namespace TestWinForms
         }
 
         private void tabCreate_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
         {
 
         }

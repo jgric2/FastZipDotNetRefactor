@@ -87,11 +87,11 @@
             mnuCreate_Clear = new ToolStripMenuItem();
             btnCreateAddFiles = new Button();
             btnCreateAddFolder = new Button();
+            lblMethod = new Label();
+            cmbMethod = new ComboBox();
             lblLevel = new Label();
             numLevel = new NumericUpDown();
             btnBuildArchive = new Button();
-            cmbMethod = new ComboBox();
-            lblMethod = new Label();
             tabControlMain.SuspendLayout();
             tabExtract.SuspendLayout();
             cmsExtract.SuspendLayout();
@@ -400,6 +400,23 @@
             btnCreateAddFolder.UseVisualStyleBackColor = true;
             btnCreateAddFolder.Click += btnCreateAddFolder_Click;
             // 
+            // lblMethod
+            // 
+            lblMethod.Location = new Point(503, 604);
+            lblMethod.Name = "lblMethod";
+            lblMethod.Size = new Size(60, 20);
+            lblMethod.TabIndex = 4;
+            lblMethod.Text = "Method:";
+            // 
+            // cmbMethod
+            // 
+            cmbMethod.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
+            cmbMethod.Location = new Point(569, 602);
+            cmbMethod.Name = "cmbMethod";
+            cmbMethod.Size = new Size(100, 23);
+            cmbMethod.TabIndex = 5;
+            // 
             // lblLevel
             // 
             lblLevel.Location = new Point(503, 634);
@@ -427,23 +444,6 @@
             btnBuildArchive.UseVisualStyleBackColor = true;
             btnBuildArchive.Click += btnBuildArchive_Click;
             // 
-            // cmbMethod
-            // 
-            cmbMethod.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
-            cmbMethod.Location = new Point(569, 602);
-            cmbMethod.Name = "cmbMethod";
-            cmbMethod.Size = new Size(100, 23);
-            cmbMethod.TabIndex = 5;
-            // 
-            // lblMethod
-            // 
-            lblMethod.Location = new Point(503, 604);
-            lblMethod.Name = "lblMethod";
-            lblMethod.Size = new Size(60, 20);
-            lblMethod.TabIndex = 4;
-            lblMethod.Text = "Method:";
-            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -452,6 +452,7 @@
             Controls.Add(tabControlMain);
             Name = "MainForm";
             Text = "ZipSpeed - Fast ZIP UI";
+            Load += MainForm_Load;
             tabControlMain.ResumeLayout(false);
             tabExtract.ResumeLayout(false);
             cmsExtract.ResumeLayout(false);

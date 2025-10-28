@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FastZipDotNet")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e023c00eb3504de2c1b1060508f0e34722a6fae3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+84ad241bbe111e33005d53be31c27209f51d3636")]
 [assembly: System.Reflection.AssemblyProductAttribute("FastZipDotNet")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FastZipDotNet")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

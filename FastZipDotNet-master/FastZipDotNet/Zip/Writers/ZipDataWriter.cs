@@ -21,17 +21,16 @@ namespace FastZipDotNet.Zip.Writers
         }
 
         FastZipDotNet FastZipDotNet;
-
         // Write a byte[] at an absolute file offset; report compressed progress by chunk
         private void WriteAt(byte[] data, long fileOffset, Action<long> onCompressedWrite)
         {
             using (var fs = new FileStream(
-            FastZipDotNet.ZipFileName,
-            FileMode.OpenOrCreate,
-            FileAccess.Write,
-            FileShare.ReadWrite,
-            Consts.ChunkSize,
-            FileOptions.SequentialScan))
+                FastZipDotNet.ZipFileName,
+                FileMode.OpenOrCreate,
+                FileAccess.Write,
+                FileShare.ReadWrite,
+                Consts.ChunkSize,
+                FileOptions.RandomAccess)) // changed to RandomAccess
             {
                 fs.Position = fileOffset;
 
@@ -47,7 +46,7 @@ namespace FastZipDotNet.Zip.Writers
                     Interlocked.Add(ref FastZipDotNet.BytesWritten, toWrite);
                     Interlocked.Add(ref FastZipDotNet.BytesPerSecond, toWrite);
 
-                    onCompressedWrite?.Invoke((long)toWrite);
+                    onCompressedWrite?.Invoke(toWrite);
                 }
                 fs.Flush();
             }
@@ -55,15 +54,17 @@ namespace FastZipDotNet.Zip.Writers
 
         // Reads from 'source' and writes to archive at destOffset.
         // Calls onUncompressedProgress and onCompressedWrite per chunk.
+        // Reads from 'source' and writes to archive at destOffset.
+        // Calls onUncompressedProgress and onCompressedWrite per chunk.
         private void WriteStreamAt(Stream source, long destOffset, Action<long> onUncompressedProgress, Action<long> onCompressedWrite)
         {
             using (var fs = new FileStream(
-            FastZipDotNet.ZipFileName,
-            FileMode.OpenOrCreate,
-            FileAccess.Write,
-            FileShare.ReadWrite,
-            Consts.ChunkSize,
-            FileOptions.SequentialScan))
+                FastZipDotNet.ZipFileName,
+                FileMode.OpenOrCreate,
+                FileAccess.Write,
+                FileShare.ReadWrite,
+                Consts.ChunkSize,
+                FileOptions.RandomAccess)) // changed to RandomAccess
             {
                 fs.Position = destOffset;
 
@@ -75,8 +76,8 @@ namespace FastZipDotNet.Zip.Writers
 
                     fs.Write(buffer, 0, read);
 
-                    onCompressedWrite?.Invoke((long)read);
-                    onUncompressedProgress?.Invoke((long)read);
+                    onCompressedWrite?.Invoke(read);
+                    onUncompressedProgress?.Invoke(read);
 
                     Interlocked.Add(ref FastZipDotNet.BytesWritten, read);
                     Interlocked.Add(ref FastZipDotNet.BytesPerSecond, read);
@@ -85,7 +86,6 @@ namespace FastZipDotNet.Zip.Writers
             }
         }
 
-   
         public static List<FileSystemInfo> GetFilesAndFoldersLevelByLevel(string rootDirectory)
         {
             var directoriesToProcess = new Queue<DirectoryInfo>();
@@ -173,8 +173,8 @@ namespace FastZipDotNet.Zip.Writers
             {
                 throw new Exception(ex.Message + "\r\nIn BrutalZip.AddFileInner");
             }
-            GC.WaitForPendingFinalizers();
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+          //  GC.WaitForPendingFinalizers();
+        //    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
             return compressedSize;
         }
 

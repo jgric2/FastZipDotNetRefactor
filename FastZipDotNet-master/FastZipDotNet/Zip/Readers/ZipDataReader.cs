@@ -375,45 +375,50 @@ namespace FastZipDotNet.Zip.Readers
         }
 
 
+        // Extract to path (reports uncompressed bytes via onBytes)
         public bool ExtractFile(ZipFileEntry zfe, string outPathFilename, Action<long> onBytes = null)
         {
             Stream output = null;
-
             try
             {
-                // Ensure the parent directory exists
-                string path = Path.GetDirectoryName(outPathFilename);
-                if (!string.IsNullOrEmpty(path) && !Directory.Exists(path))
-                    Directory.CreateDirectory(path);
+                // Ensure parent dir exists
+                string? dir = Path.GetDirectoryName(outPathFilename);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
 
-                // Check if it's a directory (entry might represent a folder)
+                // Directory entry? Create dir and return
                 if (zfe.FilenameInZip.EndsWith("/") || zfe.FilenameInZip.EndsWith("\\"))
+                {
+                    Directory.CreateDirectory(outPathFilename);
                     return true;
+                }
 
-                // Delete file if it already exists
+                // Replace existing file
                 if (File.Exists(outPathFilename))
                 {
                     try { File.Delete(outPathFilename); }
                     catch { throw new InvalidOperationException($"File '{outPathFilename}' cannot be written"); }
                 }
 
-                while (FastZipDotNet.Pause)
-                    Thread.Sleep(50);
+                while (FastZipDotNet.Pause) Thread.Sleep(50);
 
                 output = new FileStream(outPathFilename, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, FileOptions.SequentialScan);
 
-                // Use the stream-based overload that reports per-chunk progress
-                if (!ExtractFile(zfe, output, onBytes))
-                    return false;
-
-                // Close stream before touching times
+                bool ok = ExtractFile(zfe, output, onBytes);
                 output.Close();
 
-                // Set file date/time
-                File.SetCreationTime(outPathFilename, zfe.ModifyTime);
-                File.SetLastWriteTime(outPathFilename, zfe.ModifyTime);
+                // Set times if OK
+                if (ok)
+                {
+                    try
+                    {
+                        File.SetCreationTime(outPathFilename, zfe.ModifyTime);
+                        File.SetLastWriteTime(outPathFilename, zfe.ModifyTime);
+                    }
+                    catch { /* ignore */ }
+                }
 
-                return true;
+                return ok;
             }
             finally
             {
@@ -421,117 +426,123 @@ namespace FastZipDotNet.Zip.Readers
             }
         }
 
+        // Extract to an existing stream (reports uncompressed bytes via onBytes)
         public bool ExtractFile(ZipFileEntry zfe, Stream outStream, Action<long> onBytes = null)
         {
-            Stream zipStream = null;
+            if (outStream is null) throw new ArgumentNullException(nameof(outStream));
+            if (!outStream.CanWrite) throw new InvalidOperationException("Stream cannot be written");
 
+            FileStream? zipStream = null;
             try
             {
-                // Open a fresh read handle (no shared position)
-                zipStream = new FileStream(FastZipDotNet.ZipFileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1 << 20, FileOptions.SequentialScan);
-
-                if (!outStream.CanWrite)
-                    throw new InvalidOperationException("Stream cannot be written");
+                // Open a fresh handle, random access is better under concurrency
+                zipStream = new FileStream(
+                    FastZipDotNet.ZipFileName,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite,
+                    1 << 20,
+                    FileOptions.RandomAccess);
 
                 // Seek to local header
                 zipStream.Seek((long)zfe.HeaderOffset, SeekOrigin.Begin);
-                using (var br = new BinaryReader(zipStream, Encoding.Default, leaveOpen: true))
+                using var br = new BinaryReader(zipStream, Encoding.Default, leaveOpen: true);
+
+                uint signature = br.ReadUInt32();
+                if (signature != 0x04034b50) return false;
+
+                ushort versionNeeded = br.ReadUInt16();
+                ushort generalPurposeBitFlag = br.ReadUInt16();
+                ushort compressionMethod = br.ReadUInt16();
+                ushort lastModTime = br.ReadUInt16();
+                ushort lastModDate = br.ReadUInt16();
+                uint crc32Local = br.ReadUInt32();            // may be 0 if data descriptor present
+                uint compressedSizeLocal = br.ReadUInt32();   // may be 0xFFFFFFFF or 0 if data descriptor present
+                uint uncompressedSizeLocal = br.ReadUInt32(); // may be 0xFFFFFFFF or 0 if data descriptor present
+                ushort fileNameLength = br.ReadUInt16();
+                ushort extraFieldLength = br.ReadUInt16();
+
+                // Skip filename
+                if (fileNameLength > 0) br.ReadBytes(fileNameLength);
+
+                // Consume extra field, only for position advance; Zip64 parsing not needed for our strategy
+                if (extraFieldLength > 0) br.ReadBytes(extraFieldLength);
+
+                bool hasDataDescriptor = (generalPurposeBitFlag & 0x0008) != 0;
+
+                // Decide method; prefer header's method (should match zfe.Method)
+                Compression method = (Compression)compressionMethod;
+
+                uint crc32Calc = 0;
+                byte[] buffer = new byte[32768];
+
+                if (method == Compression.Store)
                 {
-                    uint signature = br.ReadUInt32();
-                    if (signature != 0x04034b50)
-                        return false;
+                    // Copy exact compressed bytes (equal to uncompressed bytes for Store).
+                    // If DD is used, local sizes are invalid/zero; use central directory size from zfe.
+                    long toCopy = (long)zfe.CompressedSize;
+                    if (toCopy < 0) toCopy = 0;
 
-                    ushort versionNeeded = br.ReadUInt16();
-                    ushort generalPurposeBitFlag = br.ReadUInt16();
-                    ushort compressionMethod = br.ReadUInt16();
-                    ushort lastModTime = br.ReadUInt16();
-                    ushort lastModDate = br.ReadUInt16();
-                    uint crc32 = br.ReadUInt32();
-                    uint compressedSize = br.ReadUInt32();
-                    uint uncompressedSize = br.ReadUInt32();
-                    ushort fileNameLength = br.ReadUInt16();
-                    ushort extraFieldLength = br.ReadUInt16();
-
-                    br.ReadBytes(fileNameLength); // Skip filename
-
-                    // Handle Zip64 sizes if needed
-                    ulong uncompressedSize64 = uncompressedSize;
-                    ulong compressedSize64 = compressedSize;
-
-                    if (compressedSize == 0xFFFFFFFF || uncompressedSize == 0xFFFFFFFF)
+                    while (toCopy > 0)
                     {
-                        byte[] extraField = br.ReadBytes(extraFieldLength);
-                        using var extraFieldStream = new MemoryStream(extraField);
-                        using var extraFieldReader = new BinaryReader(extraFieldStream);
-                        while (extraFieldStream.Position < extraFieldLength)
-                        {
-                            ushort headerId = extraFieldReader.ReadUInt16();
-                            ushort dataSize = extraFieldReader.ReadUInt16();
-                            if (headerId == 0x0001)
-                            {
-                                if (uncompressedSize == 0xFFFFFFFF)
-                                    uncompressedSize64 = extraFieldReader.ReadUInt64();
-                                if (compressedSize == 0xFFFFFFFF)
-                                    compressedSize64 = extraFieldReader.ReadUInt64();
-                                long remain = dataSize - (long)(extraFieldStream.Position - 4);
-                                if (remain > 0) extraFieldReader.BaseStream.Seek(remain, SeekOrigin.Current);
-                            }
-                            else
-                            {
-                                extraFieldReader.ReadBytes(dataSize);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        br.ReadBytes(extraFieldLength);
-                    }
+                        while (FastZipDotNet.Pause) Thread.Sleep(50);
 
-                    // Set up the input stream for file data
-                    Stream inputStream;
-                    if (compressionMethod == (ushort)Compression.Store)
-                        inputStream = zipStream;
-                    else if (compressionMethod == (ushort)Compression.Deflate)
-                        inputStream = new DeflateStream(zipStream, CompressionMode.Decompress, true);
-                    else if (compressionMethod == (ushort)Compression.Zstd)
-                        inputStream = new DecompressionStream(zipStream);
-                    else
-                        return false;
-
-                    uint crc32Calc = 0;
-                    byte[] buffer = new byte[32768];
-                    ulong bytesPending = uncompressedSize64;
-
-                    while (bytesPending > 0)
-                    {
-                        while (FastZipDotNet.Pause)
-                            Thread.Sleep(50);
-
-                        int bytesRead = inputStream.Read(buffer, 0, (int)Math.Min(bytesPending, (ulong)buffer.Length));
-                        if (bytesRead <= 0)
-                            break;
+                        int chunk = (int)Math.Min(buffer.Length, toCopy);
+                        int bytesRead = zipStream.Read(buffer, 0, chunk);
+                        if (bytesRead <= 0) break;
 
                         crc32Calc = Crc32Algorithm.Append(crc32Calc, buffer, 0, bytesRead);
-                        bytesPending -= (ulong)bytesRead;
-
                         outStream.Write(buffer, 0, bytesRead);
-
-                        // Report per-chunk progress to the aggregator
                         onBytes?.Invoke(bytesRead);
 
                         Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
                         Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
+
+                        toCopy -= bytesRead;
                     }
-
-                    Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
-                    Interlocked.Increment(ref FastZipDotNet.FilesWritten);
-                    outStream.Flush();
-
-                    if (compressionMethod == (ushort)Compression.Deflate || compressionMethod == (ushort)Compression.Zstd)
-                        inputStream.Dispose();
-
-                    return zfe.Crc32 == crc32Calc;
                 }
+                else if (method == Compression.Deflate || method == Compression.Zstd)
+                {
+                    // For compressed streams, read until decompressor reaches EOS
+                    Stream inputStream = method == Compression.Deflate
+                        ? new DeflateStream(zipStream, CompressionMode.Decompress, leaveOpen: true)
+                        : new DecompressionStream(zipStream);
+
+                    try
+                    {
+                        while (true)
+                        {
+                            while (FastZipDotNet.Pause) Thread.Sleep(50);
+
+                            int bytesRead = inputStream.Read(buffer, 0, buffer.Length);
+                            if (bytesRead <= 0) break;
+
+                            crc32Calc = Crc32Algorithm.Append(crc32Calc, buffer, 0, bytesRead);
+                            outStream.Write(buffer, 0, bytesRead);
+                            onBytes?.Invoke(bytesRead);
+
+                            Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
+                            Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
+                        }
+                    }
+                    finally
+                    {
+                        inputStream.Dispose();
+                    }
+                }
+                else
+                {
+                    // Unsupported compression method for this build
+                    return false;
+                }
+
+                Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+
+                outStream.Flush();
+
+                // Validate CRC (always compare with central dir CRC)
+                return zfe.Crc32 == crc32Calc;
             }
             finally
             {
@@ -539,112 +550,117 @@ namespace FastZipDotNet.Zip.Readers
             }
         }
 
+        // Keep this convenience overload for compatibility
+        public bool ExtractFile(ZipFileEntry zfe, string outPathFilename)
+            => ExtractFile(zfe, outPathFilename, onBytes: null);
+    
+
         /// <summary>
         /// Copy the contents of a stored file into a physical file
         /// </summary>
         /// <param name="zfe">Entry information of file to extract</param>
         /// <param name="outPathFilename">Name of file to store uncompressed data</param>
         /// <returns>True if success, false if not.</returns>
-        public bool ExtractFile(ZipFileEntry zfe, string outPathFilename)
-        {
-            Stream output = null;
+        //public bool ExtractFile(ZipFileEntry zfe, string outPathFilename)
+        //{
+        //    Stream output = null;
 
-            try
-            {
-                // Ensure the parent directory exists
-                string path = Path.GetDirectoryName(outPathFilename);
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
+        //    try
+        //    {
+        //        // Ensure the parent directory exists
+        //        string path = Path.GetDirectoryName(outPathFilename);
+        //        if (!Directory.Exists(path))
+        //        {
+        //            Directory.CreateDirectory(path);
+        //        }
 
-                // Check if it's a directory. If so, do nothing
-                if (Directory.Exists(outPathFilename))
-                {
-                    return true;
-                }
+        //        // Check if it's a directory. If so, do nothing
+        //        if (Directory.Exists(outPathFilename))
+        //        {
+        //            return true;
+        //        }
 
-                // Delete file if it already exists
-                if (File.Exists(outPathFilename))
-                {
-                    try
-                    {
-                        File.Delete(outPathFilename);
-                    }
-                    catch
-                    {
-                        throw new InvalidOperationException("File '" + outPathFilename + "' cannot be written");
-                    }
-                }
+        //        // Delete file if it already exists
+        //        if (File.Exists(outPathFilename))
+        //        {
+        //            try
+        //            {
+        //                File.Delete(outPathFilename);
+        //            }
+        //            catch
+        //            {
+        //                throw new InvalidOperationException("File '" + outPathFilename + "' cannot be written");
+        //            }
+        //        }
 
-                while (FastZipDotNet.Pause)
-                {
-                    Thread.Sleep(50);
-                }
+        //        while (FastZipDotNet.Pause)
+        //        {
+        //            Thread.Sleep(50);
+        //        }
 
 
-                while (IOHelpers.IsFileLocked(outPathFilename))
-                {
-                    Thread.Sleep(5);
-                }
-                try
-                {
-                    output = new FileStream(outPathFilename, FileMode.Create, FileAccess.Write);
-                }
-                catch
-                {
-                    for (int i = 0; i < 32; i++)
-                    {
-                        while (IOHelpers.IsFileLocked(outPathFilename))
-                        {
-                            Thread.Sleep(5);
-                           // Application.DoEvents();
-                        }
-                        try
-                        {
+        //        while (IOHelpers.IsFileLocked(outPathFilename))
+        //        {
+        //            Thread.Sleep(5);
+        //        }
+        //        try
+        //        {
+        //            output = new FileStream(outPathFilename, FileMode.Create, FileAccess.Write);
+        //        }
+        //        catch
+        //        {
+        //            for (int i = 0; i < 32; i++)
+        //            {
+        //                while (IOHelpers.IsFileLocked(outPathFilename))
+        //                {
+        //                    Thread.Sleep(5);
+        //                   // Application.DoEvents();
+        //                }
+        //                try
+        //                {
 
-                            Thread.Sleep(100);
-                            output = new FileStream(outPathFilename, FileMode.Create, FileAccess.Write);
-                            break;
-                        }
-                        catch
-                        {
+        //                    Thread.Sleep(100);
+        //                    output = new FileStream(outPathFilename, FileMode.Create, FileAccess.Write);
+        //                    break;
+        //                }
+        //                catch
+        //                {
 
-                        }
-                    }
+        //                }
+        //            }
 
-                }
+        //        }
 
-                // lock (lockObj)
-                if (!ExtractFile(zfe, output))
-                {
-                    return false;
-                }
+        //        // lock (lockObj)
+        //        if (!ExtractFile(zfe, output))
+        //        {
+        //            return false;
+        //        }
 
-                // Change file datetimes
-                output.Close();
-                while (IOHelpers.IsFileLocked(outPathFilename))
-                {
-                    Thread.Sleep(5);
-                }
-                File.SetCreationTime(outPathFilename, zfe.ModifyTime);
-                File.SetLastWriteTime(outPathFilename, zfe.ModifyTime);
+        //        // Change file datetimes
+        //        output.Close();
+        //        while (IOHelpers.IsFileLocked(outPathFilename))
+        //        {
+        //            Thread.Sleep(5);
+        //        }
+        //        File.SetCreationTime(outPathFilename, zfe.ModifyTime);
+        //        File.SetLastWriteTime(outPathFilename, zfe.ModifyTime);
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message + "\r\nIn BrutalUnZip.ExtractFile");
-            }
-            finally
-            {
-                if (output != null)
-                {
-                    output.Close();
-                    output.Dispose();
-                }
-            }
-        }
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new Exception(ex.Message + "\r\nIn BrutalUnZip.ExtractFile");
+        //    }
+        //    finally
+        //    {
+        //        if (output != null)
+        //        {
+        //            output.Close();
+        //            output.Dispose();
+        //        }
+        //    }
+        //}
 
      
         public bool ExtractFile(ZipFileEntry zfe, Stream outStream)
