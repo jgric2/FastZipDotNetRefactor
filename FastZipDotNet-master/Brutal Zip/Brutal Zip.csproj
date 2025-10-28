@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="GroBuf" Version="1.9.2" />
+    <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>

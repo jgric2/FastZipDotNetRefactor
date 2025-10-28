@@ -51,257 +51,367 @@ namespace Brutal_Zip.Views
 
         private void InitializeComponent()
         {
-            this.components = new Container();
-            this.grpCreate = new GroupBox();
-            this.pnlCreateDrop = new Panel();
-            this.lblCreateDrop = new Label();
-            this.btnCreateAddFiles = new Button();
-            this.btnCreateAddFolder = new Button();
-            this.lblCreateDest = new Label();
-            this.txtCreateDest = new TextBox();
-            this.btnCreateBrowse = new Button();
-            this.lblCreateMethod = new Label();
-            this.cmbCreateMethod = new ComboBox();
-            this.lblCreateLevel = new Label();
-            this.numCreateLevel = new NumericUpDown();
-            this.btnCreate = new Button();
-            this.lvStaging = new ListView();
-            this.colStName = new ColumnHeader();
-            this.colStType = new ColumnHeader();
-            this.colStSize = new ColumnHeader();
-            this.colStItems = new ColumnHeader();
-            this.colStPath = new ColumnHeader();
-            this.cmsStaging = new ContextMenuStrip(this.components);
-            this.mnuStagingRemove = new ToolStripMenuItem();
-            this.mnuStagingClear = new ToolStripMenuItem();
-            this.lblCreateHint = new Label();
-
-            this.grpExtract = new GroupBox();
-            this.pnlExtractDrop = new Panel();
-            this.lblExtractDrop = new Label();
-            this.btnOpenArchive = new Button();
-            this.rdoExtractToFolderName = new RadioButton();
-            this.rdoExtractHere = new RadioButton();
-            this.lblExtractDest = new Label();
-            this.txtExtractDest = new TextBox();
-            this.btnExtractBrowse = new Button();
-            this.btnExtract = new Button();
-
-            ((ISupportInitialize)(this.numCreateLevel)).BeginInit();
-            this.grpCreate.SuspendLayout();
-            this.pnlCreateDrop.SuspendLayout();
-            this.cmsStaging.SuspendLayout();
-            this.grpExtract.SuspendLayout();
-            this.pnlExtractDrop.SuspendLayout();
-            this.SuspendLayout();
-
-            // HomeView
-            this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.Name = "HomeView";
-            this.Size = new Size(1000, 700);
-
+            components = new Container();
+            grpCreate = new GroupBox();
+            btnCreateQuick = new Button();
+            pnlCreateDrop = new Panel();
+            lblCreateDrop = new Label();
+            btnCreateAddFiles = new Button();
+            btnCreateAddFolder = new Button();
+            lblCreateDest = new Label();
+            txtCreateDest = new TextBox();
+            btnCreateBrowse = new Button();
+            lblCreateMethod = new Label();
+            cmbCreateMethod = new ComboBox();
+            lblCreateLevel = new Label();
+            numCreateLevel = new NumericUpDown();
+            btnCreate = new Button();
+            lvStaging = new ListView();
+            colStName = new ColumnHeader();
+            colStType = new ColumnHeader();
+            colStSize = new ColumnHeader();
+            colStItems = new ColumnHeader();
+            colStPath = new ColumnHeader();
+            cmsStaging = new ContextMenuStrip(components);
+            mnuStagingRemove = new ToolStripMenuItem();
+            mnuStagingClear = new ToolStripMenuItem();
+            lblCreateHint = new Label();
+            grpExtract = new GroupBox();
+            pnlExtractDrop = new Panel();
+            lblExtractDrop = new Label();
+            btnOpenArchive = new Button();
+            rdoExtractToFolderName = new RadioButton();
+            rdoExtractHere = new RadioButton();
+            lblExtractDest = new Label();
+            txtExtractDest = new TextBox();
+            btnExtractBrowse = new Button();
+            btnExtract = new Button();
+            mnuStagingRemoveMissing = new ToolStripMenuItem();
+            grpCreate.SuspendLayout();
+            pnlCreateDrop.SuspendLayout();
+            ((ISupportInitialize)numCreateLevel).BeginInit();
+            cmsStaging.SuspendLayout();
+            grpExtract.SuspendLayout();
+            pnlExtractDrop.SuspendLayout();
+            SuspendLayout();
+            // 
             // grpCreate
-            this.grpCreate.Text = "Create";
-            this.grpCreate.Location = new Point(20, 20);
-            this.grpCreate.Size = new Size(450, 560);
-
+            // 
+            grpCreate.Controls.Add(btnCreateQuick);
+            grpCreate.Controls.Add(pnlCreateDrop);
+            grpCreate.Controls.Add(btnCreateAddFiles);
+            grpCreate.Controls.Add(btnCreateAddFolder);
+            grpCreate.Controls.Add(lblCreateDest);
+            grpCreate.Controls.Add(txtCreateDest);
+            grpCreate.Controls.Add(btnCreateBrowse);
+            grpCreate.Controls.Add(lblCreateMethod);
+            grpCreate.Controls.Add(cmbCreateMethod);
+            grpCreate.Controls.Add(lblCreateLevel);
+            grpCreate.Controls.Add(numCreateLevel);
+            grpCreate.Controls.Add(btnCreate);
+            grpCreate.Controls.Add(lvStaging);
+            grpCreate.Controls.Add(lblCreateHint);
+            grpCreate.Location = new Point(20, 20);
+            grpCreate.Name = "grpCreate";
+            grpCreate.Size = new Size(450, 560);
+            grpCreate.TabIndex = 1;
+            grpCreate.TabStop = false;
+            grpCreate.Text = "Create";
+            // 
+            // btnCreateQuick
+            // 
+            btnCreateQuick.Location = new Point(126, 368);
+            btnCreateQuick.Name = "btnCreateQuick";
+            btnCreateQuick.Size = new Size(160, 28);
+            btnCreateQuick.TabIndex = 13;
+            btnCreateQuick.Text = "Compress to <auto>";
+            // 
             // pnlCreateDrop
-            this.pnlCreateDrop.BorderStyle = BorderStyle.FixedSingle;
-            this.pnlCreateDrop.BackColor = Color.WhiteSmoke;
-            this.pnlCreateDrop.Location = new Point(20, 30);
-            this.pnlCreateDrop.Size = new Size(410, 200);
-
+            // 
+            pnlCreateDrop.BackColor = Color.WhiteSmoke;
+            pnlCreateDrop.BorderStyle = BorderStyle.FixedSingle;
+            pnlCreateDrop.Controls.Add(lblCreateDrop);
+            pnlCreateDrop.Location = new Point(20, 30);
+            pnlCreateDrop.Name = "pnlCreateDrop";
+            pnlCreateDrop.Size = new Size(410, 200);
+            pnlCreateDrop.TabIndex = 0;
+            // 
             // lblCreateDrop
-            this.lblCreateDrop.Dock = DockStyle.Fill;
-            this.lblCreateDrop.TextAlign = ContentAlignment.MiddleCenter;
-            this.lblCreateDrop.Text = "Drop files/folders here to create a ZIP";
-            this.pnlCreateDrop.Controls.Add(this.lblCreateDrop);
-
+            // 
+            lblCreateDrop.Dock = DockStyle.Fill;
+            lblCreateDrop.Location = new Point(0, 0);
+            lblCreateDrop.Name = "lblCreateDrop";
+            lblCreateDrop.Size = new Size(408, 198);
+            lblCreateDrop.TabIndex = 0;
+            lblCreateDrop.Text = "Drop files/folders here to create a ZIP";
+            lblCreateDrop.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // btnCreateAddFiles
-            this.btnCreateAddFiles.Text = "Add files…";
-            this.btnCreateAddFiles.Location = new Point(20, 240);
-            this.btnCreateAddFiles.Size = new Size(110, 28);
-
+            // 
+            btnCreateAddFiles.Location = new Point(20, 240);
+            btnCreateAddFiles.Name = "btnCreateAddFiles";
+            btnCreateAddFiles.Size = new Size(110, 28);
+            btnCreateAddFiles.TabIndex = 1;
+            btnCreateAddFiles.Text = "Add files…";
+            // 
             // btnCreateAddFolder
-            this.btnCreateAddFolder.Text = "Add folder…";
-            this.btnCreateAddFolder.Location = new Point(140, 240);
-            this.btnCreateAddFolder.Size = new Size(110, 28);
-
+            // 
+            btnCreateAddFolder.Location = new Point(140, 240);
+            btnCreateAddFolder.Name = "btnCreateAddFolder";
+            btnCreateAddFolder.Size = new Size(110, 28);
+            btnCreateAddFolder.TabIndex = 2;
+            btnCreateAddFolder.Text = "Add folder…";
+            // 
             // lblCreateDest
-            this.lblCreateDest.Text = "Destination:";
-            this.lblCreateDest.Location = new Point(20, 280);
-            this.lblCreateDest.Size = new Size(80, 20);
-
+            // 
+            lblCreateDest.Location = new Point(20, 280);
+            lblCreateDest.Name = "lblCreateDest";
+            lblCreateDest.Size = new Size(80, 20);
+            lblCreateDest.TabIndex = 3;
+            lblCreateDest.Text = "Destination:";
+            // 
             // txtCreateDest
-            this.txtCreateDest.Location = new Point(20, 300);
-            this.txtCreateDest.Size = new Size(330, 23);
-
+            // 
+            txtCreateDest.Location = new Point(20, 300);
+            txtCreateDest.Name = "txtCreateDest";
+            txtCreateDest.Size = new Size(330, 23);
+            txtCreateDest.TabIndex = 4;
+            // 
             // btnCreateBrowse
-            this.btnCreateBrowse.Text = "Browse…";
-            this.btnCreateBrowse.Location = new Point(360, 298);
-            this.btnCreateBrowse.Size = new Size(70, 26);
-
+            // 
+            btnCreateBrowse.Location = new Point(360, 298);
+            btnCreateBrowse.Name = "btnCreateBrowse";
+            btnCreateBrowse.Size = new Size(70, 26);
+            btnCreateBrowse.TabIndex = 5;
+            btnCreateBrowse.Text = "Browse…";
+            // 
             // lblCreateMethod
-            this.lblCreateMethod.Text = "Method:";
-            this.lblCreateMethod.Location = new Point(20, 340);
-            this.lblCreateMethod.Size = new Size(60, 20);
-
+            // 
+            lblCreateMethod.Location = new Point(20, 340);
+            lblCreateMethod.Name = "lblCreateMethod";
+            lblCreateMethod.Size = new Size(60, 20);
+            lblCreateMethod.TabIndex = 6;
+            lblCreateMethod.Text = "Method:";
+            // 
             // cmbCreateMethod
-            this.cmbCreateMethod.DropDownStyle = ComboBoxStyle.DropDownList;
-            this.cmbCreateMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
-            this.cmbCreateMethod.Location = new Point(80, 336);
-            this.cmbCreateMethod.Size = new Size(110, 23);
-
+            // 
+            cmbCreateMethod.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCreateMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
+            cmbCreateMethod.Location = new Point(80, 336);
+            cmbCreateMethod.Name = "cmbCreateMethod";
+            cmbCreateMethod.Size = new Size(110, 23);
+            cmbCreateMethod.TabIndex = 7;
+            // 
             // lblCreateLevel
-            this.lblCreateLevel.Text = "Level:";
-            this.lblCreateLevel.Location = new Point(210, 340);
-            this.lblCreateLevel.Size = new Size(40, 20);
-
+            // 
+            lblCreateLevel.Location = new Point(210, 340);
+            lblCreateLevel.Name = "lblCreateLevel";
+            lblCreateLevel.Size = new Size(40, 20);
+            lblCreateLevel.TabIndex = 8;
+            lblCreateLevel.Text = "Level:";
+            // 
             // numCreateLevel
-            this.numCreateLevel.Location = new Point(260, 336);
-            this.numCreateLevel.Size = new Size(60, 23);
-            this.numCreateLevel.Minimum = 0;
-            this.numCreateLevel.Maximum = 22;
-            this.numCreateLevel.Value = 6;
-
+            // 
+            numCreateLevel.Location = new Point(260, 336);
+            numCreateLevel.Maximum = new decimal(new int[] { 22, 0, 0, 0 });
+            numCreateLevel.Name = "numCreateLevel";
+            numCreateLevel.Size = new Size(60, 23);
+            numCreateLevel.TabIndex = 9;
+            numCreateLevel.Value = new decimal(new int[] { 6, 0, 0, 0 });
+            // 
             // btnCreate
-            this.btnCreate.Text = "Create";
-            this.btnCreate.Location = new Point(20, 368);
-            this.btnCreate.Size = new Size(100, 28);
-
-            // cmsStaging
-            this.cmsStaging.Items.AddRange(new ToolStripItem[] {
-            this.mnuStagingRemove,
-            this.mnuStagingClear
-        });
-
-            // mnuStagingRemove
-            this.mnuStagingRemove.Text = "Remove selected";
-
-            // mnuStagingClear
-            this.mnuStagingClear.Text = "Clear all";
-
+            // 
+            btnCreate.Location = new Point(20, 368);
+            btnCreate.Name = "btnCreate";
+            btnCreate.Size = new Size(100, 28);
+            btnCreate.TabIndex = 10;
+            btnCreate.Text = "Create";
+            // 
             // lvStaging
-            this.lvStaging.Location = new Point(20, 402);
-            this.lvStaging.Size = new Size(410, 120);
-            this.lvStaging.View = View.Details;
-            this.lvStaging.FullRowSelect = true;
-            this.lvStaging.HideSelection = false;
-            this.lvStaging.ContextMenuStrip = this.cmsStaging;
-
-            this.colStName.Text = "Name";
-            this.colStName.Width = 150;
-            this.colStType.Text = "Type";
-            this.colStType.Width = 70;
-            this.colStSize.Text = "Size";
-            this.colStSize.Width = 80;
-            this.colStSize.TextAlign = HorizontalAlignment.Right;
-            this.colStItems.Text = "Items";
-            this.colStItems.Width = 60;
-            this.colStItems.TextAlign = HorizontalAlignment.Right;
-            this.colStPath.Text = "Path";
-            this.colStPath.Width = 300;
-
-            this.lvStaging.Columns.AddRange(new ColumnHeader[] {
-            this.colStName, this.colStType, this.colStSize, this.colStItems, this.colStPath
-        });
-
+            // 
+            lvStaging.Columns.AddRange(new ColumnHeader[] { colStName, colStType, colStSize, colStItems, colStPath });
+            lvStaging.ContextMenuStrip = cmsStaging;
+            lvStaging.FullRowSelect = true;
+            lvStaging.Location = new Point(20, 402);
+            lvStaging.Name = "lvStaging";
+            lvStaging.Size = new Size(410, 120);
+            lvStaging.TabIndex = 11;
+            lvStaging.UseCompatibleStateImageBehavior = false;
+            lvStaging.View = View.Details;
+            // 
+            // colStName
+            // 
+            colStName.Text = "Name";
+            colStName.Width = 150;
+            // 
+            // colStType
+            // 
+            colStType.Text = "Type";
+            colStType.Width = 70;
+            // 
+            // colStSize
+            // 
+            colStSize.Text = "Size";
+            colStSize.TextAlign = HorizontalAlignment.Right;
+            colStSize.Width = 80;
+            // 
+            // colStItems
+            // 
+            colStItems.Text = "Items";
+            colStItems.TextAlign = HorizontalAlignment.Right;
+            // 
+            // colStPath
+            // 
+            colStPath.Text = "Path";
+            colStPath.Width = 300;
+            // 
+            // cmsStaging
+            // 
+            cmsStaging.Items.AddRange(new ToolStripItem[] { mnuStagingRemove, mnuStagingClear, mnuStagingRemoveMissing });
+            cmsStaging.Name = "cmsStaging";
+            cmsStaging.Size = new Size(164, 70);
+            // 
+            // mnuStagingRemove
+            // 
+            mnuStagingRemove.Name = "mnuStagingRemove";
+            mnuStagingRemove.Size = new Size(163, 22);
+            mnuStagingRemove.Text = "Remove selected";
+            // 
+            // mnuStagingClear
+            // 
+            mnuStagingClear.Name = "mnuStagingClear";
+            mnuStagingClear.Size = new Size(163, 22);
+            mnuStagingClear.Text = "Clear all";
+            // 
             // lblCreateHint
-            this.lblCreateHint.Text = "Staging: none";
-            this.lblCreateHint.Location = new Point(20, 528);
-            this.lblCreateHint.Size = new Size(410, 20);
-            this.lblCreateHint.AutoEllipsis = true;
-
-            // Add controls to grpCreate
-            this.grpCreate.Controls.Add(this.pnlCreateDrop);
-            this.grpCreate.Controls.Add(this.btnCreateAddFiles);
-            this.grpCreate.Controls.Add(this.btnCreateAddFolder);
-            this.grpCreate.Controls.Add(this.lblCreateDest);
-            this.grpCreate.Controls.Add(this.txtCreateDest);
-            this.grpCreate.Controls.Add(this.btnCreateBrowse);
-            this.grpCreate.Controls.Add(this.lblCreateMethod);
-            this.grpCreate.Controls.Add(this.cmbCreateMethod);
-            this.grpCreate.Controls.Add(this.lblCreateLevel);
-            this.grpCreate.Controls.Add(this.numCreateLevel);
-            this.grpCreate.Controls.Add(this.btnCreate);
-            this.grpCreate.Controls.Add(this.lvStaging);
-            this.grpCreate.Controls.Add(this.lblCreateHint);
-
+            // 
+            lblCreateHint.AutoEllipsis = true;
+            lblCreateHint.Location = new Point(20, 528);
+            lblCreateHint.Name = "lblCreateHint";
+            lblCreateHint.Size = new Size(410, 20);
+            lblCreateHint.TabIndex = 12;
+            lblCreateHint.Text = "Staging: none";
+            // 
             // grpExtract
-            this.grpExtract.Text = "Extract";
-            this.grpExtract.Location = new Point(500, 20);
-            this.grpExtract.Size = new Size(450, 560);
-
+            // 
+            grpExtract.Controls.Add(pnlExtractDrop);
+            grpExtract.Controls.Add(btnOpenArchive);
+            grpExtract.Controls.Add(rdoExtractToFolderName);
+            grpExtract.Controls.Add(rdoExtractHere);
+            grpExtract.Controls.Add(lblExtractDest);
+            grpExtract.Controls.Add(txtExtractDest);
+            grpExtract.Controls.Add(btnExtractBrowse);
+            grpExtract.Controls.Add(btnExtract);
+            grpExtract.Location = new Point(500, 20);
+            grpExtract.Name = "grpExtract";
+            grpExtract.Size = new Size(450, 560);
+            grpExtract.TabIndex = 2;
+            grpExtract.TabStop = false;
+            grpExtract.Text = "Extract";
+            // 
             // pnlExtractDrop
-            this.pnlExtractDrop.BorderStyle = BorderStyle.FixedSingle;
-            this.pnlExtractDrop.BackColor = Color.WhiteSmoke;
-            this.pnlExtractDrop.Location = new Point(20, 30);
-            this.pnlExtractDrop.Size = new Size(410, 200);
-
+            // 
+            pnlExtractDrop.BackColor = Color.WhiteSmoke;
+            pnlExtractDrop.BorderStyle = BorderStyle.FixedSingle;
+            pnlExtractDrop.Controls.Add(lblExtractDrop);
+            pnlExtractDrop.Location = new Point(20, 30);
+            pnlExtractDrop.Name = "pnlExtractDrop";
+            pnlExtractDrop.Size = new Size(410, 200);
+            pnlExtractDrop.TabIndex = 0;
+            // 
             // lblExtractDrop
-            this.lblExtractDrop.Dock = DockStyle.Fill;
-            this.lblExtractDrop.TextAlign = ContentAlignment.MiddleCenter;
-            this.lblExtractDrop.Text = "Drop .zip files here to extract or open";
-            this.pnlExtractDrop.Controls.Add(this.lblExtractDrop);
-
+            // 
+            lblExtractDrop.Dock = DockStyle.Fill;
+            lblExtractDrop.Location = new Point(0, 0);
+            lblExtractDrop.Name = "lblExtractDrop";
+            lblExtractDrop.Size = new Size(408, 198);
+            lblExtractDrop.TabIndex = 0;
+            lblExtractDrop.Text = "Drop .zip files here to extract or open";
+            lblExtractDrop.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // btnOpenArchive
-            this.btnOpenArchive.Text = "Open archive…";
-            this.btnOpenArchive.Location = new Point(20, 240);
-            this.btnOpenArchive.Size = new Size(110, 28);
-
+            // 
+            btnOpenArchive.Location = new Point(20, 240);
+            btnOpenArchive.Name = "btnOpenArchive";
+            btnOpenArchive.Size = new Size(110, 28);
+            btnOpenArchive.TabIndex = 1;
+            btnOpenArchive.Text = "Open archive…";
+            // 
             // rdoExtractToFolderName
-            this.rdoExtractToFolderName.Text = "Extract to “ArchiveName/”";
-            this.rdoExtractToFolderName.Location = new Point(20, 280);
-            this.rdoExtractToFolderName.Size = new Size(250, 20);
-            this.rdoExtractToFolderName.Checked = true;
-
+            // 
+            rdoExtractToFolderName.Checked = true;
+            rdoExtractToFolderName.Location = new Point(20, 280);
+            rdoExtractToFolderName.Name = "rdoExtractToFolderName";
+            rdoExtractToFolderName.Size = new Size(250, 20);
+            rdoExtractToFolderName.TabIndex = 2;
+            rdoExtractToFolderName.TabStop = true;
+            rdoExtractToFolderName.Text = "Extract to “ArchiveName/”";
+            // 
             // rdoExtractHere
-            this.rdoExtractHere.Text = "Extract here";
-            this.rdoExtractHere.Location = new Point(20, 305);
-            this.rdoExtractHere.Size = new Size(250, 20);
-
+            // 
+            rdoExtractHere.Location = new Point(20, 305);
+            rdoExtractHere.Name = "rdoExtractHere";
+            rdoExtractHere.Size = new Size(250, 20);
+            rdoExtractHere.TabIndex = 3;
+            rdoExtractHere.Text = "Extract here";
+            // 
             // lblExtractDest
-            this.lblExtractDest.Text = "Destination:";
-            this.lblExtractDest.Location = new Point(20, 340);
-            this.lblExtractDest.Size = new Size(80, 20);
-
+            // 
+            lblExtractDest.Location = new Point(20, 340);
+            lblExtractDest.Name = "lblExtractDest";
+            lblExtractDest.Size = new Size(80, 20);
+            lblExtractDest.TabIndex = 4;
+            lblExtractDest.Text = "Destination:";
+            // 
             // txtExtractDest
-            this.txtExtractDest.Location = new Point(20, 360);
-            this.txtExtractDest.Size = new Size(330, 23);
-
+            // 
+            txtExtractDest.Location = new Point(20, 360);
+            txtExtractDest.Name = "txtExtractDest";
+            txtExtractDest.Size = new Size(330, 23);
+            txtExtractDest.TabIndex = 5;
+            // 
             // btnExtractBrowse
-            this.btnExtractBrowse.Text = "Browse…";
-            this.btnExtractBrowse.Location = new Point(360, 358);
-            this.btnExtractBrowse.Size = new Size(70, 26);
-
+            // 
+            btnExtractBrowse.Location = new Point(360, 358);
+            btnExtractBrowse.Name = "btnExtractBrowse";
+            btnExtractBrowse.Size = new Size(70, 26);
+            btnExtractBrowse.TabIndex = 6;
+            btnExtractBrowse.Text = "Browse…";
+            // 
             // btnExtract
-            this.btnExtract.Text = "Extract";
-            this.btnExtract.Location = new Point(20, 400);
-            this.btnExtract.Size = new Size(100, 28);
-
-            // Add controls to grpExtract
-            this.grpExtract.Controls.Add(this.pnlExtractDrop);
-            this.grpExtract.Controls.Add(this.btnOpenArchive);
-            this.grpExtract.Controls.Add(this.rdoExtractToFolderName);
-            this.grpExtract.Controls.Add(this.rdoExtractHere);
-            this.grpExtract.Controls.Add(this.lblExtractDest);
-            this.grpExtract.Controls.Add(this.txtExtractDest);
-            this.grpExtract.Controls.Add(this.btnExtractBrowse);
-            this.grpExtract.Controls.Add(this.btnExtract);
-
-            // Add groups to HomeView
-            this.Controls.Add(this.grpCreate);
-            this.Controls.Add(this.grpExtract);
-
-            this.pnlCreateDrop.ResumeLayout(false);
-            this.grpCreate.ResumeLayout(false);
-            this.grpCreate.PerformLayout();
-            this.cmsStaging.ResumeLayout(false);
-            this.pnlExtractDrop.ResumeLayout(false);
-            this.grpExtract.ResumeLayout(false);
-            this.grpExtract.PerformLayout();
-            ((ISupportInitialize)(this.numCreateLevel)).EndInit();
-            this.ResumeLayout(false);
+            // 
+            btnExtract.Location = new Point(20, 400);
+            btnExtract.Name = "btnExtract";
+            btnExtract.Size = new Size(100, 28);
+            btnExtract.TabIndex = 7;
+            btnExtract.Text = "Extract";
+            // 
+            // mnuStagingRemoveMissing
+            // 
+            mnuStagingRemoveMissing.Name = "mnuStagingRemoveMissing";
+            mnuStagingRemoveMissing.Size = new Size(163, 22);
+            mnuStagingRemoveMissing.Text = "Remove missing";
+            // 
+            // HomeView
+            // 
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            Controls.Add(grpCreate);
+            Controls.Add(grpExtract);
+            Name = "HomeView";
+            Size = new Size(1000, 700);
+            Load += HomeView_Load;
+            grpCreate.ResumeLayout(false);
+            grpCreate.PerformLayout();
+            pnlCreateDrop.ResumeLayout(false);
+            ((ISupportInitialize)numCreateLevel).EndInit();
+            cmsStaging.ResumeLayout(false);
+            grpExtract.ResumeLayout(false);
+            grpExtract.PerformLayout();
+            pnlExtractDrop.ResumeLayout(false);
+            ResumeLayout(false);
         }
+        internal Button btnCreateQuick;
+        private ToolStripMenuItem mnuStagingRemoveMissing;
     }
 }

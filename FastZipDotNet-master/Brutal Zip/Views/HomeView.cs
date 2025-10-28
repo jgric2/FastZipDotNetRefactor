@@ -40,6 +40,9 @@ namespace Brutal_Zip.Views
                 FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
             };
 
+
+
+
             // EXTRACT: big drop zone (.zip)
             pnlExtractDrop.AllowDrop = true;
             pnlExtractDrop.DragEnter += (s, e) =>
@@ -51,18 +54,27 @@ namespace Brutal_Zip.Views
                 var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
                 if (paths == null || paths.Length == 0) return;
 
-                var zip = paths.FirstOrDefault(p =>
-                    string.Equals(Path.GetExtension(p), ".zip", StringComparison.OrdinalIgnoreCase));
+                var zips = paths.Where(p => string.Equals(Path.GetExtension(p), ".zip", StringComparison.OrdinalIgnoreCase)
+                                            && File.Exists(p)).ToList();
+                if (zips.Count == 0) return;
 
-                if (!string.IsNullOrEmpty(zip) && File.Exists(zip))
-                    ZipDroppedForExtract?.Invoke(zip);
+                if (zips.Count == 1) { ZipDroppedForExtract?.Invoke(zips[0]); return; }
+
+                // Multiple: ask
+                var dlg = MessageBox.Show(this, $"Extract {zips.Count} archives?\n\nYes = each into its own folder\nNo = pick one destination for all",
+                                          "Batch extract", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+                if (dlg == DialogResult.Cancel) return;
+
+                BatchZipsDroppedForExtract?.Invoke(zips, dlg == DialogResult.Yes);
             };
 
             // Context menu on staging list
             mnuStagingRemove.Click += (s, e) => StagingRemoveSelectedRequested?.Invoke();
             mnuStagingClear.Click += (s, e) => StagingClearRequested?.Invoke();
-
+            mnuStagingRemoveMissing.Click += (s, e) => StagingRemoveMissingRequested?.Invoke();
             // Buttons raise events (kept from earlier)
+            btnCreateQuick.Click += (s, e) => QuickCreateClicked?.Invoke();
+
             btnCreateAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
             btnCreateAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();
             btnCreateBrowse.Click += (s, e) => BrowseCreateDestinationClicked?.Invoke();
@@ -73,7 +85,13 @@ namespace Brutal_Zip.Views
             btnExtract.Click += (s, e) => ExtractClicked?.Invoke();
         }
 
+        public event Action StagingRemoveMissingRequested;
+    
+
+        public event Action<List<string>, bool> BatchZipsDroppedForExtract;
+
         // Events consumed by MainForm
+        public event Action QuickCreateClicked;
         public event Action<string[]> FilesDroppedForCreate;
         public event Action AddFilesClicked;
         public event Action AddFolderClicked;
@@ -95,6 +113,11 @@ namespace Brutal_Zip.Views
         public ListView StagingListView => lvStaging;
 
         public void SetStagingInfo(string text) => lblCreateHint.Text = text;
+
+        private void HomeView_Load(object sender, EventArgs e)
+        {
+
+        }
 
         public string CreateDestination { get => txtCreateDest.Text; set => txtCreateDest.Text = value; }
         public int CreateMethodIndex { get => cmbCreateMethod.SelectedIndex; set => cmbCreateMethod.SelectedIndex = value; }

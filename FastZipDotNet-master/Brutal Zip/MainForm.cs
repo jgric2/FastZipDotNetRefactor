@@ -33,6 +33,9 @@ namespace Brutal_Zip
         private string _lastPreviewTempFile;
 
 
+        private string _typeFilter = "";
+        private System.Windows.Forms.Timer _typeFilterTimer;
+
         private int Threads => SettingsService.Current.ThreadsAuto
             ? Math.Max(1, Environment.ProcessorCount - 1)
             : Math.Max(1, SettingsService.Current.Threads);
@@ -64,9 +67,33 @@ namespace Brutal_Zip
             homeView.ExtractClicked += async () => await DoExtractSmartAsync();
             homeView.ZipDroppedForExtract += path => OpenArchive(path);
 
+            homeView.BatchZipsDroppedForExtract += async (zips, separate) => await BatchExtractAsync(zips, separate);
+
+            homeView.QuickCreateClicked += async () => await DoQuickCreateAsync();
 
             homeView.StagingListView.SmallImageList = _icons.ImageList;
             homeView.StagingListView.UseCompatibleStateImageBehavior = false;
+
+
+            homeView.StagingListView.KeyDown += (s, e) =>
+            {
+                if (e.Control && e.KeyCode == Keys.V)
+                {
+                    var data = Clipboard.GetDataObject();
+                    if (data != null && data.GetDataPresent(DataFormats.FileDrop))
+                    {
+                        var paths = (string[])data.GetData(DataFormats.FileDrop);
+                        StageCreateFromDrop(paths);
+                    }
+                }
+            };
+
+
+            homeView.StagingRemoveMissingRequested += () =>
+            {
+                _staging.RemoveAll(s => !(s.IsFolder ? Directory.Exists(s.Path) : File.Exists(s.Path)));
+                RefreshStagingList();
+            };
 
             // Allow DnD to staging list (HomeView already raises FilesDroppedForCreate)
             homeView.StagingRemoveSelectedRequested += () => RemoveSelectedFromStaging();
@@ -84,6 +111,10 @@ namespace Brutal_Zip
             viewerView.SettingsClicked += OpenSettings;
             viewerView.SearchTextChanged += text => RefreshRows(text);
 
+            viewerView.lvArchive.KeyPress += (s, e) => OnArchiveTypeFilter(e.KeyChar);
+
+
+
             // ListView setup
             viewerView.lvArchive.SmallImageList = _icons.ImageList;
             viewerView.lvArchive.UseCompatibleStateImageBehavior = false;
@@ -92,6 +123,7 @@ namespace Brutal_Zip
             viewerView.lvArchive.DoubleClick += (s, e) => OpenSelected();
             viewerView.lvArchive.KeyDown += (s, e) => { if (e.KeyCode == Keys.Back) NavigateUp(); };
 
+            viewerView.lvArchive.ItemDrag += (s, e) => BeginDragExtract();
 
             mnuFileOpen.Click += (s, e) => OpenZipFileDialog();
             mnuFileExit.Click += (s, e) => Close();
@@ -116,6 +148,111 @@ namespace Brutal_Zip
             FormClosing += (s, e) => { _zip?.Dispose(); };
         }
 
+        private void OnArchiveTypeFilter(char ch)
+        {
+            if (!char.IsControl(ch))
+            {
+                _typeFilter += ch;
+                RefreshRows(_typeFilter);
+                if (_typeFilterTimer == null)
+                {
+                    _typeFilterTimer = new System.Windows.Forms.Timer();
+                    _typeFilterTimer.Interval = 1200;
+                    _typeFilterTimer.Tick += (s, e) =>
+                    {
+                        _typeFilter = "";
+                        _typeFilterTimer.Stop();
+                    };
+                }
+                _typeFilterTimer.Stop();
+                _typeFilterTimer.Start();
+            }
+        }
+
+
+        private void BeginDragExtract()
+        {
+            if (_zip == null || viewerView.lvArchive.SelectedIndices.Count == 0) return;
+
+            var files = new List<string>();
+            foreach (int idx in viewerView.lvArchive.SelectedIndices)
+            {
+                var r = _rows[idx];
+                if (r.Kind == RowKind.File) files.Add(r.Entry.FilenameInZip);
+            }
+            if (files.Count == 0) return;
+
+            // Extract selected to session temp
+            var extracted = new List<string>();
+            foreach (var pathInZip in files)
+            {
+                var entry = _current.Files.FirstOrDefault(f => f.FilenameInZip.Equals(pathInZip, StringComparison.OrdinalIgnoreCase));
+                if (entry.FilenameInZip == null) continue;
+                string temp = ExtractEntryToTempAsync(entry, CancellationToken.None).GetAwaiter().GetResult();
+                extracted.Add(temp);
+            }
+
+            var data = new DataObject(DataFormats.FileDrop, extracted.ToArray());
+            viewerView.lvArchive.DoDragDrop(data, DragDropEffects.Copy);
+        }
+
+
+        private async Task BatchExtractAsync(List<string> zips, bool separateFolders)
+        {
+            using var pf = new ProgressForm("Extracting archives…");
+            var progress = pf.CreateProgress();
+            pf.Show(this);
+
+            try
+            {
+                if (!separateFolders)
+                {
+                    using var fbd = new FolderBrowserDialog();
+                    if (fbd.ShowDialog(this) != DialogResult.OK) return;
+                    string destAll = fbd.SelectedPath;
+
+                    foreach (var z in zips)
+                    {
+                        using var zip = new FastZipDotNet.Zip.FastZipDotNet(z, Compression.Deflate, 6, Threads);
+                        await zip.ExtractArchiveAsync(destAll, progress, pf.Token);
+                    }
+                }
+                else
+                {
+                    foreach (var z in zips)
+                    {
+                        string dest = Path.Combine(Path.GetDirectoryName(z) ?? ".", Path.GetFileNameWithoutExtension(z));
+                        Directory.CreateDirectory(dest);
+                        using var zip = new FastZipDotNet.Zip.FastZipDotNet(z, Compression.Deflate, 6, Threads);
+                        await zip.ExtractArchiveAsync(dest, progress, pf.Token);
+                    }
+                }
+
+                if (SettingsService.Current.OpenExplorerAfterExtract)
+                    TryOpenExplorer(Path.GetDirectoryName(zips[0]) ?? ".");
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Extract error"); }
+            finally { pf.Close(); }
+        }
+
+
+        private async Task DoQuickCreateAsync()
+        {
+            if (_staging.Count == 0) { MessageBox.Show(this, "Add files or folders first."); return; }
+
+            // Auto destination: next to first staged item
+            var first = _staging[0];
+            var baseDir = first.IsFolder ? Path.GetDirectoryName(first.Path) : Path.GetDirectoryName(first.Path);
+            var baseName = first.IsFolder ? new DirectoryInfo(first.Path).Name : Path.GetFileNameWithoutExtension(first.Path);
+            string dest = Path.Combine(baseDir ?? ".", baseName + ".zip");
+
+            homeView.CreateDestination = dest;
+            homeView.CreateMethodIndex = SettingsService.Current.DefaultMethod switch { "Store" => 0, "Zstd" => 2, _ => 1 };
+            homeView.CreateLevel = SettingsService.Current.DefaultLevel;
+
+            await DoCreateAsync();
+        }
 
 
         private void OpenArchiveFolderInExplorer()
@@ -314,17 +451,22 @@ namespace Brutal_Zip
             int imageIndex = item.IsFolder ? _icons.FolderIndex : _icons.GetIndexForExtension(ext);
 
             var it = new ListViewItem(new[]
-            {
-    item.Name,
-    item.Type,
-    item.IsFolder ? "Calculating…" : FormatBytes(item.SizeBytes),
-    item.IsFolder ? "…" : "1",
-    item.Path
-})
+                         {
+                        item.Name,
+                        item.Type,
+                        item.IsFolder ? "Calculating…" : FormatBytes(item.SizeBytes),
+                        item.IsFolder ? "…" : "1",
+                        item.Path
+                        })
             {
                 ImageIndex = imageIndex,
                 Tag = item
             };
+
+            // If missing, paint gray
+            bool exists = item.IsFolder ? Directory.Exists(item.Path) : File.Exists(item.Path);
+            if (!exists) { it.ForeColor = Color.Gray; }
+
             lv.Items.Add(it);
             UpdateStagingTotals();
         }
