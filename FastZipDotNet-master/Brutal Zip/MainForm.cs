@@ -759,19 +759,71 @@ namespace Brutal_Zip
             };
             int level = homeView.CreateLevel;
 
-            // Build all jobs preserving root folder names
+            // Build all file jobs and collect empty folder entries for each staged root
             var jobs = new List<(string fullPath, string internalName, long size)>();
+            var emptyFolderEntries = new List<string>(); // internal names (e.g., "Root/EmptySub/")
+
             foreach (var s in _staging)
             {
                 if (s.IsFolder && Directory.Exists(s.Path))
                 {
-                    string root = new DirectoryInfo(s.Path).Name;
-                    foreach (var file in Directory.EnumerateFiles(s.Path, "*", SearchOption.AllDirectories))
+                    string rootName = new DirectoryInfo(s.Path).Name;
+
+                    // Enumerate all subdirectories (relative)
+                    var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    try
                     {
-                        string rel = Path.GetRelativePath(s.Path, file).Replace('\\', '/');
-                        string internalName = CombineZipPath(root, rel);
-                        long size = 0; try { size = new FileInfo(file).Length; } catch { }
-                        jobs.Add((file, internalName, size));
+                        foreach (var dir in Directory.EnumerateDirectories(s.Path, "*", SearchOption.AllDirectories))
+                        {
+                            string rel = Path.GetRelativePath(s.Path, dir).Replace('\\', '/').Trim('/');
+                            if (!string.IsNullOrEmpty(rel))
+                                allDirsRel.Add(rel);
+                        }
+                    }
+                    catch { }
+
+                    // Track directories that have at least one file under them
+                    var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    // Enumerate files and create jobs
+                    int filesInThisRoot = 0;
+                    try
+                    {
+                        foreach (var file in Directory.EnumerateFiles(s.Path, "*", SearchOption.AllDirectories))
+                        {
+                            string rel = Path.GetRelativePath(s.Path, file).Replace('\\', '/').Trim('/');
+                            string internalName = CombineZipPath(rootName, rel);
+
+                            long size = 0; try { size = new FileInfo(file).Length; } catch { }
+                            jobs.Add((file, internalName, size));
+                            filesInThisRoot++;
+
+                            // Mark all ancestor dirs of rel as non-empty
+                            var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+                            while (!string.IsNullOrEmpty(dirRel))
+                            {
+                                nonEmptyDirsRel.Add(dirRel);
+                                dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+                            }
+                        }
+                    }
+                    catch { }
+
+                    // Empty directories = allDirsRel - nonEmptyDirsRel
+                    foreach (var dRel in allDirsRel)
+                    {
+                        if (!nonEmptyDirsRel.Contains(dRel))
+                        {
+                            // Preserve this empty folder entry
+                            string internalFolder = CombineZipPath(rootName, dRel);
+                            emptyFolderEntries.Add(internalFolder);
+                        }
+                    }
+
+                    // If the entire root had no files and no subdirs with files, add the root folder as empty
+                    if (filesInThisRoot == 0 && allDirsRel.Count == 0)
+                    {
+                        emptyFolderEntries.Add(rootName);
                     }
                 }
                 else if (!s.IsFolder && File.Exists(s.Path))
@@ -782,9 +834,9 @@ namespace Brutal_Zip
                 }
             }
 
-            if (jobs.Count == 0)
+            if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
             {
-                MessageBox.Show(this, "No valid files found.", "Create");
+                MessageBox.Show(this, "No valid files or folders found.", "Create");
                 return;
             }
 
@@ -802,7 +854,7 @@ namespace Brutal_Zip
             {
                 using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
 
-                // Live thread control via slider (affects engine’s adjustable semaphore)
+                // Live engine thread control
                 pf.ConfigureThreads(maxThreads, curThreads, n =>
                 {
                     try
@@ -816,7 +868,7 @@ namespace Brutal_Zip
                     catch { }
                 });
 
-                var sem = zip.ConcurrencyLimiter; // engine’s adjustable semaphore
+                var sem = zip.ConcurrencyLimiter; // adjustable
 
                 long aggBytes = 0;
                 int aggFiles = 0;
@@ -848,7 +900,6 @@ namespace Brutal_Zip
                     }
                 });
 
-                // Fire off all jobs; concurrency limited by adjustable semaphore
                 var tasks = new List<Task>(jobs.Count);
                 foreach (var job in jobs)
                 {
@@ -856,14 +907,13 @@ namespace Brutal_Zip
 
                     tasks.Add(Task.Run(() =>
                     {
-                        // Throttle by engine semaphore (slider can adjust mid‑run)
                         sem.WaitOne(pf.Token);
                         try
                         {
                             Volatile.Write(ref currentName, job.internalName);
 
                             void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
-                            void OnComp(long n) { } // not used
+                            void OnComp(long n) { }
 
                             zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
                             Interlocked.Increment(ref aggFiles);
@@ -878,6 +928,12 @@ namespace Brutal_Zip
                 await Task.WhenAll(tasks);
                 reportCts.Cancel();
                 try { await reporter; } catch { }
+
+                // Add empty folders (sequential; negligible time)
+                foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
+                }
 
                 zip.Close();
 
@@ -1651,11 +1707,12 @@ namespace Brutal_Zip
             var list = paths?.ToList();
             if (list == null || list.Count == 0) return;
 
-            // Current inside-archive folder (breadcrumb) e.g., "" at root or "folder/sub/"
+            // Current inside-archive folder (breadcrumb) e.g., "" or "path/in/archive/"
             string currentPrefix = GetCurrentPathPrefix().Trim('/');
 
-            // Build jobs preserving top-level folder names for each chosen folder
             var jobs = new List<(string fullPath, string internalName, long size)>();
+            var emptyFolderEntries = new List<string>(); // internal folder names
+
             foreach (var p in list)
             {
                 try
@@ -1664,14 +1721,56 @@ namespace Brutal_Zip
                     if (Directory.Exists(full))
                     {
                         string rootName = new DirectoryInfo(full).Name;
+                        string basePrefix = string.IsNullOrEmpty(currentPrefix) ? rootName : (currentPrefix + "/" + rootName);
+
+                        // All subdirectories (relative)
+                        var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        try
+                        {
+                            foreach (var dir in Directory.EnumerateDirectories(full, "*", SearchOption.AllDirectories))
+                            {
+                                string rel = Path.GetRelativePath(full, dir).Replace('\\', '/').Trim('/');
+                                if (!string.IsNullOrEmpty(rel))
+                                    allDirsRel.Add(rel);
+                            }
+                        }
+                        catch { }
+
+                        var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        int filesInRoot = 0;
+
                         foreach (var file in Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories))
                         {
-                            string rel = Path.GetRelativePath(full, file).Replace('\\', '/');
-                            // internalName = currentPrefix? + "/" + rootName + "/" + rel
-                            string prefix = string.IsNullOrEmpty(currentPrefix) ? rootName : currentPrefix + "/" + rootName;
-                            string internalName = (prefix + "/" + rel).Replace('\\', '/').Trim('/');
+                            string rel = Path.GetRelativePath(full, file).Replace('\\', '/').Trim('/');
+                            string internalName = (basePrefix + "/" + rel).Replace('\\', '/').Trim('/');
+
                             long size = 0; try { size = new FileInfo(file).Length; } catch { }
                             jobs.Add((file, internalName, size));
+                            filesInRoot++;
+
+                            // mark ancestors
+                            var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+                            while (!string.IsNullOrEmpty(dirRel))
+                            {
+                                nonEmptyDirsRel.Add(dirRel);
+                                dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+                            }
+                        }
+
+                        // empty dirs under this root
+                        foreach (var dRel in allDirsRel)
+                        {
+                            if (!nonEmptyDirsRel.Contains(dRel))
+                            {
+                                string internalFolder = (basePrefix + "/" + dRel).Replace('\\', '/').Trim('/');
+                                emptyFolderEntries.Add(internalFolder);
+                            }
+                        }
+
+                        // if the folder is completely empty (no files, no subdirs)
+                        if (filesInRoot == 0 && allDirsRel.Count == 0)
+                        {
+                            emptyFolderEntries.Add(basePrefix);
                         }
                     }
                     else if (File.Exists(full))
@@ -1687,7 +1786,7 @@ namespace Brutal_Zip
                 catch { }
             }
 
-            if (jobs.Count == 0) return;
+            if (jobs.Count == 0 && emptyFolderEntries.Count == 0) return;
 
             long grandBytes = 0; int grandFiles = 0;
             foreach (var j in jobs) { grandBytes += j.size; grandFiles++; }
@@ -1709,7 +1808,7 @@ namespace Brutal_Zip
                         SettingsService.Current.ThreadsAuto = false;
                         SettingsService.Current.Threads = n;
                         SettingsService.Save();
-                        _zip.SetMaxConcurrency(n);   // affects engine’s limiter for our job scheduling
+                        _zip.SetMaxConcurrency(n);
                         pf.Text = $"Adding to archive… ({n} threads)";
                     }
                     catch { }
@@ -1774,6 +1873,12 @@ namespace Brutal_Zip
                 reportCts.Cancel();
                 try { await reporter; } catch { }
 
+                // Add empty folders
+                foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    try { _zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
+                }
+
                 // Commit and refresh
                 await Task.Run(() => _zip.Close());
                 OpenArchive(_zipPath);
@@ -1789,9 +1894,9 @@ namespace Brutal_Zip
             prefix = (prefix ?? "").Trim('/');
             name = (name ?? "").Trim('/');
             if (string.IsNullOrEmpty(prefix)) return name.Replace('\\','/');
-if (string.IsNullOrEmpty(name)) return prefix.Replace('\\','/');
-return (prefix + "/" + name).Replace('\\','/');
-}
+            if (string.IsNullOrEmpty(name)) return prefix.Replace('\\','/');
+            return (prefix + "/" + name).Replace('\\','/');
+        }
 
         private void MainForm_Load_1(object sender, EventArgs e)
         {
