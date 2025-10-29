@@ -73,7 +73,7 @@ namespace Brutal_Zip
 
             homeView.StagingListView.SmallImageList = _icons.ImageList;
             homeView.StagingListView.UseCompatibleStateImageBehavior = false;
-
+            mnuToolsFind.Click += (s, e) => DoFindInArchive();
 
             homeView.StagingListView.KeyDown += (s, e) =>
             {
