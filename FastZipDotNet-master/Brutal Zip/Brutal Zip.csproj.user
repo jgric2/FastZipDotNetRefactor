@@ -49,6 +49,9 @@
     <Compile Update="Controls\BrutalControls\TransparentToolTipControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Update="FindDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

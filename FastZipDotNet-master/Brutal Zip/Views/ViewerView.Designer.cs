@@ -19,6 +19,10 @@ namespace Brutal_Zip.Views
         internal ToolStripButton btnOpenFolder;
         internal ToolStripButton btnTogglePreview;
 
+        internal ContextMenuStrip cmsViewer;               // NEW
+        internal ToolStripMenuItem mnuCopyPaths;           // NEW
+        internal ToolStripMenuItem mnuCopyNames;           // NEW
+
         internal FlowLayoutPanel breadcrumb;
         internal SplitContainer splitMain;
         internal ListView lvArchive;
@@ -42,6 +46,7 @@ namespace Brutal_Zip.Views
 
         private void InitializeComponent()
         {
+            components = new Container();
             toolStrip = new ToolStrip();
             btnBackHome = new ToolStripButton();
             btnAddFiles = new ToolStripButton();
@@ -63,14 +68,22 @@ namespace Brutal_Zip.Views
             colRatio = new ColumnHeader();
             colMethod = new ColumnHeader();
             colModified = new ColumnHeader();
+            cmsViewer = new ContextMenuStrip(components);
+            mnuCopyPaths = new ToolStripMenuItem();
+            mnuCopyNames = new ToolStripMenuItem();
             previewPane = new PreviewPane();
             statusStrip = new StatusStrip();
             lblStatus = new ToolStripStatusLabel();
+            toolStripMenuItem1 = new ToolStripMenuItem();
+            toolStripMenuItem2 = new ToolStripMenuItem();
+            toolStripMenuItem3 = new ToolStripMenuItem();
+            toolStripMenuItem4 = new ToolStripMenuItem();
             toolStrip.SuspendLayout();
             ((ISupportInitialize)splitMain).BeginInit();
             splitMain.Panel1.SuspendLayout();
             splitMain.Panel2.SuspendLayout();
             splitMain.SuspendLayout();
+            cmsViewer.SuspendLayout();
             statusStrip.SuspendLayout();
             SuspendLayout();
             // 
@@ -103,6 +116,7 @@ namespace Brutal_Zip.Views
             // 
             // btnExtractSplit
             // 
+            btnExtractSplit.DropDownItems.AddRange(new ToolStripItem[] { toolStripMenuItem1, toolStripMenuItem2, toolStripMenuItem3, toolStripMenuItem4 });
             btnExtractSplit.Name = "btnExtractSplit";
             btnExtractSplit.Size = new Size(58, 22);
             btnExtractSplit.Text = "Extract";
@@ -178,6 +192,7 @@ namespace Brutal_Zip.Views
             // lvArchive
             // 
             lvArchive.Columns.AddRange(new ColumnHeader[] { colName, colSize, colPacked, colRatio, colMethod, colModified });
+            lvArchive.ContextMenuStrip = cmsViewer;
             lvArchive.Dock = DockStyle.Fill;
             lvArchive.FullRowSelect = true;
             lvArchive.Location = new Point(0, 0);
@@ -221,6 +236,24 @@ namespace Brutal_Zip.Views
             colModified.Text = "Modified";
             colModified.Width = 160;
             // 
+            // cmsViewer
+            // 
+            cmsViewer.Items.AddRange(new ToolStripItem[] { mnuCopyPaths, mnuCopyNames });
+            cmsViewer.Name = "cmsViewer";
+            cmsViewer.Size = new Size(220, 48);
+            // 
+            // mnuCopyPaths
+            // 
+            mnuCopyPaths.Name = "mnuCopyPaths";
+            mnuCopyPaths.Size = new Size(219, 22);
+            mnuCopyPaths.Text = "Copy inside-archive path(s)";
+            // 
+            // mnuCopyNames
+            // 
+            mnuCopyNames.Name = "mnuCopyNames";
+            mnuCopyNames.Size = new Size(219, 22);
+            mnuCopyNames.Text = "Copy name(s)";
+            // 
             // previewPane
             // 
             previewPane.Dock = DockStyle.Fill;
@@ -242,6 +275,30 @@ namespace Brutal_Zip.Views
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(0, 17);
             // 
+            // toolStripMenuItem1
+            // 
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new Size(180, 22);
+            toolStripMenuItem1.Text = "Extract selected…";
+            // 
+            // toolStripMenuItem2
+            // 
+            toolStripMenuItem2.Name = "toolStripMenuItem2";
+            toolStripMenuItem2.Size = new Size(180, 22);
+            toolStripMenuItem2.Text = "Extract here";
+            // 
+            // toolStripMenuItem3
+            // 
+            toolStripMenuItem3.Name = "toolStripMenuItem3";
+            toolStripMenuItem3.Size = new Size(213, 22);
+            toolStripMenuItem3.Text = "Extract to “ArchiveName”/";
+            // 
+            // toolStripMenuItem4
+            // 
+            toolStripMenuItem4.Name = "toolStripMenuItem4";
+            toolStripMenuItem4.Size = new Size(213, 22);
+            toolStripMenuItem4.Text = "Choose folder…";
+            // 
             // ViewerView
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
@@ -258,10 +315,15 @@ namespace Brutal_Zip.Views
             splitMain.Panel2.ResumeLayout(false);
             ((ISupportInitialize)splitMain).EndInit();
             splitMain.ResumeLayout(false);
+            cmsViewer.ResumeLayout(false);
             statusStrip.ResumeLayout(false);
             statusStrip.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
+        private ToolStripMenuItem toolStripMenuItem1;
+        private ToolStripMenuItem toolStripMenuItem2;
+        private ToolStripMenuItem toolStripMenuItem3;
+        private ToolStripMenuItem toolStripMenuItem4;
     }
 }

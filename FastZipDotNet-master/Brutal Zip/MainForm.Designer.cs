@@ -17,6 +17,12 @@
         private ToolStripMenuItem mnuHelpAbout;
         private ToolStripMenuItem mnuFileRecent;
 
+        private ToolStripMenuItem mnuToolsOpenAfterCreate;     // NEW
+        private ToolStripMenuItem mnuToolsOpenAfterExtract;    // NEW
+        private ToolStripMenuItem mnuToolsFind;                // NEW (used in Feature 8)
+
+
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null)) components.Dispose();
@@ -99,6 +105,23 @@
             mnuTools.Name = "mnuTools";
             mnuTools.Size = new Size(47, 20);
             mnuTools.Text = "&Tools";
+
+
+            mnuToolsOpenAfterCreate = new ToolStripMenuItem("Open Explorer after Create") { CheckOnClick = true };
+            mnuToolsOpenAfterExtract = new ToolStripMenuItem("Open Explorer after Extract") { CheckOnClick = true };
+            mnuToolsFind = new ToolStripMenuItem("Find in archive…"); // used in Feature 8
+
+            mnuTools.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                mnuToolsSettings,
+                new ToolStripSeparator(),
+                mnuToolsOpenAfterCreate,
+                mnuToolsOpenAfterExtract,
+                new ToolStripSeparator(),
+                mnuToolsFind
+            });
+            mnuToolsFind.Click += (s, e) => DoFindInArchive();
+
             // 
             // mnuToolsSettings
             // 

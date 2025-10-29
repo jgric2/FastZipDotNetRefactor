@@ -149,6 +149,9 @@ namespace Brutal_Zip
             viewerView.SettingsClicked += OpenSettings;
             viewerView.SearchTextChanged += text => RefreshRows(text);
 
+            viewerView.mnuCopyPaths.Click += (s, e) => CopySelectedPaths();
+            viewerView.mnuCopyNames.Click += (s, e) => CopySelectedNames();
+
             viewerView.lvArchive.KeyPress += (s, e) => OnArchiveTypeFilter(e.KeyChar);
 
 
@@ -183,6 +186,22 @@ namespace Brutal_Zip
             mnuToolsSettings.Click += (s, e) => OpenSettings();
             mnuHelpAbout.Click += (s, e) => { using var a = new AboutForm(); a.ShowDialog(this); };
 
+
+            mnuToolsOpenAfterCreate.Checked = SettingsService.Current.OpenExplorerAfterCreate;
+            mnuToolsOpenAfterExtract.Checked = SettingsService.Current.OpenExplorerAfterExtract;
+
+            mnuToolsOpenAfterCreate.CheckedChanged += (s, e) =>
+            {
+                SettingsService.Current.OpenExplorerAfterCreate = mnuToolsOpenAfterCreate.Checked;
+                try { SettingsService.Save(); } catch { }
+            };
+            mnuToolsOpenAfterExtract.CheckedChanged += (s, e) =>
+            {
+                SettingsService.Current.OpenExplorerAfterExtract = mnuToolsOpenAfterExtract.Checked;
+                try { SettingsService.Save(); } catch { }
+            };
+
+
             // Ensure session temp exists
             try { System.IO.Directory.CreateDirectory(_sessionTemp); } catch { }
 
@@ -199,6 +218,64 @@ namespace Brutal_Zip
 
             Load += MainForm_Load;
             FormClosing += (s, e) => { _zip?.Dispose(); };
+        }
+
+
+        private bool HasSingleRoot(out string rootName)
+        {
+            rootName = null;
+            if (_zip?.ZipFileEntries == null || _zip.ZipFileEntries.Count == 0) return false;
+
+            var names = _zip.ZipFileEntries
+                .Select(e => (e.FilenameInZip ?? string.Empty).Replace('\\', '/').Trim('/'))
+                .Where(n => n.Length > 0)
+                .ToList();
+
+            if (names.Count == 0) return false;
+
+            var roots = names.Select(n => n.Split('/')[0]).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (roots.Count != 1) return false;
+
+            rootName = roots[0];
+
+            // If there is any file at root, not a single-folder archive
+            bool anyFileAtRoot = _zip.ZipFileEntries.Any(e =>
+            {
+                var n = (e.FilenameInZip ?? "").Replace('\\', '/').Trim('/');
+                return n.Length > 0 && !n.Contains("/") && !IsDirectory(e);
+            });
+            return !anyFileAtRoot;
+        }
+
+
+        private void CopySelectedPaths()
+        {
+            if (_zip == null) return;
+            if (viewerView.lvArchive.SelectedIndices.Count == 0) return;
+
+            var lines = new List<string>();
+            foreach (int idx in viewerView.lvArchive.SelectedIndices)
+            {
+                var r = _rows[idx];
+                if (r.Kind == RowKind.File) lines.Add(r.Entry.FilenameInZip);
+                else if (r.Kind == RowKind.Dir) lines.Add(r.Name + "/");
+            }
+            if (lines.Count > 0) Clipboard.SetText(string.Join(Environment.NewLine, lines));
+        }
+
+        private void CopySelectedNames()
+        {
+            if (_zip == null) return;
+            if (viewerView.lvArchive.SelectedIndices.Count == 0) return;
+
+            var lines = new List<string>();
+            foreach (int idx in viewerView.lvArchive.SelectedIndices)
+            {
+                var r = _rows[idx];
+                if (r.Kind == RowKind.File) lines.Add(Path.GetFileName(r.Entry.FilenameInZip.Replace('\\', '/')));
+                else if (r.Kind == RowKind.Dir) lines.Add(r.Name);
+            }
+            if (lines.Count > 0) Clipboard.SetText(string.Join(Environment.NewLine, lines));
         }
 
 
@@ -869,14 +946,27 @@ namespace Brutal_Zip
                 _zipPath = ofd.FileName;
             }
 
-            // Destination policy
+            // Destination policy with single-root heuristic
             string outDir;
-            if (homeView.ExtractHere && !string.IsNullOrEmpty(homeView.ExtractDestination))
+            bool singleRoot = HasSingleRoot(out var root);
+            if (singleRoot)
+            {
+                // If Smart chosen, extract directly next to the archive and keep the single root as folder
+                string baseDir = Path.GetDirectoryName(_zipPath) ?? ".";
+                outDir = Path.Combine(baseDir, root);
+            }
+            else if (homeView.ExtractHere && !string.IsNullOrEmpty(homeView.ExtractDestination))
+            {
                 outDir = homeView.ExtractDestination;
+            }
             else if (homeView.ExtractToArchiveName || SettingsService.Current.ExtractDefault == "Smart")
+            {
                 outDir = Path.Combine(Path.GetDirectoryName(_zipPath) ?? ".", Path.GetFileNameWithoutExtension(_zipPath));
+            }
             else
+            {
                 outDir = string.IsNullOrEmpty(homeView.ExtractDestination) ? (Path.GetDirectoryName(_zipPath) ?? ".") : homeView.ExtractDestination;
+            }
 
             Directory.CreateDirectory(outDir);
 
@@ -911,6 +1001,46 @@ namespace Brutal_Zip
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Extract error"); }
             finally { pf.Close(); }
         }
+
+        private void DoFindInArchive()
+        {
+            if (_zip == null) { MessageBox.Show(this, "Open a zip first.", "Find"); return; }
+
+            using var dlg = new FindDialog();
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            var rx = FindDialog.BuildRegex(dlg.Pattern, dlg.MatchCase);
+
+            // Filter current directory entries; optionally search entire archive:
+            var matches = new List<int>();
+            for (int i = 0; i < _rows.Count; i++)
+            {
+                var r = _rows[i];
+                if (r.Kind == RowKind.File)
+                {
+                    string name = Path.GetFileName(r.Entry.FilenameInZip.Replace('\\', '/'));
+                    if (rx.IsMatch(name)) matches.Add(i);
+                }
+                else if (r.Kind == RowKind.Dir)
+                {
+                    if (rx.IsMatch(r.Name)) matches.Add(i);
+                }
+            }
+
+            if (matches.Count == 0)
+            {
+                MessageBox.Show(this, "No matches.", "Find");
+                return;
+            }
+
+            viewerView.lvArchive.SelectedIndices.Clear();
+            foreach (var idx in matches)
+                viewerView.lvArchive.SelectedIndices.Add(idx);
+
+            viewerView.lvArchive.EnsureVisible(matches[0]);
+            viewerView.lvArchive.Focus();
+        }
+
 
         // Viewer logic (unchanged behavior, just uses viewerView.* controls)
         private void OpenArchive(string path)
