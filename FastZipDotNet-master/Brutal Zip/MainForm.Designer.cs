@@ -30,12 +30,13 @@
             menuMain = new MenuStrip();
             mnuFile = new ToolStripMenuItem();
             mnuFileOpen = new ToolStripMenuItem();
+            mnuFileRecent = new ToolStripMenuItem();
             mnuFileExit = new ToolStripMenuItem();
             mnuTools = new ToolStripMenuItem();
-            mnuFileRecent = new ToolStripMenuItem("&Recent");
             mnuToolsSettings = new ToolStripMenuItem();
             mnuHelp = new ToolStripMenuItem();
             mnuHelpAbout = new ToolStripMenuItem();
+            toolStripMenuItem1 = new ToolStripMenuItem();
             menuMain.SuspendLayout();
             SuspendLayout();
             // 
@@ -69,7 +70,7 @@
             // 
             // mnuFile
             // 
-            mnuFile.DropDownItems.AddRange(new ToolStripItem[] { mnuFileOpen, mnuFileRecent, new ToolStripSeparator(), mnuFileExit });
+            mnuFile.DropDownItems.AddRange(new ToolStripItem[] { mnuFileOpen, toolStripMenuItem1, mnuFileRecent, mnuFileExit });
             mnuFile.Name = "mnuFile";
             mnuFile.Size = new Size(37, 20);
             mnuFile.Text = "&File";
@@ -77,13 +78,19 @@
             // mnuFileOpen
             // 
             mnuFileOpen.Name = "mnuFileOpen";
-            mnuFileOpen.Size = new Size(112, 22);
+            mnuFileOpen.Size = new Size(180, 22);
             mnuFileOpen.Text = "&Open…";
+            // 
+            // mnuFileRecent
+            // 
+            mnuFileRecent.Name = "mnuFileRecent";
+            mnuFileRecent.Size = new Size(180, 22);
+            mnuFileRecent.Text = "&Recent";
             // 
             // mnuFileExit
             // 
             mnuFileExit.Name = "mnuFileExit";
-            mnuFileExit.Size = new Size(112, 22);
+            mnuFileExit.Size = new Size(180, 22);
             mnuFileExit.Text = "E&xit";
             // 
             // mnuTools
@@ -96,7 +103,7 @@
             // mnuToolsSettings
             // 
             mnuToolsSettings.Name = "mnuToolsSettings";
-            mnuToolsSettings.Size = new Size(116, 22);
+            mnuToolsSettings.Size = new Size(180, 22);
             mnuToolsSettings.Text = "&Settings";
             // 
             // mnuHelp
@@ -109,8 +116,15 @@
             // mnuHelpAbout
             // 
             mnuHelpAbout.Name = "mnuHelpAbout";
-            mnuHelpAbout.Size = new Size(107, 22);
+            mnuHelpAbout.Size = new Size(180, 22);
             mnuHelpAbout.Text = "&About";
+            // 
+            // toolStripMenuItem1
+            // 
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new Size(180, 22);
+            toolStripMenuItem1.Text = "Export list...";
+            toolStripMenuItem1.Click += toolStripMenuItem1_Click;
             // 
             // MainForm
             // 
@@ -118,8 +132,8 @@
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(1000, 700);
             Controls.Add(menuMain);
-            Controls.Add(viewerView);
             Controls.Add(homeView);
+            Controls.Add(viewerView);
             KeyPreview = true;
             MainMenuStrip = menuMain;
             Name = "MainForm";
@@ -131,5 +145,6 @@
             ResumeLayout(false);
             PerformLayout();
         }
+        private ToolStripMenuItem toolStripMenuItem1;
     }
 }

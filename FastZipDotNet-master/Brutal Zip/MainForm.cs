@@ -110,6 +110,14 @@ namespace Brutal_Zip
                 try { _zip?.SetMaxConcurrency(n); } catch { }
             };
 
+            this.KeyDown += async (s, e) => {
+                if (e.KeyCode == Keys.Space && viewerView.Visible)
+                {
+                    await PreviewSelectedAsync();
+                    if (viewerView.splitMain.Panel2Collapsed) TogglePreviewPane();
+                }
+            };
+
 
             // auto changed
             homeView.ThreadsAutoChanged += auto =>
@@ -123,6 +131,11 @@ namespace Brutal_Zip
             // Allow DnD to staging list (HomeView already raises FilesDroppedForCreate)
             homeView.StagingRemoveSelectedRequested += () => RemoveSelectedFromStaging();
             homeView.StagingClearRequested += () => { _staging.Clear(); RefreshStagingList(); };
+
+
+            homeView.StagingListView.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) RemoveSelectedFromStaging(); };
+
+
 
             // Viewer events
             viewerView.AddFilesClicked += async () => await AddFilesIntoArchiveAsync();
@@ -139,6 +152,9 @@ namespace Brutal_Zip
             viewerView.lvArchive.KeyPress += (s, e) => OnArchiveTypeFilter(e.KeyChar);
 
 
+            this.KeyPreview = true;
+            this.KeyDown += (s, e) => { if (e.Control && e.KeyCode == Keys.F) viewerView.txtSearch.Focus(); };
+
 
             // ListView setup
             viewerView.lvArchive.SmallImageList = _icons.ImageList;
@@ -149,13 +165,13 @@ namespace Brutal_Zip
                 //try
                 //{
                 //    if (_rows.Count > e.ItemIndex)
-                        e.Item = MakeItem(_rows[e.ItemIndex]);
+                e.Item = MakeItem(_rows[e.ItemIndex]);
                 //}
                 //catch
                 //{
-                    
+
                 //}
-                
+
             };
             viewerView.lvArchive.DoubleClick += (s, e) => OpenSelected();
             viewerView.lvArchive.KeyDown += (s, e) => { if (e.KeyCode == Keys.Back) NavigateUp(); };
@@ -1717,6 +1733,39 @@ namespace Brutal_Zip
         private void MainForm_Load_1(object sender, EventArgs e)
         {
 
+        }
+
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            ExportList();
+        }
+
+        private void ExportList()
+        {
+            if (_zip == null) return;
+            using var sfd = new SaveFileDialog { Filter = "CSV (.csv)|.csv|JSON (.json)|.json" };
+            if (sfd.ShowDialog(this) != DialogResult.OK) return;
+
+            var entries = _zip.ZipFileEntries;
+            if (Path.GetExtension(sfd.FileName).Equals(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                var arr = entries.Select(e => new {
+                    e.FilenameInZip,
+                    e.FileSize,
+                    e.CompressedSize,
+                    Method = e.Method.ToString(),
+                    e.ModifyTime
+                }).ToList();
+                File.WriteAllText(sfd.FileName, System.Text.Json.JsonSerializer.Serialize(arr, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                using var sw = new StreamWriter(sfd.FileName);
+                sw.WriteLine("Name,Size,Compressed,Method,Modified");
+                foreach (var e in entries)
+                    sw.WriteLine($"\"{e.FilenameInZip}\",{e.FileSize},{e.CompressedSize},{e.Method},{e.ModifyTime:yyyy-MM-dd HH:mm:ss}");
+            }
+            TryOpenExplorerSelect(sfd.FileName);
         }
     }
 }
