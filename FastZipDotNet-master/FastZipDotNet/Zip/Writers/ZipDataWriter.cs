@@ -973,44 +973,61 @@ Action<long> onCompressedWrite)
         {
             try
             {
+                // Ensure directory form ends with '/'
                 if (!folderNameInZip.EndsWith("/"))
-                {
                     folderNameInZip += "/";
-                }
 
-                // Prepare the ZipFileEntry with zero size
-                ZipFileEntry zfe = new ZipFileEntry
+                var zfe = new ZipFileEntry
                 {
                     FilenameInZip = IOHelpers.NormalizedFilename(folderNameInZip),
                     Comment = "",
-                    Method = Compression.Store, // No compression for folders
+                    Method = Compression.Store,        // no compression
                     EncodeUTF8 = FastZipDotNet.EncodeUTF8,
                     FileSize = 0,
                     CompressedSize = 0,
-                    Crc32 = 0, // No CRC for empty folder
+                    Crc32 = 0,
                     ModifyTime = DateTime.Now,
 
-                    ExternalFileAttr = (uint)((1 << 4) | 0x10) // Directory attribute
+                    // MS-DOS directory attribute + “directory” bit in external attributes
+                    ExternalFileAttr = (uint)((1 << 4) | 0x10),
                 };
 
-                lock (LockObj)
-                {
-                    zfe.HeaderOffset = (ulong)FastZipDotNet.ZipFileStream.Position;
-                    ZipWritersHeaders.WriteLocalHeader(ref zfe, FastZipDotNet.ZipFileStream);
+                // Build local header bytes (no data follows for an empty folder)
+                var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
 
-                    // Update HeaderSize
-                    zfe.HeaderSize = (ulong)(30 + zfe.FilenameInZip.Length);
-                    FastZipDotNet.ZipFileEntries.Add(zfe);
+                // Reserve space and get absolute offset (this advances AppendOffset atomically)
+                long start = FastZipDotNet.Reserve(localHeader.Length);
+                zfe.HeaderOffset = (ulong)start;
+                zfe.HeaderSize = (ulong)localHeader.Length;
+
+                // Random-access write at reserved offset (same pattern as WriteAt for files)
+                using (var fs = new FileStream(
+                    FastZipDotNet.ZipFileName,
+                    FileMode.OpenOrCreate,
+                    FileAccess.Write,
+                    FileShare.ReadWrite,
+                    Consts.ChunkSize,
+                    FileOptions.RandomAccess))
+                {
+                    fs.Position = start;
+                    fs.Write(localHeader, 0, localHeader.Length);
+                    fs.Flush();
                 }
+
+                // Record in central list
+                lock (FastZipDotNet.ZipFileEntries)
+                    FastZipDotNet.ZipFileEntries.Add(zfe);
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message + "\r\nIn BrutalZipEngine.AddEmptyFolder");
+                throw new Exception(ex.Message + "\r\nIn ZipDataWriter.AddEmptyFolder (reserve‑based)");
             }
         }
+    
 
 
-        private const long DefaultBufferThreshold = 16L * 1024 * 1024; // 16 MB
+
+private const long DefaultBufferThreshold = 16L * 1024 * 1024; // 16 MB
 
 
         public long AddFileWithProgress(
