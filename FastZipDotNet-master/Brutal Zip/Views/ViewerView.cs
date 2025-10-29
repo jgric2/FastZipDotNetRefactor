@@ -16,6 +16,11 @@ namespace Brutal_Zip.Views
         {
             InitializeComponent();
 
+            //this.btnExtractSplit.DropDownItems.Add("Extract selected…");
+            //this.btnExtractSplit.DropDownItems.Add("Extract here");
+            //this.btnExtractSplit.DropDownItems.Add("Extract to “ArchiveName”/");
+            //this.btnExtractSplit.DropDownItems.Add("Choose folder…");
+
             btnBackHome.Click += (s, e) => BackHomeClicked?.Invoke();
             btnAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
             btnAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();

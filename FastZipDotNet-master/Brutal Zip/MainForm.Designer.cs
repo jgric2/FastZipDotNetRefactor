@@ -116,8 +116,8 @@
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(1000, 700);
             Controls.Add(menuMain);
-            Controls.Add(homeView);
             Controls.Add(viewerView);
+            Controls.Add(homeView);
             KeyPreview = true;
             MainMenuStrip = menuMain;
             Name = "MainForm";
