@@ -110,7 +110,8 @@ namespace Brutal_Zip
                 try { _zip?.SetMaxConcurrency(n); } catch { }
             };
 
-            this.KeyDown += async (s, e) => {
+            this.KeyDown += async (s, e) =>
+            {
                 if (e.KeyCode == Keys.Space && viewerView.Visible)
                 {
                     await PreviewSelectedAsync();
@@ -758,36 +759,37 @@ namespace Brutal_Zip
             };
             int level = homeView.CreateLevel;
 
-            // Pre-scan to get grand totals (files + bytes) for stable overall progress
-            var staged = _staging.ToArray();
-            long grandBytes = 0;
-            int grandFiles = 0;
-
-            var scanInfo = new List<(StagedItem item, int fileCount, long bytes)>(staged.Length);
-
-            foreach (var it in staged)
+            // Build all jobs preserving root folder names
+            var jobs = new List<(string fullPath, string internalName, long size)>();
+            foreach (var s in _staging)
             {
-                int cnt;
-                long bytes;
-                if (it.IsFolder && Directory.Exists(it.Path))
+                if (s.IsFolder && Directory.Exists(s.Path))
                 {
-                    ScanFolder(it.Path, out bytes, out cnt);
+                    string root = new DirectoryInfo(s.Path).Name;
+                    foreach (var file in Directory.EnumerateFiles(s.Path, "*", SearchOption.AllDirectories))
+                    {
+                        string rel = Path.GetRelativePath(s.Path, file).Replace('\\', '/');
+                        string internalName = CombineZipPath(root, rel);
+                        long size = 0; try { size = new FileInfo(file).Length; } catch { }
+                        jobs.Add((file, internalName, size));
+                    }
                 }
-                else if (!it.IsFolder && File.Exists(it.Path))
+                else if (!s.IsFolder && File.Exists(s.Path))
                 {
-                    cnt = 1;
-                    try { bytes = new FileInfo(it.Path).Length; } catch { bytes = 0; }
+                    string internalName = Path.GetFileName(s.Path);
+                    long size = 0; try { size = new FileInfo(s.Path).Length; } catch { }
+                    jobs.Add((s.Path, internalName, size));
                 }
-                else
-                {
-                    // Missing path; skip
-                    cnt = 0; bytes = 0;
-                }
-
-                grandFiles += cnt;
-                grandBytes += bytes;
-                scanInfo.Add((it, cnt, bytes));
             }
+
+            if (jobs.Count == 0)
+            {
+                MessageBox.Show(this, "No valid files found.", "Create");
+                return;
+            }
+
+            long grandBytes = 0; int grandFiles = 0;
+            foreach (var j in jobs) { grandBytes += j.size; grandFiles++; }
 
             int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
             int curThreads = Threads;
@@ -800,7 +802,7 @@ namespace Brutal_Zip
             {
                 using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
 
-                // Live thread control via slider
+                // Live thread control via slider (affects engine’s adjustable semaphore)
                 pf.ConfigureThreads(maxThreads, curThreads, n =>
                 {
                     try
@@ -814,9 +816,10 @@ namespace Brutal_Zip
                     catch { }
                 });
 
-                // Aggregated counters and reporter
-                long aggProcessedBytes = 0;
-                int aggFilesDone = 0;
+                var sem = zip.ConcurrencyLimiter; // engine’s adjustable semaphore
+
+                long aggBytes = 0;
+                int aggFiles = 0;
                 string currentName = null;
                 var sw = Stopwatch.StartNew();
 
@@ -825,8 +828,8 @@ namespace Brutal_Zip
                 {
                     while (!reportCts.IsCancellationRequested)
                     {
-                        long pBytes = Math.Min(Interlocked.Read(ref aggProcessedBytes), grandBytes);
-                        int pFiles = Math.Min(Volatile.Read(ref aggFilesDone), grandFiles);
+                        long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
+                        int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
                         double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
 
                         progress.Report(new ZipProgress
@@ -845,58 +848,38 @@ namespace Brutal_Zip
                     }
                 });
 
-                // Process items in order (we rely on engine's own concurrency internally)
-                for (int i = 0; i < scanInfo.Count; i++)
+                // Fire off all jobs; concurrency limited by adjustable semaphore
+                var tasks = new List<Task>(jobs.Count);
+                foreach (var job in jobs)
                 {
-                    var (item, itemFiles, itemBytes) = scanInfo[i];
+                    pf.Token.ThrowIfCancellationRequested();
 
-                    if (pf.Token.IsCancellationRequested) break;
-
-                    if (item.IsFolder && Directory.Exists(item.Path))
+                    tasks.Add(Task.Run(() =>
                     {
-                        // Base offset for this item
-                        long baseBytes = Interlocked.Read(ref aggProcessedBytes);
-
-                        // Forward engine progress into our aggregated model
-                        var perItemProgress = new Progress<ZipProgress>(p =>
+                        // Throttle by engine semaphore (slider can adjust mid‑run)
+                        sem.WaitOne(pf.Token);
+                        try
                         {
-                            // Update current file name and processed bytes for this item
-                            Volatile.Write(ref currentName, p.CurrentFile);
-                            long combined = baseBytes + p.BytesProcessedUncompressed;
-                            Interlocked.Exchange(ref aggProcessedBytes, combined);
-                        });
+                            Volatile.Write(ref currentName, job.internalName);
 
-                        bool ok = await zip.ZipDataWriter.AddFilesToArchiveAsync(item.Path, Threads, level, perItemProgress, pf.Token);
-                        if (!ok) break;
+                            void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
+                            void OnComp(long n) { } // not used
 
-                        // Item done: finalize aggregates for files/bytes
-                        Interlocked.Add(ref aggFilesDone, itemFiles);
-
-                        // Ensure bytes aggregate reaches base + itemBytes
-                        long now = Interlocked.Read(ref aggProcessedBytes);
-                        long target = baseBytes + itemBytes;
-                        if (target > now) Interlocked.Exchange(ref aggProcessedBytes, target);
-                    }
-                    else if (!item.IsFolder && File.Exists(item.Path))
-                    {
-                        // Single file: use OnUnc to advance bytes
-                        void OnUnc(long n) => Interlocked.Add(ref aggProcessedBytes, n);
-                        void OnComp(long n) { }
-                        Volatile.Write(ref currentName, Path.GetFileName(item.Path));
-
-                        zip.ZipDataWriter.AddFileWithProgress(item.Path, Path.GetFileName(item.Path), level, "", OnUnc, OnComp);
-
-                        Interlocked.Increment(ref aggFilesDone);
-                    }
-                    else
-                    {
-                        // Missing; skip
-                    }
+                            zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
+                            Interlocked.Increment(ref aggFiles);
+                        }
+                        finally
+                        {
+                            sem.Release();
+                        }
+                    }, pf.Token));
                 }
 
-                zip.Close();
+                await Task.WhenAll(tasks);
                 reportCts.Cancel();
                 try { await reporter; } catch { }
+
+                zip.Close();
 
                 if (SettingsService.Current.OpenExplorerAfterCreate)
                     TryOpenExplorerSelect(dest);
@@ -907,33 +890,6 @@ namespace Brutal_Zip
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
             finally { pf.Close(); }
-
-            // Local helper
-            static void ScanFolder(string folder, out long bytes, out int fileCount)
-            {
-                bytes = 0;
-                fileCount = 0;
-                try
-                {
-                    var stack = new Stack<string>();
-                    stack.Push(folder);
-                    while (stack.Count > 0)
-                    {
-                        var d = stack.Pop();
-                        try
-                        {
-                            foreach (var f in Directory.EnumerateFiles(d))
-                            {
-                                try { bytes += new FileInfo(f).Length; fileCount++; } catch { }
-                            }
-                            foreach (var sub in Directory.EnumerateDirectories(d))
-                                stack.Push(sub);
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
-            }
         }
 
         private async Task DoExtractSmartAsync()
@@ -1695,38 +1651,46 @@ namespace Brutal_Zip
             var list = paths?.ToList();
             if (list == null || list.Count == 0) return;
 
-            // Pre-scan for totals so progress is stable
-            long grandBytes = 0;
-            int grandFiles = 0;
-            var scanInfo = new List<(string path, bool isFolder, int fileCount, long bytes)>(list.Count);
+            // Current inside-archive folder (breadcrumb) e.g., "" at root or "folder/sub/"
+            string currentPrefix = GetCurrentPathPrefix().Trim('/');
 
+            // Build jobs preserving top-level folder names for each chosen folder
+            var jobs = new List<(string fullPath, string internalName, long size)>();
             foreach (var p in list)
             {
                 try
                 {
                     var full = Path.GetFullPath(p);
-                    bool isDir = Directory.Exists(full);
-                    bool isFile = File.Exists(full);
-
-                    if (!isDir && !isFile) continue;
-
-                    int cnt; long bytes;
-                    if (isDir)
+                    if (Directory.Exists(full))
                     {
-                        ScanFolder(full, out bytes, out cnt);
+                        string rootName = new DirectoryInfo(full).Name;
+                        foreach (var file in Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories))
+                        {
+                            string rel = Path.GetRelativePath(full, file).Replace('\\', '/');
+                            // internalName = currentPrefix? + "/" + rootName + "/" + rel
+                            string prefix = string.IsNullOrEmpty(currentPrefix) ? rootName : currentPrefix + "/" + rootName;
+                            string internalName = (prefix + "/" + rel).Replace('\\', '/').Trim('/');
+                            long size = 0; try { size = new FileInfo(file).Length; } catch { }
+                            jobs.Add((file, internalName, size));
+                        }
                     }
-                    else
+                    else if (File.Exists(full))
                     {
-                        cnt = 1;
-                        try { bytes = new FileInfo(full).Length; } catch { bytes = 0; }
+                        string name = Path.GetFileName(full);
+                        string internalName = string.IsNullOrEmpty(currentPrefix)
+                            ? name
+                            : (currentPrefix + "/" + name).Replace('\\', '/').Trim('/');
+                        long size = 0; try { size = new FileInfo(full).Length; } catch { }
+                        jobs.Add((full, internalName, size));
                     }
-
-                    grandFiles += cnt;
-                    grandBytes += bytes;
-                    scanInfo.Add((full, isDir, cnt, bytes));
                 }
                 catch { }
             }
+
+            if (jobs.Count == 0) return;
+
+            long grandBytes = 0; int grandFiles = 0;
+            foreach (var j in jobs) { grandBytes += j.size; grandFiles++; }
 
             int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
             int curThreads = Threads;
@@ -1745,15 +1709,16 @@ namespace Brutal_Zip
                         SettingsService.Current.ThreadsAuto = false;
                         SettingsService.Current.Threads = n;
                         SettingsService.Save();
-                        _zip.SetMaxConcurrency(n);
+                        _zip.SetMaxConcurrency(n);   // affects engine’s limiter for our job scheduling
                         pf.Text = $"Adding to archive… ({n} threads)";
                     }
                     catch { }
                 });
 
-                // Aggregated counters
-                long aggProcessedBytes = 0;
-                int aggFilesDone = 0;
+                var sem = _zip.ConcurrencyLimiter;
+
+                long aggBytes = 0;
+                int aggFiles = 0;
                 string currentName = null;
                 var sw = Stopwatch.StartNew();
 
@@ -1762,8 +1727,8 @@ namespace Brutal_Zip
                 {
                     while (!reportCts.IsCancellationRequested)
                     {
-                        long pBytes = Math.Min(Interlocked.Read(ref aggProcessedBytes), grandBytes);
-                        int pFiles = Math.Min(Volatile.Read(ref aggFilesDone), grandFiles);
+                        long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
+                        int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
                         double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
 
                         progress.Report(new ZipProgress
@@ -1782,48 +1747,34 @@ namespace Brutal_Zip
                     }
                 });
 
-                // Add items
-                foreach (var (path, isFolder, fileCount, bytes) in scanInfo)
+                var tasks = new List<Task>(jobs.Count);
+                foreach (var job in jobs)
                 {
-                    if (pf.Token.IsCancellationRequested) break;
+                    pf.Token.ThrowIfCancellationRequested();
 
-                    if (isFolder)
+                    tasks.Add(Task.Run(() =>
                     {
-                        long baseBytes = Interlocked.Read(ref aggProcessedBytes);
-
-                        var perProgress = new Progress<ZipProgress>(p =>
+                        sem.WaitOne(pf.Token);
+                        try
                         {
-                            Volatile.Write(ref currentName, p.CurrentFile);
-                            long combined = baseBytes + p.BytesProcessedUncompressed;
-                            Interlocked.Exchange(ref aggProcessedBytes, combined);
-                        });
-
-                        bool ok = await _zip.ZipDataWriter.AddFilesToArchiveAsync(path, Threads, _zip.CompressionLevelValue, perProgress, pf.Token);
-                        if (!ok) break;
-
-                        Interlocked.Add(ref aggFilesDone, fileCount);
-                        long now = Interlocked.Read(ref aggProcessedBytes);
-                        long target = baseBytes + bytes;
-                        if (target > now) Interlocked.Exchange(ref aggProcessedBytes, target);
-                    }
-                    else
-                    {
-                        void OnUnc(long n) => Interlocked.Add(ref aggProcessedBytes, n);
-                        void OnComp(long n) { }
-                        Volatile.Write(ref currentName, Path.GetFileName(path));
-
-                        string prefix = GetCurrentPathPrefix();
-                        string internalName = prefix.Length == 0 ? Path.GetFileName(path) : (prefix + Path.GetFileName(path));
-
-                        _zip.ZipDataWriter.AddFileWithProgress(path, internalName, _zip.CompressionLevelValue, "", OnUnc, OnComp);
-                        Interlocked.Increment(ref aggFilesDone);
-                    }
+                            Volatile.Write(ref currentName, job.internalName);
+                            void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
+                            void OnComp(long n) { }
+                            _zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, _zip.CompressionLevelValue, "", OnUnc, OnComp);
+                            Interlocked.Increment(ref aggFiles);
+                        }
+                        finally
+                        {
+                            sem.Release();
+                        }
+                    }, pf.Token));
                 }
 
+                await Task.WhenAll(tasks);
                 reportCts.Cancel();
                 try { await reporter; } catch { }
 
-                // Commit and refresh the opened archive
+                // Commit and refresh
                 await Task.Run(() => _zip.Close());
                 OpenArchive(_zipPath);
                 NavigateTo(_current);
@@ -1831,34 +1782,16 @@ namespace Brutal_Zip
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Add error"); }
             finally { pf.Close(); }
-
-            // Local helper
-            static void ScanFolder(string folder, out long bytes, out int fileCount)
-            {
-                bytes = 0;
-                fileCount = 0;
-                try
-                {
-                    var stack = new Stack<string>();
-                    stack.Push(folder);
-                    while (stack.Count > 0)
-                    {
-                        var d = stack.Pop();
-                        try
-                        {
-                            foreach (var f in Directory.EnumerateFiles(d))
-                            {
-                                try { bytes += new FileInfo(f).Length; fileCount++; } catch { }
-                            }
-                            foreach (var sub in Directory.EnumerateDirectories(d))
-                                stack.Push(sub);
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
-            }
         }
+
+        private static string CombineZipPath(string prefix, string name)
+        {
+            prefix = (prefix ?? "").Trim('/');
+            name = (name ?? "").Trim('/');
+            if (string.IsNullOrEmpty(prefix)) return name.Replace('\\','/');
+if (string.IsNullOrEmpty(name)) return prefix.Replace('\\','/');
+return (prefix + "/" + name).Replace('\\','/');
+}
 
         private void MainForm_Load_1(object sender, EventArgs e)
         {
@@ -1879,7 +1812,8 @@ namespace Brutal_Zip
             var entries = _zip.ZipFileEntries;
             if (Path.GetExtension(sfd.FileName).Equals(".json", StringComparison.OrdinalIgnoreCase))
             {
-                var arr = entries.Select(e => new {
+                var arr = entries.Select(e => new
+                {
                     e.FilenameInZip,
                     e.FileSize,
                     e.CompressedSize,
@@ -1896,6 +1830,11 @@ namespace Brutal_Zip
                     sw.WriteLine($"\"{e.FilenameInZip}\",{e.FileSize},{e.CompressedSize},{e.Method},{e.ModifyTime:yyyy-MM-dd HH:mm:ss}");
             }
             TryOpenExplorerSelect(sfd.FileName);
+        }
+
+        private void MainForm_Load_2(object sender, EventArgs e)
+        {
+
         }
     }
 }
