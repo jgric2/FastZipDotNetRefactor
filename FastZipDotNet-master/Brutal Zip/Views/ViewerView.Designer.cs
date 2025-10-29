@@ -42,134 +42,227 @@ namespace Brutal_Zip.Views
 
         private void InitializeComponent()
         {
-            this.components = new Container();
-            this.toolStrip = new ToolStrip();
-            this.btnBackHome = new ToolStripButton();
-            this.btnAddFiles = new ToolStripButton();
-            this.btnAddFolder = new ToolStripButton();
-            this.btnExtractSplit = new ToolStripSplitButton();
-            this.lblSearch = new ToolStripLabel();
-            this.txtSearch = new ToolStripTextBox();
-            this.btnInfo = new ToolStripButton();
-            this.btnTest = new ToolStripButton();
-            this.btnSettings = new ToolStripButton();
-            this.btnOpenFolder = new ToolStripButton();
-            this.btnTogglePreview = new ToolStripButton();
-
-            this.breadcrumb = new FlowLayoutPanel();
-            this.splitMain = new SplitContainer();
-            this.lvArchive = new ListView();
-            this.colName = new ColumnHeader();
-            this.colSize = new ColumnHeader();
-            this.colPacked = new ColumnHeader();
-            this.colRatio = new ColumnHeader();
-            this.colMethod = new ColumnHeader();
-            this.colModified = new ColumnHeader();
-            this.previewPane = new PreviewPane();
-
-            this.statusStrip = new StatusStrip();
-            this.lblStatus = new ToolStripStatusLabel();
-
-            ((ISupportInitialize)(this.splitMain)).BeginInit();
-            this.splitMain.Panel1.SuspendLayout();
-            this.splitMain.Panel2.SuspendLayout();
-            this.SuspendLayout();
-
-            // ViewerView
-            this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.Name = "ViewerView";
-            this.Size = new Size(1000, 700);
-
+            toolStrip = new ToolStrip();
+            btnBackHome = new ToolStripButton();
+            btnAddFiles = new ToolStripButton();
+            btnAddFolder = new ToolStripButton();
+            btnExtractSplit = new ToolStripSplitButton();
+            btnOpenFolder = new ToolStripButton();
+            btnTogglePreview = new ToolStripButton();
+            lblSearch = new ToolStripLabel();
+            txtSearch = new ToolStripTextBox();
+            btnInfo = new ToolStripButton();
+            btnTest = new ToolStripButton();
+            btnSettings = new ToolStripButton();
+            breadcrumb = new FlowLayoutPanel();
+            splitMain = new SplitContainer();
+            lvArchive = new ListView();
+            colName = new ColumnHeader();
+            colSize = new ColumnHeader();
+            colPacked = new ColumnHeader();
+            colRatio = new ColumnHeader();
+            colMethod = new ColumnHeader();
+            colModified = new ColumnHeader();
+            previewPane = new PreviewPane();
+            statusStrip = new StatusStrip();
+            lblStatus = new ToolStripStatusLabel();
+            toolStrip.SuspendLayout();
+            ((ISupportInitialize)splitMain).BeginInit();
+            splitMain.Panel1.SuspendLayout();
+            splitMain.Panel2.SuspendLayout();
+            splitMain.SuspendLayout();
+            statusStrip.SuspendLayout();
+            SuspendLayout();
+            // 
             // toolStrip
-            this.toolStrip.Dock = DockStyle.Top;
-
-            this.btnBackHome.Text = "Home";
-            this.btnAddFiles.Text = "Add files…";
-            this.btnAddFolder.Text = "Add folder…";
-            this.btnExtractSplit.Text = "Extract";
-            this.btnExtractSplit.DropDownItems.Add("Extract selected…");
-            this.btnExtractSplit.DropDownItems.Add("Extract here");
-            this.btnExtractSplit.DropDownItems.Add("Extract to “ArchiveName”/");
-            this.btnExtractSplit.DropDownItems.Add("Choose folder…");
-
-            this.btnOpenFolder.Text = "Open folder";
-            this.btnTogglePreview.Text = "Preview";
-
-            this.lblSearch.Text = "Search:";
-
-            this.btnInfo.Text = "Info";
-            this.btnTest.Text = "Test";
-            this.btnSettings.Text = "Settings";
-
-            this.toolStrip.Items.AddRange(new ToolStripItem[]
-            {
-            this.btnBackHome, new ToolStripSeparator(),
-            this.btnAddFiles, this.btnAddFolder, this.btnExtractSplit, new ToolStripSeparator(),
-            this.btnOpenFolder, this.btnTogglePreview, new ToolStripSeparator(),
-            this.lblSearch, this.txtSearch, new ToolStripSeparator(),
-            this.btnInfo, this.btnTest, this.btnSettings
-            });
-
+            // 
+            toolStrip.Items.AddRange(new ToolStripItem[] { btnBackHome, btnAddFiles, btnAddFolder, btnExtractSplit, btnOpenFolder, btnTogglePreview, lblSearch, txtSearch, btnInfo, btnTest, btnSettings });
+            toolStrip.Location = new Point(0, 0);
+            toolStrip.Name = "toolStrip";
+            toolStrip.Size = new Size(1000, 25);
+            toolStrip.TabIndex = 2;
+            toolStrip.ItemClicked += toolStrip_ItemClicked;
+            // 
+            // btnBackHome
+            // 
+            btnBackHome.Name = "btnBackHome";
+            btnBackHome.Size = new Size(44, 22);
+            btnBackHome.Text = "Home";
+            // 
+            // btnAddFiles
+            // 
+            btnAddFiles.Name = "btnAddFiles";
+            btnAddFiles.Size = new Size(66, 22);
+            btnAddFiles.Text = "Add files…";
+            // 
+            // btnAddFolder
+            // 
+            btnAddFolder.Name = "btnAddFolder";
+            btnAddFolder.Size = new Size(76, 22);
+            btnAddFolder.Text = "Add folder…";
+            // 
+            // btnExtractSplit
+            // 
+            btnExtractSplit.Name = "btnExtractSplit";
+            btnExtractSplit.Size = new Size(58, 22);
+            btnExtractSplit.Text = "Extract";
+            // 
+            // btnOpenFolder
+            // 
+            btnOpenFolder.Name = "btnOpenFolder";
+            btnOpenFolder.Size = new Size(74, 22);
+            btnOpenFolder.Text = "Open folder";
+            // 
+            // btnTogglePreview
+            // 
+            btnTogglePreview.Name = "btnTogglePreview";
+            btnTogglePreview.Size = new Size(52, 22);
+            btnTogglePreview.Text = "Preview";
+            // 
+            // lblSearch
+            // 
+            lblSearch.Name = "lblSearch";
+            lblSearch.Size = new Size(45, 22);
+            lblSearch.Text = "Search:";
+            // 
+            // txtSearch
+            // 
+            txtSearch.Name = "txtSearch";
+            txtSearch.Size = new Size(100, 25);
+            // 
+            // btnInfo
+            // 
+            btnInfo.Name = "btnInfo";
+            btnInfo.Size = new Size(32, 22);
+            btnInfo.Text = "Info";
+            // 
+            // btnTest
+            // 
+            btnTest.Name = "btnTest";
+            btnTest.Size = new Size(32, 22);
+            btnTest.Text = "Test";
+            // 
+            // btnSettings
+            // 
+            btnSettings.Name = "btnSettings";
+            btnSettings.Size = new Size(53, 22);
+            btnSettings.Text = "Settings";
+            // 
             // breadcrumb
-            this.breadcrumb.Dock = DockStyle.Top;
-            this.breadcrumb.Height = 28;
-            this.breadcrumb.Padding = new Padding(8, 4, 8, 4);
-
+            // 
+            breadcrumb.Dock = DockStyle.Top;
+            breadcrumb.Location = new Point(0, 25);
+            breadcrumb.Name = "breadcrumb";
+            breadcrumb.Padding = new Padding(8, 4, 8, 4);
+            breadcrumb.Size = new Size(1000, 28);
+            breadcrumb.TabIndex = 1;
+            // 
             // splitMain
-            this.splitMain.Dock = DockStyle.Fill;
-            this.splitMain.Orientation = Orientation.Horizontal;
-            this.splitMain.SplitterDistance = 420;
-            this.splitMain.Panel2Collapsed = true;
-
+            // 
+            splitMain.Dock = DockStyle.Fill;
+            splitMain.Location = new Point(0, 53);
+            splitMain.Name = "splitMain";
+            splitMain.Orientation = Orientation.Horizontal;
+            // 
+            // splitMain.Panel1
+            // 
+            splitMain.Panel1.Controls.Add(lvArchive);
+            // 
+            // splitMain.Panel2
+            // 
+            splitMain.Panel2.Controls.Add(previewPane);
+            splitMain.Panel2Collapsed = true;
+            splitMain.Size = new Size(1000, 625);
+            splitMain.SplitterDistance = 71;
+            splitMain.TabIndex = 0;
+            // 
             // lvArchive
-            this.lvArchive.Dock = DockStyle.Fill;
-            this.lvArchive.View = View.Details;
-            this.lvArchive.FullRowSelect = true;
-            this.lvArchive.HideSelection = false;
-            this.lvArchive.VirtualMode = true;
-
-            this.colName.Text = "Name";
-            this.colName.Width = 420;
-            this.colSize.Text = "Size";
-            this.colSize.Width = 120;
-            this.colSize.TextAlign = HorizontalAlignment.Right;
-            this.colPacked.Text = "Packed";
-            this.colPacked.Width = 120;
-            this.colPacked.TextAlign = HorizontalAlignment.Right;
-            this.colRatio.Text = "Ratio";
-            this.colRatio.Width = 80;
-            this.colRatio.TextAlign = HorizontalAlignment.Right;
-            this.colMethod.Text = "Method";
-            this.colMethod.Width = 80;
-            this.colModified.Text = "Modified";
-            this.colModified.Width = 160;
-
-            this.lvArchive.Columns.AddRange(new ColumnHeader[] {
-            this.colName, this.colSize, this.colPacked, this.colRatio, this.colMethod, this.colModified
-        });
-
+            // 
+            lvArchive.Columns.AddRange(new ColumnHeader[] { colName, colSize, colPacked, colRatio, colMethod, colModified });
+            lvArchive.Dock = DockStyle.Fill;
+            lvArchive.FullRowSelect = true;
+            lvArchive.Location = new Point(0, 0);
+            lvArchive.Name = "lvArchive";
+            lvArchive.Size = new Size(1000, 625);
+            lvArchive.TabIndex = 0;
+            lvArchive.UseCompatibleStateImageBehavior = false;
+            lvArchive.View = View.Details;
+            lvArchive.VirtualMode = true;
+            // 
+            // colName
+            // 
+            colName.Text = "Name";
+            colName.Width = 420;
+            // 
+            // colSize
+            // 
+            colSize.Text = "Size";
+            colSize.TextAlign = HorizontalAlignment.Right;
+            colSize.Width = 120;
+            // 
+            // colPacked
+            // 
+            colPacked.Text = "Packed";
+            colPacked.TextAlign = HorizontalAlignment.Right;
+            colPacked.Width = 120;
+            // 
+            // colRatio
+            // 
+            colRatio.Text = "Ratio";
+            colRatio.TextAlign = HorizontalAlignment.Right;
+            colRatio.Width = 80;
+            // 
+            // colMethod
+            // 
+            colMethod.Text = "Method";
+            colMethod.Width = 80;
+            // 
+            // colModified
+            // 
+            colModified.Text = "Modified";
+            colModified.Width = 160;
+            // 
             // previewPane
-            this.previewPane.Dock = DockStyle.Fill;
-
-            this.splitMain.Panel1.Controls.Add(this.lvArchive);
-            this.splitMain.Panel2.Controls.Add(this.previewPane);
-
+            // 
+            previewPane.Dock = DockStyle.Fill;
+            previewPane.Location = new Point(0, 0);
+            previewPane.Name = "previewPane";
+            previewPane.Size = new Size(150, 25);
+            previewPane.TabIndex = 0;
+            // 
             // statusStrip
-            this.statusStrip.Dock = DockStyle.Bottom;
-            this.statusStrip.Items.Add(this.lblStatus);
-
-            // Add controls
-            this.Controls.Add(this.splitMain);
-            this.Controls.Add(this.breadcrumb);
-            this.Controls.Add(this.toolStrip);
-            this.Controls.Add(this.statusStrip);
-
-            this.splitMain.Panel2.ResumeLayout(false);
-            this.splitMain.Panel1.ResumeLayout(false);
-            ((ISupportInitialize)(this.splitMain)).EndInit();
-
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            // 
+            statusStrip.Items.AddRange(new ToolStripItem[] { lblStatus });
+            statusStrip.Location = new Point(0, 678);
+            statusStrip.Name = "statusStrip";
+            statusStrip.Size = new Size(1000, 22);
+            statusStrip.TabIndex = 3;
+            // 
+            // lblStatus
+            // 
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(0, 17);
+            // 
+            // ViewerView
+            // 
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            Controls.Add(splitMain);
+            Controls.Add(breadcrumb);
+            Controls.Add(toolStrip);
+            Controls.Add(statusStrip);
+            Name = "ViewerView";
+            Size = new Size(1000, 700);
+            toolStrip.ResumeLayout(false);
+            toolStrip.PerformLayout();
+            splitMain.Panel1.ResumeLayout(false);
+            splitMain.Panel2.ResumeLayout(false);
+            ((ISupportInitialize)splitMain).EndInit();
+            splitMain.ResumeLayout(false);
+            statusStrip.ResumeLayout(false);
+            statusStrip.PerformLayout();
+            ResumeLayout(false);
+            PerformLayout();
         }
     }
 }

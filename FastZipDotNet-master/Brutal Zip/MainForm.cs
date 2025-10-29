@@ -146,15 +146,15 @@ namespace Brutal_Zip
 
             viewerView.lvArchive.RetrieveVirtualItem += (s, e) =>
             {
-                try
-                {
-                    if (_rows.Count > e.ItemIndex)
+                //try
+                //{
+                //    if (_rows.Count > e.ItemIndex)
                         e.Item = MakeItem(_rows[e.ItemIndex]);
-                }
-                catch
-                {
+                //}
+                //catch
+                //{
                     
-                }
+                //}
                 
             };
             viewerView.lvArchive.DoubleClick += (s, e) => OpenSelected();

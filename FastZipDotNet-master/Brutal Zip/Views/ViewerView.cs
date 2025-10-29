@@ -47,5 +47,10 @@ namespace Brutal_Zip.Views
         public event Action<string> SearchTextChanged;
 
         public void SetStatus(string text) => lblStatus.Text = text;
+
+        private void toolStrip_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+
+        }
     }
 }

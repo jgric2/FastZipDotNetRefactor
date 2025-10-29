@@ -1,159 +1,136 @@
-﻿namespace Brutal_Zip.Views
+﻿using System.ComponentModel;
+using System.Drawing;
+using System.Windows.Forms;
+using Microsoft.Web.WebView2.WinForms;
+
+namespace Brutal_Zip.Views
 {
     partial class PreviewPane
     {
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
         private Label lblFileName;
         private Label lblInfo;
         private Button btnPlayPause;
         private Button btnStop;
         private Button btnOpenExternal;
+
         private Panel panelContent;
         private PictureBox picture;
         private RichTextBox txtPreview;
         private Label lblUnsupported;
 
+        // WebView2 for media (and could be used for HTML/markdown previews later)
+        private WebView2 webView;
+
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-                components.Dispose();
-
-            // Dispose current image if any
+            if (disposing && (components != null)) components.Dispose();
             if (picture != null && picture.Image != null)
             {
                 picture.Image.Dispose();
                 picture.Image = null;
             }
-
             base.Dispose(disposing);
         }
 
         private void InitializeComponent()
         {
+            components = new Container();
+
+            // Root
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.Name = "PreviewPane";
+            this.Size = new Size(800, 240);
+
+            // Top labels
             lblFileName = new Label();
-            lblInfo = new Label();
-            btnOpenExternal = new Button();
-            btnStop = new Button();
-            btnPlayPause = new Button();
-            panelContent = new Panel();
-            picture = new PictureBox();
-            txtPreview = new RichTextBox();
-            lblUnsupported = new Label();
-            panelContent.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picture).BeginInit();
-            SuspendLayout();
-            // 
-            // lblFileName
-            // 
-            lblFileName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            lblFileName.Location = new Point(12, 10);
-            lblFileName.Name = "lblFileName";
-            lblFileName.Size = new Size(560, 18);
-            lblFileName.TabIndex = 0;
             lblFileName.Text = "-";
-            // 
-            // lblInfo
-            // 
-            lblInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            lblFileName.Location = new Point(12, 10);
+            lblFileName.Size = new Size(560, 18);
+            lblFileName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+            lblInfo = new Label();
+            lblInfo.Text = "";
             lblInfo.Location = new Point(12, 28);
-            lblInfo.Name = "lblInfo";
             lblInfo.Size = new Size(560, 18);
-            lblInfo.TabIndex = 1;
-            // 
-            // btnOpenExternal
-            // 
-            btnOpenExternal.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnOpenExternal.Location = new Point(631, 29);
-            btnOpenExternal.Name = "btnOpenExternal";
-            btnOpenExternal.Size = new Size(80, 24);
-            btnOpenExternal.TabIndex = 4;
+            lblInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+            // Buttons (top-right)
+            btnOpenExternal = new Button();
             btnOpenExternal.Text = "Open";
-            // 
-            // btnStop
-            // 
-            btnStop.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnStop.Location = new Point(717, 29);
-            btnStop.Name = "btnStop";
-            btnStop.Size = new Size(80, 24);
-            btnStop.TabIndex = 3;
+            btnOpenExternal.Location = new Point(800 - 12 - 80, 8);
+            btnOpenExternal.Size = new Size(80, 24);
+            btnOpenExternal.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+            btnStop = new Button();
             btnStop.Text = "Stop";
-            // 
-            // btnPlayPause
-            // 
-            btnPlayPause.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnPlayPause.Location = new Point(717, 3);
-            btnPlayPause.Name = "btnPlayPause";
-            btnPlayPause.Size = new Size(80, 24);
-            btnPlayPause.TabIndex = 2;
+            btnStop.Location = new Point(800 - 12 - (80 * 2) - 8, 8);
+            btnStop.Size = new Size(80, 24);
+            btnStop.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+            btnPlayPause = new Button();
             btnPlayPause.Text = "Play";
-            // 
-            // panelContent
-            // 
+            btnPlayPause.Location = new Point(800 - 12 - (80 * 3) - 16, 8);
+            btnPlayPause.Size = new Size(80, 24);
+            btnPlayPause.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
+            // Content panel
+            panelContent = new Panel();
+            panelContent.Location = new Point(12, 56);
+            panelContent.Size = new Size(776, 172);
             panelContent.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             panelContent.BackColor = Color.Black;
+
+            // WebView2
+            webView = new WebView2();
+            webView.Location = new Point(0, 0);
+            webView.Size = new Size(776, 172);
+            webView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            webView.Visible = false; // shown when media mode
+
+            // Picture
+            picture = new PictureBox();
+            picture.Location = new Point(0, 0);
+            picture.Size = new Size(776, 172);
+            picture.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            picture.SizeMode = PictureBoxSizeMode.Zoom;
+            picture.Visible = false;
+            picture.BackColor = Color.Black;
+
+            // Text/code
+            txtPreview = new RichTextBox();
+            txtPreview.Location = new Point(0, 0);
+            txtPreview.Size = new Size(776, 172);
+            txtPreview.ReadOnly = true;
+            txtPreview.BorderStyle = BorderStyle.None;
+            txtPreview.Font = new Font("Consolas", 10f);
+            txtPreview.BackColor = Color.White;
+            txtPreview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            txtPreview.Visible = false;
+
+            // Unsupported label
+            lblUnsupported = new Label();
+            lblUnsupported.Location = new Point(0, 0);
+            lblUnsupported.Size = new Size(776, 172);
+            lblUnsupported.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lblUnsupported.TextAlign = ContentAlignment.MiddleCenter;
+            lblUnsupported.ForeColor = Color.White;
+            lblUnsupported.BackColor = Color.Black;
+            lblUnsupported.Text = "No preview available. Use Open to view.";
+            lblUnsupported.Visible = true;
+
+            panelContent.Controls.Add(webView);
             panelContent.Controls.Add(picture);
             panelContent.Controls.Add(txtPreview);
             panelContent.Controls.Add(lblUnsupported);
-            panelContent.Location = new Point(12, 56);
-            panelContent.Name = "panelContent";
-            panelContent.Size = new Size(776, 172);
-            panelContent.TabIndex = 5;
-            // 
-            // picture
-            // 
-            picture.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            picture.BackColor = Color.Black;
-            picture.Location = new Point(0, 0);
-            picture.Name = "picture";
-            picture.Size = new Size(776, 172);
-            picture.SizeMode = PictureBoxSizeMode.Zoom;
-            picture.TabIndex = 0;
-            picture.TabStop = false;
-            picture.Visible = false;
-            // 
-            // txtPreview
-            // 
-            txtPreview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            txtPreview.BorderStyle = BorderStyle.None;
-            txtPreview.Font = new Font("Consolas", 10F);
-            txtPreview.Location = new Point(0, 0);
-            txtPreview.Name = "txtPreview";
-            txtPreview.ReadOnly = true;
-            txtPreview.Size = new Size(776, 172);
-            txtPreview.TabIndex = 1;
-            txtPreview.Text = "";
-            txtPreview.Visible = false;
-            // 
-            // lblUnsupported
-            // 
-            lblUnsupported.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lblUnsupported.BackColor = Color.Black;
-            lblUnsupported.ForeColor = Color.White;
-            lblUnsupported.Location = new Point(0, 0);
-            lblUnsupported.Name = "lblUnsupported";
-            lblUnsupported.Size = new Size(776, 172);
-            lblUnsupported.TabIndex = 2;
-            lblUnsupported.Text = "No preview available. Use Open to view.";
-            lblUnsupported.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // PreviewPane
-            // 
-            AutoScaleDimensions = new SizeF(96F, 96F);
-            AutoScaleMode = AutoScaleMode.Dpi;
+
             Controls.Add(lblFileName);
             Controls.Add(lblInfo);
             Controls.Add(btnPlayPause);
             Controls.Add(btnStop);
             Controls.Add(btnOpenExternal);
             Controls.Add(panelContent);
-            Name = "PreviewPane";
-            Size = new Size(800, 240);
-            panelContent.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)picture).EndInit();
-            ResumeLayout(false);
-
-            // Events wired in code-behind
         }
     }
 }
