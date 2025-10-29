@@ -46,18 +46,20 @@ namespace BrutalZip
 
     public class AppSettings
     {
-        public string DefaultMethod { get; set; } = "Deflate"; // Store | Deflate | Zstd
+        public string DefaultMethod { get; set; } = "Deflate";
         public int DefaultLevel { get; set; } = 6;
 
         public bool ThreadsAuto { get; set; } = true;
         public int Threads { get; set; } = Math.Max(1, Environment.ProcessorCount - 1);
 
-        // Extract behavior: "Smart" = ArchiveName/, "Here" = same folder
         public string ExtractDefault { get; set; } = "Smart";
-
         public bool OpenExplorerAfterCreate { get; set; } = true;
         public bool OpenExplorerAfterExtract { get; set; } = false;
 
         public bool AddContextMenu { get; set; } = false;
+
+        // NEW:
+        public List<string> RecentArchives { get; set; } = new List<string>();
+        public int RecentMax { get; set; } = 10;
     }
 }

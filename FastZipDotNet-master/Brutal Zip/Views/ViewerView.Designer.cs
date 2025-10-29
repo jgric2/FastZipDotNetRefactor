@@ -106,10 +106,6 @@ namespace Brutal_Zip.Views
             btnExtractSplit.Name = "btnExtractSplit";
             btnExtractSplit.Size = new Size(58, 22);
             btnExtractSplit.Text = "Extract";
-            this.btnExtractSplit.DropDownItems.Add("Extract selected…");
-            this.btnExtractSplit.DropDownItems.Add("Extract here");
-            this.btnExtractSplit.DropDownItems.Add("Extract to “ArchiveName”/");
-            this.btnExtractSplit.DropDownItems.Add("Choose folder…");
             // 
             // btnOpenFolder
             // 
@@ -176,7 +172,7 @@ namespace Brutal_Zip.Views
             // 
             splitMain.Panel2.Controls.Add(previewPane);
             splitMain.Size = new Size(1000, 625);
-            splitMain.SplitterDistance = 71;
+            splitMain.SplitterDistance = 370;
             splitMain.TabIndex = 0;
             // 
             // lvArchive
@@ -186,7 +182,7 @@ namespace Brutal_Zip.Views
             lvArchive.FullRowSelect = true;
             lvArchive.Location = new Point(0, 0);
             lvArchive.Name = "lvArchive";
-            lvArchive.Size = new Size(1000, 71);
+            lvArchive.Size = new Size(1000, 370);
             lvArchive.TabIndex = 0;
             lvArchive.UseCompatibleStateImageBehavior = false;
             lvArchive.View = View.Details;
@@ -230,7 +226,7 @@ namespace Brutal_Zip.Views
             previewPane.Dock = DockStyle.Fill;
             previewPane.Location = new Point(0, 0);
             previewPane.Name = "previewPane";
-            previewPane.Size = new Size(1000, 550);
+            previewPane.Size = new Size(1000, 251);
             previewPane.TabIndex = 0;
             // 
             // statusStrip

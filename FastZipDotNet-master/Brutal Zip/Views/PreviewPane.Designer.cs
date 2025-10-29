@@ -76,7 +76,7 @@ namespace Brutal_Zip.Views
             // btnOpenExternal
             // 
             btnOpenExternal.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnOpenExternal.Location = new Point(708, 31);
+            btnOpenExternal.Location = new Point(708, 8);
             btnOpenExternal.Name = "btnOpenExternal";
             btnOpenExternal.Size = new Size(80, 24);
             btnOpenExternal.TabIndex = 4;
@@ -85,20 +85,22 @@ namespace Brutal_Zip.Views
             // btnStop
             // 
             btnStop.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnStop.Location = new Point(708, 5);
+            btnStop.Location = new Point(803, 5);
             btnStop.Name = "btnStop";
             btnStop.Size = new Size(80, 24);
             btnStop.TabIndex = 3;
             btnStop.Text = "Stop";
+            btnStop.Visible = false;
             // 
             // btnPlayPause
             // 
             btnPlayPause.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnPlayPause.Location = new Point(624, 5);
+            btnPlayPause.Location = new Point(803, 5);
             btnPlayPause.Name = "btnPlayPause";
             btnPlayPause.Size = new Size(80, 24);
             btnPlayPause.TabIndex = 2;
             btnPlayPause.Text = "Play";
+            btnPlayPause.Visible = false;
             // 
             // panelContent
             // 
@@ -111,7 +113,7 @@ namespace Brutal_Zip.Views
             panelContent.Controls.Add(lblUnsupported);
             panelContent.Location = new Point(12, 59);
             panelContent.Name = "panelContent";
-            panelContent.Size = new Size(776, 158);
+            panelContent.Size = new Size(776, 163);
             panelContent.TabIndex = 5;
             // 
             // webView
@@ -122,7 +124,7 @@ namespace Brutal_Zip.Views
             webView.DefaultBackgroundColor = Color.White;
             webView.Location = new Point(0, 0);
             webView.Name = "webView";
-            webView.Size = new Size(776, 158);
+            webView.Size = new Size(776, 163);
             webView.TabIndex = 0;
             webView.Visible = false;
             webView.ZoomFactor = 1D;
@@ -133,7 +135,7 @@ namespace Brutal_Zip.Views
             picture.BackColor = Color.Black;
             picture.Location = new Point(0, 0);
             picture.Name = "picture";
-            picture.Size = new Size(776, 158);
+            picture.Size = new Size(776, 163);
             picture.SizeMode = PictureBoxSizeMode.Zoom;
             picture.TabIndex = 1;
             picture.TabStop = false;
@@ -148,7 +150,7 @@ namespace Brutal_Zip.Views
             txtPreview.Location = new Point(0, 0);
             txtPreview.Name = "txtPreview";
             txtPreview.ReadOnly = true;
-            txtPreview.Size = new Size(776, 158);
+            txtPreview.Size = new Size(776, 163);
             txtPreview.TabIndex = 2;
             txtPreview.Text = "";
             txtPreview.Visible = false;
@@ -164,7 +166,7 @@ namespace Brutal_Zip.Views
             scintilla.Location = new Point(0, 0);
             scintilla.Name = "scintilla";
             scintilla.ScrollWidth = 1;
-            scintilla.Size = new Size(776, 158);
+            scintilla.Size = new Size(776, 163);
             scintilla.TabIndents = true;
             scintilla.TabIndex = 3;
             scintilla.UseRightToLeftReadingLayout = false;
@@ -178,7 +180,7 @@ namespace Brutal_Zip.Views
             lblUnsupported.ForeColor = Color.White;
             lblUnsupported.Location = new Point(0, 0);
             lblUnsupported.Name = "lblUnsupported";
-            lblUnsupported.Size = new Size(776, 158);
+            lblUnsupported.Size = new Size(776, 163);
             lblUnsupported.TabIndex = 4;
             lblUnsupported.Text = "No preview available. Use Open to view.";
             lblUnsupported.TextAlign = ContentAlignment.MiddleCenter;

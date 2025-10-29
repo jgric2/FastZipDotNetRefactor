@@ -15,6 +15,7 @@
         private ToolStripMenuItem mnuToolsSettings;
         private ToolStripMenuItem mnuHelp;
         private ToolStripMenuItem mnuHelpAbout;
+        private ToolStripMenuItem mnuFileRecent;
 
         protected override void Dispose(bool disposing)
         {
@@ -31,6 +32,7 @@
             mnuFileOpen = new ToolStripMenuItem();
             mnuFileExit = new ToolStripMenuItem();
             mnuTools = new ToolStripMenuItem();
+            mnuFileRecent = new ToolStripMenuItem("&Recent");
             mnuToolsSettings = new ToolStripMenuItem();
             mnuHelp = new ToolStripMenuItem();
             mnuHelpAbout = new ToolStripMenuItem();
@@ -67,7 +69,7 @@
             // 
             // mnuFile
             // 
-            mnuFile.DropDownItems.AddRange(new ToolStripItem[] { mnuFileOpen, mnuFileExit });
+            mnuFile.DropDownItems.AddRange(new ToolStripItem[] { mnuFileOpen, mnuFileRecent, new ToolStripSeparator(), mnuFileExit });
             mnuFile.Name = "mnuFile";
             mnuFile.Size = new Size(37, 20);
             mnuFile.Text = "&File";

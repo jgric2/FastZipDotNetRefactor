@@ -178,11 +178,73 @@ namespace Brutal_Zip
             viewerView.btnTogglePreview.Click += (s, e) => TogglePreviewPane();
 
             // Assign ImageList for icons
-     
+            RebuildRecentMenu();
 
 
             Load += MainForm_Load;
             FormClosing += (s, e) => { _zip?.Dispose(); };
+        }
+
+
+        private void RebuildRecentMenu()
+        {
+            if (mnuFileRecent == null) return;
+
+            mnuFileRecent.DropDownItems.Clear();
+
+            var recents = RecentManager.GetList();
+            if (recents.Count == 0)
+            {
+                var none = new ToolStripMenuItem("(none)") { Enabled = false };
+                mnuFileRecent.DropDownItems.Add(none);
+            }
+            else
+            {
+                // Build items (limit to max in settings)
+                int max = Math.Max(1, SettingsService.Current.RecentMax);
+                foreach (var path in recents.Take(max))
+                {
+                    string label = Path.GetFileName(path);
+                    if (string.IsNullOrEmpty(label)) label = path;
+
+                    bool exists = File.Exists(path);
+                    var item = new ToolStripMenuItem(label)
+                    {
+                        Tag = path,
+                        ToolTipText = path,
+                        Enabled = true
+                    };
+                    if (!exists)
+                    {
+                        item.ForeColor = Color.Gray;
+                        item.ToolTipText = path + " (missing)";
+                    }
+
+                    item.Click += (s, e) =>
+                    {
+                        string p = (string)((ToolStripMenuItem)s).Tag;
+                        if (File.Exists(p)) OpenArchive(p);
+                        else
+                        {
+                            var r = MessageBox.Show(this, $"File not found:\n{p}\n\nRemove from recent list?", "Missing",
+                                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                            if (r == DialogResult.Yes)
+                            {
+                                RecentManager.Remove(p);
+                                RebuildRecentMenu();
+                            }
+                        }
+                    };
+
+                    mnuFileRecent.DropDownItems.Add(item);
+                }
+            }
+
+            // Separator + Clear
+            mnuFileRecent.DropDownItems.Add(new ToolStripSeparator());
+            var clear = new ToolStripMenuItem("Clear list");
+            clear.Click += (s, e) => { RecentManager.Clear(); RebuildRecentMenu(); };
+            mnuFileRecent.DropDownItems.Add(clear);
         }
 
         private void OnArchiveTypeFilter(char ch)
@@ -854,6 +916,10 @@ namespace Brutal_Zip
                 NavigateTo(_root);
                 ShowViewer();
                 Text = "Brutal Zip — " + Path.GetFileName(path);
+
+                RecentManager.Add(path);
+                RebuildRecentMenu();
+
             }
             catch (Exception ex)
             {
