@@ -26,6 +26,10 @@ namespace Brutal_Zip.Views
         private PreviewKind _kind = PreviewKind.None;
         private bool _mediaPaused = true;
 
+        private string _mappedHost = "localfiles";
+        private string _mappedFolder;   // to avoid remapping on every preview
+
+
         private enum PreviewKind { None, Image, Text, Code, Media }
 
         public void Clear()
@@ -87,34 +91,83 @@ namespace Brutal_Zip.Views
             try
             {
                 await EnsureWebViewAsync();
-                // Build a safe HTML with local file source
-                string fileUri = new Uri(path).AbsoluteUri; // file:///C:/...
+
+                // Map the folder of the media file to a virtual HTTPS origin
+                string folder = Path.GetDirectoryName(path) ?? ".";
+                if (!string.Equals(folder, _mappedFolder, StringComparison.OrdinalIgnoreCase))
+                {
+                    _mappedFolder = folder;
+                    // Allow WebView2 to serve any file in this folder via https://localfiles/
+                    webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                        _mappedHost,
+                        folder,
+                        CoreWebView2HostResourceAccessKind.Allow);
+                }
+
+                // Build a safe url under the mapped host
+                string fileName = Path.GetFileName(path);
+                string src = $"https://{_mappedHost}/{Uri.EscapeDataString(fileName)}";
+
                 string html = $@"
-<!DOCTYPE html> <html> <head> <meta charset='utf-8'> <meta http-equiv='X-UA-Compatible' content='IE=edge'/> <style> html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden; }} #v {{ width:100%; height:100%; background:#000; }} </style> </head> <body> <video id='v' src='{HttpUtility.HtmlAttributeEncode(fileUri)}' controls autoplay style='background:#000;'></video> <script> window.playPause = function() {{ var v=document.getElementById('v'); if(!v) return; if (v.paused) v.play(); else v.pause(); return v.paused ? 'Play' : 'Pause'; }}; window.stopVideo = function(){{ var v=document.getElementById('v'); if(!v) return; v.pause(); v.currentTime = 0; return true; }}; </script> </body> </html>"; webView.CoreWebView2.NavigateToString(html); _mediaPaused = false; btnPlayPause.Text = "Pause"; ShowOnly(webView);
+<!DOCTYPE html> <html> <head> <meta charset='utf-8'> <meta http-equiv='X-UA-Compatible' content='IE=edge'/> <style> html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden; }} #v {{ width:100%; height:100%; background:#000; }} </style> </head> <body> <video id='v' src='{src}' controls style='background:#000;'></video> <script> window.playPause = function() {{ var v=document.getElementById('v'); if(!v) return 'Play'; if (v.paused) {{ v.play(); return 'Pause'; }} else {{ v.pause(); return 'Play'; }} }}; window.stopVideo = function(){{ var v=document.getElementById('v'); if(!v) return true; v.pause(); v.currentTime = 0; return true; }}; </script> </body> </html>";
+                btnPlayPause.Enabled = false; // will enable on NavigationCompleted
+                btnStop.Enabled = false;
+                _mediaPaused = true;
+                btnPlayPause.Text = "Play";
+
+                webView.CoreWebView2.NavigateToString(html);
+                ShowOnly(webView);
             }
-            catch { ShowUnsupported(); }
+            catch
+            {
+                ShowUnsupported();
+            }
         }
         private async Task EnsureWebViewAsync()
         {
             if (webView.CoreWebView2 != null) return;
-            // If no runtime, the next call throws; recommend installing Evergreen WebView2 runtime (Win11 already has it).
-            await webView.EnsureCoreWebView2Async();
-            // Avoid default context menu for a clean look
-            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-            webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
-            webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+
+            await webView.EnsureCoreWebView2Async(null);
+
+            var s = webView.CoreWebView2.Settings;
+            s.AreDefaultContextMenusEnabled = false;
+            s.AreDevToolsEnabled = false;
+            s.IsStatusBarEnabled = false;
+
+            // Enable/disable buttons when the page is ready
+            webView.CoreWebView2.NavigationCompleted += (s2, e2) =>
+            {
+                if (_kind == PreviewKind.Media)
+                {
+                    btnPlayPause.Enabled = true;
+                    btnStop.Enabled = true;
+                }
+            };
         }
 
         private async void TogglePlay()
         {
-            if (_kind != PreviewKind.Media || webView.CoreWebView2 == null) { OpenExternal(); return; }
+            if (_kind != PreviewKind.Media || webView.CoreWebView2 == null)
+            {
+                OpenExternal();
+                return;
+            }
 
             try
             {
+                // returns "Pause" or "Play"
                 string result = await webView.CoreWebView2.ExecuteScriptAsync("window.playPause && window.playPause();");
-                // result returns quoted string, e.g. "\"Pause\"" — normalize
-                _mediaPaused = result?.IndexOf("Play", StringComparison.OrdinalIgnoreCase) >= 0;
-                btnPlayPause.Text = _mediaPaused ? "Play" : "Pause";
+                // result contains quotes from JSON-string serialization
+                if (result != null && result.IndexOf("Pause", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    _mediaPaused = false;
+                    btnPlayPause.Text = "Pause";
+                }
+                else
+                {
+                    _mediaPaused = true;
+                    btnPlayPause.Text = "Play";
+                }
             }
             catch { }
         }
@@ -198,8 +251,9 @@ namespace Brutal_Zip.Views
             lblUnsupported.Visible = false;
             webView.Visible = false;
 
-            btnPlayPause.Enabled = (_kind == PreviewKind.Media);
-            btnStop.Enabled = (_kind == PreviewKind.Media);
+            // Only enable Play/Stop in Media mode; otherwise leave them enabled if you want “Open” to work
+            btnPlayPause.Enabled = (_kind == PreviewKind.Media && webView.CoreWebView2 != null);
+            btnStop.Enabled = (_kind == PreviewKind.Media && webView.CoreWebView2 != null);
 
             if (c == null)
             {

@@ -105,7 +105,11 @@ namespace Brutal_Zip.Views
             // 
             btnExtractSplit.Name = "btnExtractSplit";
             btnExtractSplit.Size = new Size(58, 22);
-            btnExtractSplit.Text = "Extract";
+            this.btnExtractSplit.Text = "Extract";
+            this.btnExtractSplit.DropDownItems.Add("Extract selected…");
+            this.btnExtractSplit.DropDownItems.Add("Extract here");
+            this.btnExtractSplit.DropDownItems.Add("Extract to “ArchiveName”/");
+            this.btnExtractSplit.DropDownItems.Add("Choose folder…");
             // 
             // btnOpenFolder
             // 
