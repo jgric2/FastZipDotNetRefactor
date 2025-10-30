@@ -43,6 +43,8 @@ namespace Brutal_Zip.Views
         internal ToolStripMenuItem mnuEncryptNew;
         internal ToolStripMenuItem mnuSetAddPassword;
         internal ToolStripMenuItem mnuAlgoZipCrypto;
+        internal ToolStripMenuItem mnuAlgoAES128;
+        internal ToolStripMenuItem mnuAlgoAES192;
         internal ToolStripMenuItem mnuAlgoAES256;
 
 
@@ -65,6 +67,8 @@ namespace Brutal_Zip.Views
             mnuEncryptNew = new ToolStripMenuItem();
             mnuSetAddPassword = new ToolStripMenuItem();
             mnuAlgoZipCrypto = new ToolStripMenuItem();
+            mnuAlgoAES128 = new ToolStripMenuItem();
+            mnuAlgoAES192 = new ToolStripMenuItem();
             mnuAlgoAES256 = new ToolStripMenuItem();
 
             btnOpenFolder = new ToolStripButton();
@@ -120,6 +124,8 @@ namespace Brutal_Zip.Views
                 mnuEncryptNew,
                 mnuSetAddPassword,
                 mnuAlgoZipCrypto,
+                mnuAlgoAES128,
+                mnuAlgoAES192,
                 mnuAlgoAES256
             });
 
@@ -131,10 +137,12 @@ namespace Brutal_Zip.Views
             mnuAlgoZipCrypto.Text = "ZipCrypto";
             mnuAlgoZipCrypto.Checked = true;
 
+            mnuAlgoAES128.Text = "AES-128";
+            mnuAlgoAES192.Text = "AES-192";
             mnuAlgoAES256.Text = "AES-256";
+            mnuAlgoAES128.Enabled = true;
+            mnuAlgoAES192.Enabled = true;
             mnuAlgoAES256.Enabled = true;
-
-
 
             toolStrip.Location = new Point(0, 0);
             toolStrip.Name = "toolStrip";

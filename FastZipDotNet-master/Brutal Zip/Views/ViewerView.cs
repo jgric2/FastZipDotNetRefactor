@@ -41,22 +41,59 @@ namespace Brutal_Zip.Views
             mnuEncryptNew.CheckedChanged += (s, e) => EncryptNewItemsChanged?.Invoke(mnuEncryptNew.Checked);
             mnuSetAddPassword.Click += (s, e) => SetAddPasswordClicked?.Invoke();
 
-            mnuAlgoZipCrypto.Click += (s, e) =>
-            {
-                mnuAlgoZipCrypto.Checked = true;
-                mnuAlgoAES256.Checked = false;
-                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.ZipCrypto);
-            };
-
-            mnuAlgoAES256.Click += (s, e) =>
+            void ClearAlgoChecks()
             {
                 mnuAlgoZipCrypto.Checked = false;
-                mnuAlgoAES256.Checked = true;
+                mnuAlgoAES128.Checked = false;
+                mnuAlgoAES192.Checked = false;
+                mnuAlgoAES256.Checked = false;
+            }
+
+            mnuAlgoZipCrypto.Click += (s, e) =>
+            {
+                ClearAlgoChecks();
+                SetAddEncryptionSelection(EncryptionAlgorithm.ZipCrypto);
+                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.ZipCrypto);
+            };
+            mnuAlgoAES128.Click += (s, e) =>
+            {
+                ClearAlgoChecks();
+                SetAddEncryptionSelection(EncryptionAlgorithm.Aes128);
+                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes128);
+            };
+            mnuAlgoAES192.Click += (s, e) =>
+            {
+                ClearAlgoChecks();
+                SetAddEncryptionSelection(EncryptionAlgorithm.Aes192);
+                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes192);
+            };
+            mnuAlgoAES256.Click += (s, e) =>
+            {
+                ClearAlgoChecks();
+                SetAddEncryptionSelection(EncryptionAlgorithm.Aes256);
                 AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes256);
             };
 
 
         }
+
+
+        public void SetAddEncryptionSelection(EncryptionAlgorithm algo)
+        {
+            mnuAlgoZipCrypto.Checked = false;
+            mnuAlgoAES128.Checked = false;
+            mnuAlgoAES192.Checked = false;
+            mnuAlgoAES256.Checked = false;
+
+            switch (algo)
+            {
+                case EncryptionAlgorithm.Aes128: mnuAlgoAES128.Checked = true; break;
+                case EncryptionAlgorithm.Aes192: mnuAlgoAES192.Checked = true; break;
+                case EncryptionAlgorithm.Aes256: mnuAlgoAES256.Checked = true; break;
+                default: mnuAlgoZipCrypto.Checked = true; break;
+            }
+        }
+
 
         public event Action BackHomeClicked;
         public event Action AddFilesClicked;

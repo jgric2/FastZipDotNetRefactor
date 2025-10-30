@@ -293,7 +293,7 @@ namespace Brutal_Zip.Views
             // cmbEncrypt
             // 
             cmbEncrypt.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbEncrypt.Items.AddRange(new object[] { "ZipCrypto", "AES-256" });
+            cmbEncrypt.Items.AddRange(new object[] { "ZipCrypto", "AES-128", "AES-192", "AES-256" });
             cmbEncrypt.Location = new Point(80, 423);
             cmbEncrypt.Name = "cmbEncrypt";
             cmbEncrypt.Size = new Size(150, 23);

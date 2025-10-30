@@ -306,7 +306,7 @@ namespace FastZipDotNet.Zip.Writers
                 zfe.IsEncrypted = true;
                 zfe.IsAes = true;
                 zfe.AesVersion = 2;     // AE-2
-                zfe.AesStrength = 3;    // 256-bit
+                zfe.AesStrength = StrengthFromAlgo(FastZipDotNet.Encryption);
 
                 int saltLen = WinZipAes.GetSaltLength(zfe.AesStrength);
                 int tagLen = 10;
@@ -584,6 +584,14 @@ namespace FastZipDotNet.Zip.Writers
         ////       return (long)zfe.CompressedSize;
         ////   }
 
+        private static byte StrengthFromAlgo(EncryptionAlgorithm algo) => algo switch
+        {
+            EncryptionAlgorithm.Aes128 => (byte)1,
+            EncryptionAlgorithm.Aes192 => (byte)2,
+            EncryptionAlgorithm.Aes256 => (byte)3,
+            _ => (byte)3
+        };
+
         public long AddStream(Stream inStream, string filenameInZip, DateTime modifyTime, int compressionLevel, string fileComment,
           Action<long> onUncompressedProgress, Action<long> onCompressedWrite)
         {
@@ -682,7 +690,7 @@ namespace FastZipDotNet.Zip.Writers
                     zfe.IsEncrypted = true;
                     zfe.IsAes = true;
                     zfe.AesVersion = 2;
-                    zfe.AesStrength = 3;
+                    zfe.AesStrength = StrengthFromAlgo(FastZipDotNet.Encryption);
 
                     int saltLen = WinZipAes.GetSaltLength(zfe.AesStrength);
                     int tagLen = 10;

@@ -871,9 +871,14 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
 
             // Encryption choices
             bool encOn = homeView.CreateEncryptEnabled;
-            EncryptionAlgorithm encAlgo = (homeView.CreateEncryptAlgorithmIndex == 0)
-                ? EncryptionAlgorithm.ZipCrypto
-                : EncryptionAlgorithm.Aes256; // AES to be enabled in next step
+            EncryptionAlgorithm encAlgo = homeView.CreateEncryptAlgorithmIndex switch
+            {
+                0 => EncryptionAlgorithm.ZipCrypto,
+                1 => EncryptionAlgorithm.Aes128,
+                2 => EncryptionAlgorithm.Aes192,
+                3 => EncryptionAlgorithm.Aes256,
+                _ => EncryptionAlgorithm.ZipCrypto
+            };
 
             if (encOn && string.IsNullOrEmpty(_createPassword))
             {
@@ -1236,9 +1241,32 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                     viewerView.mnuEncryptNew.Checked = anyEncrypted;
 
                 // Decide default algorithm based on entries; AES not active yet, but detect it
-                _addAlgorithm = _zip.ZipFileEntries.Any(e => e.IsAes)
-                    ? EncryptionAlgorithm.Aes256   // will be enabled in next AES step
-                    : EncryptionAlgorithm.ZipCrypto;
+                if (_zip.ZipFileEntries.Any(e => e.IsAes))
+                {
+                    // Pick the most common strength among entries, default to 256
+                    byte strength = _zip.ZipFileEntries
+                    .Where(e => e.IsAes && e.AesStrength != 0)
+                    .GroupBy(e => e.AesStrength)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .FirstOrDefault();
+
+                    _addAlgorithm = strength switch
+                    {
+                        1 => EncryptionAlgorithm.Aes128,
+                        2 => EncryptionAlgorithm.Aes192,
+                        3 => EncryptionAlgorithm.Aes256,
+                        _ => EncryptionAlgorithm.Aes256
+                    };
+
+                    // reflect in UI
+                    viewerView.SetAddEncryptionSelection(_addAlgorithm);
+                }
+                else
+                {
+                    _addAlgorithm = EncryptionAlgorithm.ZipCrypto;
+                    viewerView.SetAddEncryptionSelection(_addAlgorithm);
+                }
 
                 // If the archive has encrypted entries and we plan to add to it,
                 // capture (or prompt for) the password now and reuse for additions.
@@ -1991,7 +2019,6 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             // Apply encryption preference for additions
             if (_encryptNewAdds)
             {
-                // Try reuse archive’s known password for additions
                 if (string.IsNullOrEmpty(_addPassword))
                 {
                     if (!string.IsNullOrEmpty(_zip.Password))
@@ -2003,23 +2030,17 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                         using var dlg = new PasswordDialog();
                         if (dlg.ShowDialog(this) != DialogResult.OK) return;
                         _addPassword = dlg.Password;
-                        _zip.Password = _addPassword; // also keep on the open zip for future reads
+                        _zip.Password = _addPassword;
                     }
                 }
 
-                // For now only ZipCrypto is implemented; AES will be enabled in next step.
-                var effectiveAlgo = (_addAlgorithm == EncryptionAlgorithm.ZipCrypto)
-                    ? EncryptionAlgorithm.ZipCrypto
-                    : EncryptionAlgorithm.ZipCrypto; // clamp to ZipCrypto until AES step
-
-                _zip.Encryption = effectiveAlgo;
+                // Accept ZipCrypto, AES-128/192/256
+                _zip.Encryption = _addAlgorithm;
                 _zip.Password = _addPassword;
             }
             else
             {
-                // Explicitly disable encryption for these additions
                 _zip.Encryption = EncryptionAlgorithm.None;
-                // Don't clear _zip.Password here; reader may still need it for other operations
             }
 
             long grandBytes = 0; int grandFiles = 0;
