@@ -24,6 +24,11 @@ namespace Brutal_Zip
         private string _lastPreviewTempFile;
 
 
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>> _tempExtractTasks
+     = new System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>>(StringComparer.OrdinalIgnoreCase);
+
+        private string _zipId = "archive";
+
         private string _typeFilter = "";
         private System.Windows.Forms.Timer _typeFilterTimer;
 
@@ -50,6 +55,37 @@ namespace Brutal_Zip
             public int ItemsCount;     // files count (for folders)
             public string Name => System.IO.Path.GetFileName(Path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
             public string Type => IsFolder ? "Folder" : "File";
+        }
+
+
+
+        private static string ComputeArchiveId(string zipPath)
+        {
+            try
+            {
+                var full = Path.GetFullPath(zipPath).ToLowerInvariant();
+                var bytes = System.Text.Encoding.UTF8.GetBytes(full);
+                var hash = System.Security.Cryptography.SHA1.HashData(bytes);
+                return Convert.ToHexString(hash, 0, 6); // 12 hex chars
+            }
+            catch { return Guid.NewGuid().ToString("N").Substring(0, 12); }
+        }
+
+        private string TempKeyForEntry(string zipPath, FastZipDotNet.Zip.Structure.ZipEntryStructs.ZipFileEntry e)
+        {
+            return $"{zipPath}|{e.HeaderOffset}|{e.Crc32}|{e.CompressedSize}|{e.FileSize}";
+        }
+
+        private string GetStableTempPath(FastZipDotNet.Zip.Structure.ZipEntryStructs.ZipFileEntry e)
+        {
+            string inside = e.FilenameInZip
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .TrimStart(Path.DirectorySeparatorChar);
+
+            string dir = Path.Combine(_sessionTemp, _zipId, Path.GetDirectoryName(inside) ?? "");
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, Path.GetFileName(inside));
         }
 
         public MainForm()
@@ -157,7 +193,6 @@ namespace Brutal_Zip
 
             viewerView.infoPane.EnsureTempProvider = async (zipPath, entry) =>
             {
-                // Extract to your session temp using the existing fast method
                 return await ExtractEntryToTempAsync(entry, CancellationToken.None);
             };
 
@@ -656,26 +691,90 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         }
 
         // Extract one entry to temp and return path
-        private async Task<string> ExtractEntryToTempAsync(ZipFileEntry e, CancellationToken ct)
+        private async Task<string> ExtractEntryToTempAsync(FastZipDotNet.Zip.Structure.ZipEntryStructs.ZipFileEntry e, CancellationToken ct)
         {
-            // Build a session temp path preserving inside-archive folders and name
-            string inside = e.FilenameInZip.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
-            string outPath = Path.Combine(_sessionTemp, inside);
+            if (_zip == null) throw new InvalidOperationException("No open archive.");
 
-            string? dir = Path.GetDirectoryName(outPath);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            string key = TempKeyForEntry(_zip.ZipFileName, e);
 
-            // Use a unique file path to avoid locking collisions with Preview/InfoPane
-            string uniqueOut = MakeUniquePath(outPath);
+            // Create or reuse a shared extraction task (no per-call cancellation inside)
+            Task<string> sharedTask = _tempExtractTasks.GetOrAdd(key, _ =>
+                Task.Run(async () =>
+                {
+                    string finalPath = GetStableTempPath(e);
 
-            await Task.Run(() =>
+                    // If already extracted and size matches, reuse
+                    try
+                    {
+                        if (File.Exists(finalPath))
+                        {
+                            var fi = new FileInfo(finalPath);
+                            if (fi.Length == (long)e.FileSize)
+                                return finalPath;
+                        }
+                    }
+                    catch { /* reuse check failed; proceed to extract */ }
+
+                    string partPath = finalPath + ".part";
+                    try { if (File.Exists(partPath)) File.Delete(partPath); } catch { }
+
+                    // Perform the extraction into .part (no CT here to allow completion)
+                    bool ok = await Task.Run(() =>
+                    {
+                        void OnBytes(long n) { }
+                        return _zip.ZipDataReader.ExtractFile(e, partPath, OnBytes);
+                    }).ConfigureAwait(false);
+
+                    if (!ok || !File.Exists(partPath))
+                        throw new IOException("Temp extract failed.");
+
+                    // Move .part into place if final doesn't exist yet
+                    try
+                    {
+                        if (!File.Exists(finalPath))
+                        {
+#if NET8_0_OR_GREATER
+                            File.Move(partPath, finalPath, overwrite: false);
+#else
+File.Move(partPath, finalPath);
+#endif
+                        }
+                        else
+                        {
+                            try { File.Delete(partPath); } catch { }
+                        }
+                    }
+                    catch
+                    {
+                        if (File.Exists(finalPath)) return finalPath;
+                        return partPath; // fallback if move failed but .part exists
+                    }
+
+                    return finalPath;
+                })
+            );
+
+            try
             {
-                void OnBytes(long n) { } // not needed for temp preview
-                                         // We use our own reader to extract; it will write to 'uniqueOut'
-                _zip.ZipDataReader.ExtractFile(e, uniqueOut, OnBytes);
-            }, ct);
-
-            return uniqueOut;
+#if NET8_0_OR_GREATER
+                // Caller may cancel the await, but extraction continues in the shared task
+                return await sharedTask.WaitAsync(ct).ConfigureAwait(false);
+#else
+// .NET < 8: we can't WaitAsync; the caller can ignore cancel or use a manual polling here
+return await sharedTask.ConfigureAwait(false);
+#endif
+            }
+            catch (OperationCanceledException)
+            {
+                // Do not remove the cached task; let it finish for reuse.
+                throw;
+            }
+            catch
+            {
+                // Remove failed task so next call can retry
+                _tempExtractTasks.TryRemove(key, out _);
+                throw;
+            }
         }
 
         private async Task PreviewSelectedAsync()
@@ -1324,6 +1423,8 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                 _zip?.Dispose();
                 _zipPath = path;
 
+                _zipId = ComputeArchiveId(_zipPath);
+
                 // Open in read/write to allow adding later (writer will use random access)
                 _zip = new FastZipDotNet.Zip.FastZipDotNet(path, Compression.Deflate, 6, Threads);
 
@@ -1411,6 +1512,8 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         {
             _zip?.Dispose(); _zip = null; _zipPath = null;
             _root = _current = null;
+
+            _tempExtractTasks.Clear(); // Optional: reset cache for new archive
 
             viewerView.lvArchive.BeginUpdate();
             viewerView.lvArchive.VirtualListSize = 0;
