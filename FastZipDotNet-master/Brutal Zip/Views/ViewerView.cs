@@ -44,9 +44,17 @@ namespace Brutal_Zip.Views
             mnuAlgoZipCrypto.Click += (s, e) =>
             {
                 mnuAlgoZipCrypto.Checked = true;
-                // leave AES disabled for now
+                mnuAlgoAES256.Checked = false;
                 AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.ZipCrypto);
             };
+
+            mnuAlgoAES256.Click += (s, e) =>
+            {
+                mnuAlgoZipCrypto.Checked = false;
+                mnuAlgoAES256.Checked = true;
+                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes256);
+            };
+
 
         }
 

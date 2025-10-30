@@ -1,6 +1,7 @@
 ﻿using FastZipDotNet.MultiThreading;
 using FastZipDotNet.Zip.Cryptography;
 using FastZipDotNet.Zip.Encryption;
+using FastZipDotNet.Zip.Encryption.FastZipDotNet.Zip.Encryption;
 using FastZipDotNet.Zip.Helpers;
 using FastZipDotNet.Zip.ZStd;
 using System.Diagnostics;
@@ -453,7 +454,7 @@ namespace FastZipDotNet.Zip.Readers
 
                 ushort versionNeeded = br.ReadUInt16();
                 ushort generalPurposeBitFlag = br.ReadUInt16();
-                ushort compressionMethod = br.ReadUInt16();
+                ushort compressionMethodLocal = br.ReadUInt16(); // may be 99 for AES
                 ushort lastModTime = br.ReadUInt16();
                 ushort lastModDate = br.ReadUInt16();
                 uint crc32Local = br.ReadUInt32();
@@ -468,44 +469,67 @@ namespace FastZipDotNet.Zip.Readers
                 bool hasDataDescriptor = (generalPurposeBitFlag & 0x0008) != 0;
                 bool isEncrypted = (generalPurposeBitFlag & 0x0001) != 0;
 
-                Compression method = (Compression)compressionMethod;
+                // method decision
+                Compression actualMethod = zfe.IsAes ? zfe.Method : (Compression)compressionMethodLocal;
 
-                // Build input stream (handle ZipCrypto)
+                // Build input stream (AES or ZipCrypto or none)
                 Stream inputStream = null;
                 try
                 {
                     if (isEncrypted)
                     {
                         if (zfe.IsAes)
-                            throw new NotSupportedException("AES-encrypted entries will be supported in the next step.");
+                        {
+                            if (string.IsNullOrEmpty(FastZipDotNet.Password))
+                                throw new CryptographicException("Password required for AES-encrypted entry.");
 
-                        if (string.IsNullOrEmpty(FastZipDotNet.Password))
-                            throw new CryptographicException("Password required for encrypted ZIP entry.");
+                            // total encrypted size includes salt + pwv + ciphertext + 10 tag
+                            long totalEncryptedSize = (long)zfe.CompressedSize;
+                            if (totalEncryptedSize <= 0) throw new InvalidDataException("Invalid AES compressed size");
 
-                        // We never set data descriptor when writing; verifier is CRC high byte
-                        byte verifier = hasDataDescriptor ? (byte)(lastModTime >> 8) : (byte)(zfe.Crc32 >> 24);
+                            byte strength = zfe.AesStrength != 0 ? zfe.AesStrength : (byte)3; // default to 256 if unknown
+                            var aes = new AesDecryptStream(zipStream, FastZipDotNet.Password, strength, totalEncryptedSize);
 
-                        long payloadLen = (long)zfe.CompressedSize - 12;
-                        if (payloadLen < 0) throw new InvalidDataException("Invalid encrypted size");
-
-                        var decrypt = new ZipCryptoDecryptStream(zipStream, FastZipDotNet.Password, verifier, payloadLen);
-
-                        if (method == Compression.Store)
-                            inputStream = decrypt;
-                        else if (method == Compression.Deflate)
-                            inputStream = new DeflateStream(decrypt, CompressionMode.Decompress, leaveOpen: true);
-                        else if (method == Compression.Zstd)
-                            inputStream = new DecompressionStream(decrypt);
+                            // Decompressor wraps the AES plaintext stream
+                            if (actualMethod == Compression.Store)
+                                inputStream = aes;
+                            else if (actualMethod == Compression.Deflate)
+                                inputStream = new DeflateStream(aes, CompressionMode.Decompress, leaveOpen: true);
+                            else if (actualMethod == Compression.Zstd)
+                                inputStream = new DecompressionStream(aes);
+                            else
+                                return false;
+                        }
                         else
-                            return false;
+                        {
+                            // ZipCrypto
+                            if (string.IsNullOrEmpty(FastZipDotNet.Password))
+                                throw new CryptographicException("Password required for encrypted ZIP entry.");
+
+                            byte verifier = hasDataDescriptor ? (byte)(lastModTime >> 8) : (byte)(zfe.Crc32 >> 24);
+
+                            long payloadLen = (long)zfe.CompressedSize - 12;
+                            if (payloadLen < 0) throw new InvalidDataException("Invalid encrypted size");
+
+                            var decrypt = new Encryption.ZipCryptoDecryptStream(zipStream, FastZipDotNet.Password, verifier, payloadLen);
+
+                            if (actualMethod == Compression.Store)
+                                inputStream = decrypt;
+                            else if (actualMethod == Compression.Deflate)
+                                inputStream = new DeflateStream(decrypt, CompressionMode.Decompress, leaveOpen: true);
+                            else if (actualMethod == Compression.Zstd)
+                                inputStream = new DecompressionStream(decrypt);
+                            else
+                                return false;
+                        }
                     }
                     else
                     {
-                        if (method == Compression.Store)
+                        if (actualMethod == Compression.Store)
                             inputStream = zipStream;
-                        else if (method == Compression.Deflate)
+                        else if (actualMethod == Compression.Deflate)
                             inputStream = new DeflateStream(zipStream, CompressionMode.Decompress, leaveOpen: true);
-                        else if (method == Compression.Zstd)
+                        else if (actualMethod == Compression.Zstd)
                             inputStream = new DecompressionStream(zipStream);
                         else
                             return false;
@@ -537,6 +561,8 @@ namespace FastZipDotNet.Zip.Readers
                     Interlocked.Increment(ref FastZipDotNet.FilesWritten);
                     outStream.Flush();
 
+                    // For AES, CRC field may be 0; do not strictly fail on CRC mismatch if AES; MAC already verified by stream
+                    if (zfe.IsAes) return remaining == 0;
                     return remaining == 0 && (zfe.Crc32 == crc32Calc);
                 }
                 finally

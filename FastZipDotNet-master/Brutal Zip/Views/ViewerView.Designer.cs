@@ -131,8 +131,8 @@ namespace Brutal_Zip.Views
             mnuAlgoZipCrypto.Text = "ZipCrypto";
             mnuAlgoZipCrypto.Checked = true;
 
-            mnuAlgoAES256.Text = "AES-256 (soon)";
-            mnuAlgoAES256.Enabled = false;
+            mnuAlgoAES256.Text = "AES-256";
+            mnuAlgoAES256.Enabled = true;
 
 
 
