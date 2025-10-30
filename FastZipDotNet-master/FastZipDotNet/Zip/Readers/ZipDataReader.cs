@@ -1,7 +1,6 @@
 ﻿using FastZipDotNet.MultiThreading;
 using FastZipDotNet.Zip.Cryptography;
 using FastZipDotNet.Zip.Encryption;
-using FastZipDotNet.Zip.Encryption.FastZipDotNet.Zip.Encryption;
 using FastZipDotNet.Zip.Helpers;
 using FastZipDotNet.Zip.ZStd;
 using System.Diagnostics;

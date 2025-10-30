@@ -178,6 +178,30 @@
             // 
             // MainForm
             // 
+
+            sepTools3 = new ToolStripSeparator();
+            mnuToolsCrackPassword = new ToolStripMenuItem();
+
+            // mnuTools
+            mnuTools.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                mnuToolsSettings,
+                sepTools1,
+                mnuToolsOpenAfterCreate,
+                mnuToolsOpenAfterExtract,
+                sepTools2,
+                mnuToolsFind,
+                sepTools3,                 // NEW
+                mnuToolsCrackPassword      // NEW
+            });
+
+            // mnuToolsCrackPassword
+            mnuToolsCrackPassword.Name = "mnuToolsCrackPassword";
+            mnuToolsCrackPassword.Size = new Size(213, 22);
+            mnuToolsCrackPassword.Text = "Crack Password…";
+            mnuToolsCrackPassword.Enabled = false; // enabled when an encrypted entry exists
+
+
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(1000, 700);
@@ -196,5 +220,7 @@
             PerformLayout();
         }
         private ToolStripMenuItem toolStripMenuItem1;
+        private ToolStripSeparator sepTools3;      // NEW
+        internal ToolStripMenuItem mnuToolsCrackPassword; // NEW
     }
 }

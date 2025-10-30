@@ -49,6 +49,9 @@
     <Compile Update="Controls\BrutalControls\TransparentToolTipControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Update="CrackPasswordForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="FindDialog.cs">
       <SubType>Form</SubType>
     </Compile>

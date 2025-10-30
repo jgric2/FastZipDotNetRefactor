@@ -29,7 +29,7 @@ namespace FastZipDotNet.Zip.Encryption
     }
 
     // Traditional PKWARE stream cipher
-    internal sealed class TraditionalZipCrypto
+    public sealed class TraditionalZipCrypto
     {
         private uint key0 = 0x12345678;
         private uint key1 = 0x23456789;

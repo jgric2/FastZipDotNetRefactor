@@ -1,18 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
-namespace Brutal_Zip
+﻿namespace Brutal_Zip
 {
     public partial class PasswordDialog : Form
     {
         public string Password => txtPassword.Text;
-        public PasswordDialog() { InitializeComponent(); }
+
+        private PasswordCrackContext _crackContext;
+
+        public PasswordDialog()
+        { 
+            InitializeComponent();
+
+            checkBoxShowPassword.Checked = !txtPassword.UseSystemPasswordChar;
+        }
+
+        public void SetCrackContext(PasswordCrackContext ctx)
+        {
+            _crackContext = ctx;
+            btnCrack.Visible = (_crackContext != null);
+        }
+
+        private void btnCrack_Click(object sender, EventArgs e)
+        {
+            if (_crackContext == null) return;
+            using var frm = new CrackPasswordForm(_crackContext);
+            var r = frm.ShowDialog(this);
+            if (r == DialogResult.OK && !string.IsNullOrEmpty(frm.FoundPassword))
+            {
+                txtPassword.Text = frm.FoundPassword;
+                txtPassword.SelectAll();
+                txtPassword.Focus();
+            }
+        }
+
+        private void checkBoxShowPassword_CheckedChanged(object sender, EventArgs e)
+        {
+            txtPassword.UseSystemPasswordChar = !checkBoxShowPassword.Checked;
+        }
     }
 }

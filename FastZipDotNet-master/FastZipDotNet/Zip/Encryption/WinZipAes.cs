@@ -1,11 +1,4 @@
-﻿using System;
-using System.Buffers;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-
-namespace FastZipDotNet.Zip.Encryption
-{
+﻿
     using System;
     using System.IO;
     using System.Runtime.CompilerServices;
@@ -13,7 +6,7 @@ namespace FastZipDotNet.Zip.Encryption
 
     namespace FastZipDotNet.Zip.Encryption
     {
-        internal static class WinZipAes
+        public static class WinZipAes
         {
             public static int GetSaltLength(byte strength) => strength switch
             {
@@ -280,5 +273,5 @@ namespace FastZipDotNet.Zip.Encryption
             }
         }
     }
-}
+
 

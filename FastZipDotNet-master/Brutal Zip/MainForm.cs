@@ -68,7 +68,7 @@ namespace Brutal_Zip
             viewerView.SetAddEncryptionSelection(addAlgo);
             _addAlgorithm = addAlgo;
 
-
+            mnuToolsCrackPassword.Click += (s, e) => CrackPasswordFromTools();
 
 
             // HomeView encryption UI
@@ -1249,6 +1249,9 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                 if (viewerView.mnuEncryptNew != null)
                     viewerView.mnuEncryptNew.Checked = anyEncrypted;
 
+                // NEW: enable/disable Tools > Crack Password…
+                mnuToolsCrackPassword.Enabled = anyEncrypted;
+
                 // Decide default algorithm based on entries; AES not active yet, but detect it
                 if (_zip.ZipFileEntries.Any(e => e.IsAes))
                 {
@@ -1304,11 +1307,97 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             viewerView.lvArchive.BeginUpdate();
             viewerView.lvArchive.VirtualListSize = 0;
             viewerView.lvArchive.EndUpdate();
-
+            mnuToolsCrackPassword.Enabled = false;
             _rows.Clear();
 
             ShowHome();
         }
+
+
+        private void CrackPasswordFromTools()
+        {
+            try
+            {
+                if (_zip == null)
+                {
+                    MessageBox.Show(this, "Open an archive first.", "Crack Password");
+                    return;
+                }
+
+                if (!_zip.ZipFileEntries.Any(e => e.IsEncrypted))
+                {
+                    MessageBox.Show(this, "This archive has no encrypted entries.", "Crack Password");
+                    return;
+                }
+
+                // Prefer an encrypted file currently selected in the viewer; otherwise pick any encrypted entry
+                if (!TryGetEncryptedEntryForCrack(out var target))
+                {
+                    MessageBox.Show(this, "No encrypted file is selected. Select an encrypted file and try again.", "Crack Password");
+                    return;
+                }
+
+                using var frm = new CrackPasswordForm(new PasswordCrackContext(_zip.ZipFileName, target));
+                var r = frm.ShowDialog(this);
+                if (r == DialogResult.OK && !string.IsNullOrEmpty(frm.FoundPassword))
+                {
+                    _zip.Password = frm.FoundPassword;
+                    _addPassword = frm.FoundPassword; // reuse for adding files
+                    MessageBox.Show(this, "Password set for this archive.", "Crack Password");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Crack Password");
+            }
+        }
+
+        private bool TryGetEncryptedEntryForCrack(out FastZipDotNet.Zip.Structure.ZipEntryStructs.ZipFileEntry entry)
+        {
+            // 1) If viewer is visible and a selected item is an encrypted file, use that
+            if (viewerView.Visible && viewerView.lvArchive.SelectedIndices.Count > 0)
+            {
+                foreach (int idx in viewerView.lvArchive.SelectedIndices)
+                {
+                    if (idx >= 0 && idx < _rows.Count)
+                    {
+                        var r = _rows[idx];
+                        if (r.Kind == RowKind.File && r.Entry.IsEncrypted)
+                        {
+                            entry = r.Entry;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // 2) If current folder (_current) has any encrypted file, use first
+            if (_current != null)
+            {
+                foreach (var f in _current.Files)
+                {
+                    if (f.IsEncrypted)
+                    {
+                        entry = f;
+                        return true;
+                    }
+                }
+            }
+
+            // 3) Fall back to first encrypted file in the archive
+            foreach (var f in _zip.ZipFileEntries)
+            {
+                if (f.IsEncrypted)
+                {
+                    entry = f;
+                    return true;
+                }
+            }
+
+            entry = default;
+            return false;
+        }
+
 
         private void BuildTree(List<ZipFileEntry> entries)
         {
@@ -2208,7 +2297,12 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             if (!anyEncrypted) return true;
 
             if (!string.IsNullOrEmpty(_zip.Password)) return true;
+
+            var firstEncrypted = _zip.ZipFileEntries.FirstOrDefault(e => e.IsEncrypted);
             using var dlg = new PasswordDialog();
+            if (firstEncrypted.FilenameInZip != null)
+                dlg.SetCrackContext(new PasswordCrackContext(_zip.ZipFileName, firstEncrypted));
+
             if (dlg.ShowDialog(this) != DialogResult.OK) return false;
             _zip.Password = dlg.Password;
             return true;
