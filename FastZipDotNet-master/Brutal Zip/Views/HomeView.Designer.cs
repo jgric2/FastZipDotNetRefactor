@@ -75,22 +75,22 @@ namespace Brutal_Zip.Views
             lblCreateLevel = new Label();
             numCreateLevel = new NumericUpDown();
             lblThreadsText = new Label();
-            tbThreads = new TrackBar();
             lblThreadsValue = new Label();
             chkThreadsAutoMain = new CheckBox();
             btnCreate = new Button();
             btnCreateQuick = new Button();
             lvStaging = new ListView();
-            cmsStaging = new ContextMenuStrip(components);
-            mnuStagingRemove = new ToolStripMenuItem();
-            mnuStagingRemoveMissing = new ToolStripMenuItem();
-            mnuStagingClear = new ToolStripMenuItem();
             colStName = new ColumnHeader();
             colStType = new ColumnHeader();
             colStSize = new ColumnHeader();
             colStItems = new ColumnHeader();
             colStPath = new ColumnHeader();
+            cmsStaging = new ContextMenuStrip(components);
+            mnuStagingRemove = new ToolStripMenuItem();
+            mnuStagingRemoveMissing = new ToolStripMenuItem();
+            mnuStagingClear = new ToolStripMenuItem();
             lblCreateHint = new Label();
+            tbThreads = new TrackBar();
             grpExtract = new GroupBox();
             pnlExtractDrop = new Panel();
             lblExtractDrop = new Label();
@@ -104,8 +104,8 @@ namespace Brutal_Zip.Views
             grpCreate.SuspendLayout();
             pnlCreateDrop.SuspendLayout();
             ((ISupportInitialize)numCreateLevel).BeginInit();
-            ((ISupportInitialize)tbThreads).BeginInit();
             cmsStaging.SuspendLayout();
+            ((ISupportInitialize)tbThreads).BeginInit();
             grpExtract.SuspendLayout();
             pnlExtractDrop.SuspendLayout();
             SuspendLayout();
@@ -152,7 +152,7 @@ namespace Brutal_Zip.Views
             lblCreateDrop.Dock = DockStyle.Fill;
             lblCreateDrop.Location = new Point(0, 0);
             lblCreateDrop.Name = "lblCreateDrop";
-            lblCreateDrop.Size = new Size(100, 23);
+            lblCreateDrop.Size = new Size(408, 198);
             lblCreateDrop.TabIndex = 0;
             lblCreateDrop.Text = "Drop files/folders here to create a ZIP";
             lblCreateDrop.TextAlign = ContentAlignment.MiddleCenter;
@@ -238,17 +238,6 @@ namespace Brutal_Zip.Views
             lblThreadsText.TabIndex = 10;
             lblThreadsText.Text = "Threads:";
             // 
-            // tbThreads
-            // 
-            tbThreads.LargeChange = 1;
-            tbThreads.Location = new Point(80, 363);
-            tbThreads.Maximum = 8;
-            tbThreads.Minimum = 1;
-            tbThreads.Name = "tbThreads";
-            tbThreads.Size = new Size(250, 45);
-            tbThreads.TabIndex = 11;
-            tbThreads.Value = 1;
-            // 
             // lblThreadsValue
             // 
             lblThreadsValue.Location = new Point(340, 364);
@@ -274,6 +263,7 @@ namespace Brutal_Zip.Views
             btnCreate.Size = new Size(100, 28);
             btnCreate.TabIndex = 14;
             btnCreate.Text = "Create";
+            btnCreate.Click += btnCreate_Click;
             // 
             // btnCreateQuick
             // 
@@ -294,29 +284,6 @@ namespace Brutal_Zip.Views
             lvStaging.TabIndex = 16;
             lvStaging.UseCompatibleStateImageBehavior = false;
             lvStaging.View = View.Details;
-            // 
-            // cmsStaging
-            // 
-            cmsStaging.Items.AddRange(new ToolStripItem[] { mnuStagingRemove, mnuStagingRemoveMissing, mnuStagingClear });
-            cmsStaging.Name = "cmsStaging";
-            // 
-            // mnuStagingRemove
-            // 
-            mnuStagingRemove.Name = "mnuStagingRemove";
-            mnuStagingRemove.Size = new Size(32, 19);
-            mnuStagingRemove.Text = "Remove selected";
-            // 
-            // mnuStagingRemoveMissing
-            // 
-            mnuStagingRemoveMissing.Name = "mnuStagingRemoveMissing";
-            mnuStagingRemoveMissing.Size = new Size(32, 19);
-            mnuStagingRemoveMissing.Text = "Remove missing";
-            // 
-            // mnuStagingClear
-            // 
-            mnuStagingClear.Name = "mnuStagingClear";
-            mnuStagingClear.Size = new Size(32, 19);
-            mnuStagingClear.Text = "Clear all";
             // 
             // colStName
             // 
@@ -344,6 +311,30 @@ namespace Brutal_Zip.Views
             colStPath.Text = "Path";
             colStPath.Width = 300;
             // 
+            // cmsStaging
+            // 
+            cmsStaging.Items.AddRange(new ToolStripItem[] { mnuStagingRemove, mnuStagingRemoveMissing, mnuStagingClear });
+            cmsStaging.Name = "cmsStaging";
+            cmsStaging.Size = new Size(164, 70);
+            // 
+            // mnuStagingRemove
+            // 
+            mnuStagingRemove.Name = "mnuStagingRemove";
+            mnuStagingRemove.Size = new Size(163, 22);
+            mnuStagingRemove.Text = "Remove selected";
+            // 
+            // mnuStagingRemoveMissing
+            // 
+            mnuStagingRemoveMissing.Name = "mnuStagingRemoveMissing";
+            mnuStagingRemoveMissing.Size = new Size(163, 22);
+            mnuStagingRemoveMissing.Text = "Remove missing";
+            // 
+            // mnuStagingClear
+            // 
+            mnuStagingClear.Name = "mnuStagingClear";
+            mnuStagingClear.Size = new Size(163, 22);
+            mnuStagingClear.Text = "Clear all";
+            // 
             // lblCreateHint
             // 
             lblCreateHint.AutoEllipsis = true;
@@ -352,6 +343,17 @@ namespace Brutal_Zip.Views
             lblCreateHint.Size = new Size(410, 20);
             lblCreateHint.TabIndex = 17;
             lblCreateHint.Text = "Staging: none";
+            // 
+            // tbThreads
+            // 
+            tbThreads.LargeChange = 1;
+            tbThreads.Location = new Point(80, 363);
+            tbThreads.Maximum = 8;
+            tbThreads.Minimum = 1;
+            tbThreads.Name = "tbThreads";
+            tbThreads.Size = new Size(250, 45);
+            tbThreads.TabIndex = 11;
+            tbThreads.Value = 1;
             // 
             // grpExtract
             // 
@@ -385,7 +387,7 @@ namespace Brutal_Zip.Views
             lblExtractDrop.Dock = DockStyle.Fill;
             lblExtractDrop.Location = new Point(0, 0);
             lblExtractDrop.Name = "lblExtractDrop";
-            lblExtractDrop.Size = new Size(100, 23);
+            lblExtractDrop.Size = new Size(408, 198);
             lblExtractDrop.TabIndex = 0;
             lblExtractDrop.Text = "Drop .zip files here to extract or open";
             lblExtractDrop.TextAlign = ContentAlignment.MiddleCenter;
@@ -459,8 +461,8 @@ namespace Brutal_Zip.Views
             grpCreate.PerformLayout();
             pnlCreateDrop.ResumeLayout(false);
             ((ISupportInitialize)numCreateLevel).EndInit();
-            ((ISupportInitialize)tbThreads).EndInit();
             cmsStaging.ResumeLayout(false);
+            ((ISupportInitialize)tbThreads).EndInit();
             grpExtract.ResumeLayout(false);
             grpExtract.PerformLayout();
             pnlExtractDrop.ResumeLayout(false);

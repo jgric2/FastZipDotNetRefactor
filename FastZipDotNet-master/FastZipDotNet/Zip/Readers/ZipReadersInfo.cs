@@ -210,13 +210,19 @@ namespace FastZipDotNet.Zip.Readers
                         break;
                     }
 
-                    bool encodeUTF8 = (BitConverter.ToUInt16(centralDirImage, pointer + 8) & 0x0800) != 0;
-                    Encoding encoder = encodeUTF8 ? Encoding.UTF8 : Encoding.GetEncoding(437);
+                    //bool encodeUTF8 = (BitConverter.ToUInt16(centralDirImage, pointer + 8) & 0x0800) != 0;
+                    ushort flags = BitConverter.ToUInt16(centralDirImage, pointer + 8);
+                    bool encodeUTF8 = (flags & 0x0800) != 0;
+                    bool isEncrypted = (flags & 0x0001) != 0;
 
+                    Encoding encoder = encodeUTF8 ? Encoding.UTF8 : Encoding.GetEncoding(437);
+                    ushort compMethodRaw = BitConverter.ToUInt16(centralDirImage, pointer + 10);
                     ZipFileEntry zfe = new ZipFileEntry();
 
                     zfe.EncodeUTF8 = encodeUTF8;
-                    zfe.Method = (Compression)BitConverter.ToUInt16(centralDirImage, pointer + 10);
+                    zfe.IsEncrypted = isEncrypted;
+                   
+                    zfe.Method = (Compression)compMethodRaw;
                     zfe.ModifyTime = DosHelpers.DosTimeToDateTime(BitConverter.ToUInt32(centralDirImage, pointer + 12));
                     zfe.Crc32 = BitConverter.ToUInt32(centralDirImage, pointer + 16);
                     uint compressedSize = BitConverter.ToUInt32(centralDirImage, pointer + 20);
@@ -237,6 +243,54 @@ namespace FastZipDotNet.Zip.Readers
                     // Read extra field
                     MemoryStream extraFieldStream = new MemoryStream(centralDirImage, pointer, extraFieldLength, false);
                     BinaryReader extraFieldReader = new BinaryReader(extraFieldStream);
+
+                    bool aesSeen = false;
+                    byte aesStrength = 0;
+                    ushort aesVersion = 0;
+                    ushort actualMethodFromAes = 0;
+
+                    if (extraFieldLength > 0)
+                    {
+                        long endPos = extraFieldStream.Position + extraFieldLength;
+                        while (extraFieldStream.Position < endPos)
+                        {
+                            ushort headerId = extraFieldReader.ReadUInt16();
+                            ushort dataSize = extraFieldReader.ReadUInt16();
+                            long start = extraFieldStream.Position;
+
+                            if (headerId == 0x9901 && dataSize >= 7) // WinZip AES
+                            {
+                                aesVersion = extraFieldReader.ReadUInt16();   // 2 bytes
+                                ushort vendorId = extraFieldReader.ReadUInt16(); // 'AE'
+                                aesStrength = extraFieldReader.ReadByte();    // 1
+                                actualMethodFromAes = extraFieldReader.ReadUInt16(); // 2
+
+                                aesSeen = true;
+                                // set actual compression method (99 in header)
+                                zfe.Method = (Compression)actualMethodFromAes;
+                            }
+                            else
+                            {
+                                extraFieldReader.BaseStream.Seek(dataSize, SeekOrigin.Current);
+                            }
+                        }
+                    }
+
+                    zfe.IsAes = aesSeen;
+                    if (aesSeen)
+                    {
+                        zfe.AesStrength = aesStrength;
+                        zfe.AesVersion = aesVersion;
+                        zfe.IsEncrypted = true;
+                    }
+
+
+
+
+
+
+
+
 
                     ulong uncompressedSize64 = uncompressedSize;
                     ulong compressedSize64 = compressedSize;

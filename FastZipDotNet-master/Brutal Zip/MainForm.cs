@@ -503,6 +503,8 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         {
             if (_zip == null) return;
             if (viewerView.lvArchive.SelectedIndices.Count == 0) { viewerView.previewPane.Clear(); return; }
+            if (!EnsurePasswordForEncryptedIfNeeded()) return;
+
 
             var r = _rows[viewerView.lvArchive.SelectedIndices[0]];
             if (r.Kind != RowKind.File) { viewerView.previewPane.Clear(); return; }
@@ -884,6 +886,9 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             try
             {
                 using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
+
+                zip.Encryption = EncryptionAlgorithm.ZipCrypto;
+                zip.Password = "Aussie111:)";
 
                 // Live engine thread control
                 pf.ConfigureThreads(maxThreads, curThreads, n =>
@@ -1443,6 +1448,8 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                 return;
             }
 
+            if (!EnsurePasswordForEncryptedIfNeeded()) return;
+
             int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
             int curThreads = Threads;
 
@@ -1556,6 +1563,7 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         {
             if (_zip == null) return;
             if (viewerView.lvArchive.SelectedIndices.Count == 0) return;
+            if (!EnsurePasswordForEncryptedIfNeeded()) return;
 
             var files = new List<ZipFileEntry>();
             foreach (int idx in viewerView.lvArchive.SelectedIndices)
@@ -1950,6 +1958,27 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         private void MainForm_Load_1(object sender, EventArgs e)
         {
 
+        }
+
+        private bool EnsurePasswordForEncryptedIfNeeded()
+        {
+            if (_zip == null) return true;
+            bool anyEncrypted = _zip.ZipFileEntries.Any(e => e.IsEncrypted);
+            if (!anyEncrypted) return true;
+
+            // If AES seen, we'll add support in next step; warn now
+            if (_zip.ZipFileEntries.Any(e => e.IsAes))
+            {
+                MessageBox.Show(this, "AES-encrypted entries detected. AES decryption will be added in the next step.", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // For now, return false to avoid failure paths; or prompt anyway in anticipation.
+                // return false;
+            }
+
+            if (!string.IsNullOrEmpty(_zip.Password)) return true;
+            using var dlg = new PasswordDialog();
+            if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+            _zip.Password = dlg.Password;
+            return true;
         }
 
         private void toolStripMenuItem1_Click(object sender, EventArgs e)

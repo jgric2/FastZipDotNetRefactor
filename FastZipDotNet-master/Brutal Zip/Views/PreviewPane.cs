@@ -534,5 +534,10 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             while (s >= 1024 && i < u.Length - 1) { s /= 1024; i++; }
             return $"{s:F1} {u[i]}";
         }
+
+        private void lblInfo_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

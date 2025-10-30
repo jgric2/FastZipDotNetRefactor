@@ -72,6 +72,7 @@ namespace Brutal_Zip.Views
             lblInfo.Name = "lblInfo";
             lblInfo.Size = new Size(560, 18);
             lblInfo.TabIndex = 1;
+            lblInfo.Click += lblInfo_Click;
             // 
             // btnOpenExternal
             // 

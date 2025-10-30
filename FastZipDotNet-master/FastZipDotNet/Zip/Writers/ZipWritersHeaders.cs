@@ -8,12 +8,74 @@ namespace FastZipDotNet.Zip.Writers
 {
     public static class ZipWritersHeaders
     {
-      
-        public static byte[] BuildLocalHeaderBytes(ref ZipFileEntry zfe)
+
+        public static byte[] BuildLocalHeaderBytes(ref ZipFileEntry _zfe)
         {
             using (var ms = new MemoryStream())
             {
-                WriteLocalHeader(ref zfe, ms);
+                // Signature
+                ms.Write(new byte[] { 0x50, 0x4b, 0x03, 0x04 }, 0, 4);
+
+                bool zip64Needed = _zfe.FileSize >= uint.MaxValue || _zfe.CompressedSize >= uint.MaxValue;
+
+                ushort versionNeeded = (ushort)(zip64Needed ? 45 : 20);
+                if (_zfe.Method == Compression.Zstd)
+                    versionNeeded = 63;
+
+                // Version needed
+                ms.Write(BitConverter.GetBytes(versionNeeded), 0, 2);
+
+                // General purpose bit flag
+                ushort gpFlag = 0;
+                if (_zfe.EncodeUTF8) gpFlag |= 0x0800;
+                if (_zfe.IsEncrypted) gpFlag |= 0x0001;
+                ms.Write(BitConverter.GetBytes(gpFlag), 0, 2);
+
+                // Compression method
+                ms.Write(BitConverter.GetBytes((ushort)_zfe.Method), 0, 2);
+
+                // Last Mod File Time/Date
+                ms.Write(BitConverter.GetBytes(DosHelpers.DateTimeToDosTime(_zfe.ModifyTime)), 0, 4);
+
+                // CRC32
+                ms.Write(BitConverter.GetBytes(_zfe.Crc32), 0, 4);
+
+                // Compressed/uncompressed sizes
+                ms.Write(BitConverter.GetBytes(zip64Needed ? 0xFFFFFFFFu : (uint)_zfe.CompressedSize), 0, 4);
+                ms.Write(BitConverter.GetBytes(zip64Needed ? 0xFFFFFFFFu : (uint)_zfe.FileSize), 0, 4);
+
+                // Filename
+                var encoder = _zfe.EncodeUTF8 ? Encoding.UTF8 : EncodingHelper.DefaultEncoding;
+                byte[] encodedFilename = encoder.GetBytes(_zfe.FilenameInZip);
+                ms.Write(BitConverter.GetBytes((ushort)encodedFilename.Length), 0, 2);
+
+                // Extra field
+                using var msExtra = new MemoryStream();
+                using var bwExtra = new BinaryWriter(msExtra);
+
+                if (zip64Needed)
+                {
+                    bwExtra.Write((ushort)0x0001); // Zip64
+                    bwExtra.Write((ushort)16);
+                    bwExtra.Write((ulong)_zfe.FileSize);
+                    bwExtra.Write((ulong)_zfe.CompressedSize);
+                }
+
+                if (_zfe.Method == Compression.Zstd)
+                {
+                    bwExtra.Write((ushort)0xE07C);
+                    bwExtra.Write((ushort)1);
+                    bwExtra.Write((byte)0);
+                }
+
+                byte[] extraBytes = msExtra.ToArray();
+
+                ms.Write(BitConverter.GetBytes((ushort)extraBytes.Length), 0, 2);
+
+                if (encodedFilename.Length > 0) ms.Write(encodedFilename, 0, encodedFilename.Length);
+                if (extraBytes.Length > 0) ms.Write(extraBytes, 0, extraBytes.Length);
+
+                _zfe.HeaderSize = (ulong)(30 + encodedFilename.Length + extraBytes.Length);
                 return ms.ToArray();
             }
         }
@@ -49,8 +111,8 @@ namespace FastZipDotNet.Zip.Writers
 
                 // General Purpose Bit Flag
                 ushort gpFlag = 0;
-                if (_zfe.EncodeUTF8)
-                    gpFlag |= 0x0800; // UTF-8 encoding flag
+                if (_zfe.EncodeUTF8) gpFlag |= 0x0800;
+                if (_zfe.IsEncrypted) gpFlag |= 0x0001;
                 zipFileStream.Write(BitConverter.GetBytes(gpFlag), 0, 2);
 
                 // Compression Method
@@ -176,8 +238,8 @@ namespace FastZipDotNet.Zip.Writers
 
                 // General Purpose Bit Flag
                 ushort gpFlag = 0;
-                if (_zfe.EncodeUTF8)
-                    gpFlag |= 0x0800; // UTF-8 encoding flag
+                if (_zfe.EncodeUTF8) gpFlag |= 0x0800;
+                if (_zfe.IsEncrypted) gpFlag |= 0x0001;
                 zipFileStream.Write(BitConverter.GetBytes(gpFlag), 0, 2);
 
                 // Compression Method

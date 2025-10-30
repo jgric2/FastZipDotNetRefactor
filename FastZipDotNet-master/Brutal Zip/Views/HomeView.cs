@@ -72,7 +72,7 @@ namespace Brutal_Zip.Views
             btnCreateAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
             btnCreateAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();
             btnCreateBrowse.Click += (s, e) => BrowseCreateDestinationClicked?.Invoke();
-            btnCreate.Click += (s, e) => CreateClicked?.Invoke();
+           // btnCreate.Click += (s, e) => CreateClicked?.Invoke();
             btnCreateQuick.Click += (s, e) => QuickCreateClicked?.Invoke();
 
             btnOpenArchive.Click += (s, e) => OpenArchiveClicked?.Invoke();
@@ -149,6 +149,11 @@ namespace Brutal_Zip.Views
 
             chkThreadsAutoMain.Checked = auto;
             tbThreads.Enabled = !auto;
+        }
+
+        private void btnCreate_Click(object sender, EventArgs e)
+        {
+            CreateClicked?.Invoke();
         }
     }
 }

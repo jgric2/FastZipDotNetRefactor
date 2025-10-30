@@ -1,9 +1,11 @@
 ﻿using FastZipDotNet.MultiThreading;
 using FastZipDotNet.Zip.Cryptography;
+using FastZipDotNet.Zip.Encryption;
 using FastZipDotNet.Zip.Helpers;
 using FastZipDotNet.Zip.ZStd;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 using static FastZipDotNet.Zip.Structure.ZipEntryStructs;
@@ -432,10 +434,9 @@ namespace FastZipDotNet.Zip.Readers
             if (outStream is null) throw new ArgumentNullException(nameof(outStream));
             if (!outStream.CanWrite) throw new InvalidOperationException("Stream cannot be written");
 
-            FileStream? zipStream = null;
+            FileStream zipStream = null;
             try
             {
-                // Open a fresh handle, random access is better under concurrency
                 zipStream = new FileStream(
                     FastZipDotNet.ZipFileName,
                     FileMode.Open,
@@ -444,7 +445,6 @@ namespace FastZipDotNet.Zip.Readers
                     1 << 20,
                     FileOptions.RandomAccess);
 
-                // Seek to local header
                 zipStream.Seek((long)zfe.HeaderOffset, SeekOrigin.Begin);
                 using var br = new BinaryReader(zipStream, Encoding.Default, leaveOpen: true);
 
@@ -456,39 +456,71 @@ namespace FastZipDotNet.Zip.Readers
                 ushort compressionMethod = br.ReadUInt16();
                 ushort lastModTime = br.ReadUInt16();
                 ushort lastModDate = br.ReadUInt16();
-                uint crc32Local = br.ReadUInt32();            // may be 0 if data descriptor present
-                uint compressedSizeLocal = br.ReadUInt32();   // may be 0xFFFFFFFF or 0 if data descriptor present
-                uint uncompressedSizeLocal = br.ReadUInt32(); // may be 0xFFFFFFFF or 0 if data descriptor present
+                uint crc32Local = br.ReadUInt32();
+                uint compressedSizeLocal = br.ReadUInt32();
+                uint uncompressedSizeLocal = br.ReadUInt32();
                 ushort fileNameLength = br.ReadUInt16();
                 ushort extraFieldLength = br.ReadUInt16();
 
-                // Skip filename
                 if (fileNameLength > 0) br.ReadBytes(fileNameLength);
-
-                // Consume extra field, only for position advance; Zip64 parsing not needed for our strategy
                 if (extraFieldLength > 0) br.ReadBytes(extraFieldLength);
 
                 bool hasDataDescriptor = (generalPurposeBitFlag & 0x0008) != 0;
+                bool isEncrypted = (generalPurposeBitFlag & 0x0001) != 0;
 
-                // Decide method; prefer header's method (should match zfe.Method)
                 Compression method = (Compression)compressionMethod;
 
-                uint crc32Calc = 0;
-                byte[] buffer = new byte[32768];
-
-                if (method == Compression.Store)
+                // Build input stream (handle ZipCrypto)
+                Stream inputStream = null;
+                try
                 {
-                    // Copy exact compressed bytes (equal to uncompressed bytes for Store).
-                    // If DD is used, local sizes are invalid/zero; use central directory size from zfe.
-                    long toCopy = (long)zfe.CompressedSize;
-                    if (toCopy < 0) toCopy = 0;
+                    if (isEncrypted)
+                    {
+                        if (zfe.IsAes)
+                            throw new NotSupportedException("AES-encrypted entries will be supported in the next step.");
 
-                    while (toCopy > 0)
+                        if (string.IsNullOrEmpty(FastZipDotNet.Password))
+                            throw new CryptographicException("Password required for encrypted ZIP entry.");
+
+                        // We never set data descriptor when writing; verifier is CRC high byte
+                        byte verifier = hasDataDescriptor ? (byte)(lastModTime >> 8) : (byte)(zfe.Crc32 >> 24);
+
+                        long payloadLen = (long)zfe.CompressedSize - 12;
+                        if (payloadLen < 0) throw new InvalidDataException("Invalid encrypted size");
+
+                        var decrypt = new ZipCryptoDecryptStream(zipStream, FastZipDotNet.Password, verifier, payloadLen);
+
+                        if (method == Compression.Store)
+                            inputStream = decrypt;
+                        else if (method == Compression.Deflate)
+                            inputStream = new DeflateStream(decrypt, CompressionMode.Decompress, leaveOpen: true);
+                        else if (method == Compression.Zstd)
+                            inputStream = new DecompressionStream(decrypt);
+                        else
+                            return false;
+                    }
+                    else
+                    {
+                        if (method == Compression.Store)
+                            inputStream = zipStream;
+                        else if (method == Compression.Deflate)
+                            inputStream = new DeflateStream(zipStream, CompressionMode.Decompress, leaveOpen: true);
+                        else if (method == Compression.Zstd)
+                            inputStream = new DecompressionStream(zipStream);
+                        else
+                            return false;
+                    }
+
+                    uint crc32Calc = 0;
+                    byte[] buffer = new byte[32768];
+                    ulong remaining = zfe.FileSize;
+
+                    while (remaining > 0)
                     {
                         while (FastZipDotNet.Pause) Thread.Sleep(50);
 
-                        int chunk = (int)Math.Min(buffer.Length, toCopy);
-                        int bytesRead = zipStream.Read(buffer, 0, chunk);
+                        int toRead = (int)Math.Min((ulong)buffer.Length, remaining);
+                        int bytesRead = inputStream.Read(buffer, 0, toRead);
                         if (bytesRead <= 0) break;
 
                         crc32Calc = Crc32Algorithm.Append(crc32Calc, buffer, 0, bytesRead);
@@ -498,51 +530,20 @@ namespace FastZipDotNet.Zip.Readers
                         Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
                         Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
 
-                        toCopy -= bytesRead;
+                        remaining -= (ulong)bytesRead;
                     }
+
+                    Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                    Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+                    outStream.Flush();
+
+                    return remaining == 0 && (zfe.Crc32 == crc32Calc);
                 }
-                else if (method == Compression.Deflate || method == Compression.Zstd)
+                finally
                 {
-                    // For compressed streams, read until decompressor reaches EOS
-                    Stream inputStream = method == Compression.Deflate
-                        ? new DeflateStream(zipStream, CompressionMode.Decompress, leaveOpen: true)
-                        : new DecompressionStream(zipStream);
-
-                    try
-                    {
-                        while (true)
-                        {
-                            while (FastZipDotNet.Pause) Thread.Sleep(50);
-
-                            int bytesRead = inputStream.Read(buffer, 0, buffer.Length);
-                            if (bytesRead <= 0) break;
-
-                            crc32Calc = Crc32Algorithm.Append(crc32Calc, buffer, 0, bytesRead);
-                            outStream.Write(buffer, 0, bytesRead);
-                            onBytes?.Invoke(bytesRead);
-
-                            Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
-                            Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
-                        }
-                    }
-                    finally
-                    {
+                    if (inputStream != null && inputStream != zipStream)
                         inputStream.Dispose();
-                    }
                 }
-                else
-                {
-                    // Unsupported compression method for this build
-                    return false;
-                }
-
-                Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
-                Interlocked.Increment(ref FastZipDotNet.FilesWritten);
-
-                outStream.Flush();
-
-                // Validate CRC (always compare with central dir CRC)
-                return zfe.Crc32 == crc32Calc;
             }
             finally
             {
@@ -553,7 +554,7 @@ namespace FastZipDotNet.Zip.Readers
         // Keep this convenience overload for compatibility
         public bool ExtractFile(ZipFileEntry zfe, string outPathFilename)
             => ExtractFile(zfe, outPathFilename, onBytes: null);
-    
+
 
         /// <summary>
         /// Copy the contents of a stored file into a physical file
@@ -662,113 +663,117 @@ namespace FastZipDotNet.Zip.Readers
         //    }
         //}
 
-     
+
         public bool ExtractFile(ZipFileEntry zfe, Stream outStream)
-        {
-            Stream zipStream = null;
+    => ExtractFile(zfe, outStream, onBytes: null);
 
-            try
-            {
-                // Open a separate read handle so we never contend with the writer
-                zipStream = new FileStream(FastZipDotNet.ZipFileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1 << 20, FileOptions.SequentialScan);
+        //public bool ExtractFile(ZipFileEntry zfe, Stream outStream)
+        //{
+        //{
+        //    Stream zipStream = null;
 
-                if (!outStream.CanWrite)
-                    throw new InvalidOperationException("Stream cannot be written");
+        //    try
+        //    {
+        //        // Open a separate read handle so we never contend with the writer
+        //        zipStream = new FileStream(FastZipDotNet.ZipFileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1 << 20, FileOptions.SequentialScan);
 
-                zipStream.Seek((long)zfe.HeaderOffset, SeekOrigin.Begin);
-                using (var br = new BinaryReader(zipStream, Encoding.Default, leaveOpen: true))
-                {
-                    uint signature = br.ReadUInt32();
-                    if (signature != 0x04034b50)
-                        return false;
+        //        if (!outStream.CanWrite)
+        //            throw new InvalidOperationException("Stream cannot be written");
 
-                    ushort versionNeeded = br.ReadUInt16();
-                    ushort generalPurposeBitFlag = br.ReadUInt16();
-                    ushort compressionMethod = br.ReadUInt16();
-                    ushort lastModTime = br.ReadUInt16();
-                    ushort lastModDate = br.ReadUInt16();
-                    uint crc32 = br.ReadUInt32();
-                    uint compressedSize = br.ReadUInt32();
-                    uint uncompressedSize = br.ReadUInt32();
-                    ushort fileNameLength = br.ReadUInt16();
-                    ushort extraFieldLength = br.ReadUInt16();
+        //        zipStream.Seek((long)zfe.HeaderOffset, SeekOrigin.Begin);
+        //        using (var br = new BinaryReader(zipStream, Encoding.Default, leaveOpen: true))
+        //        {
+        //            uint signature = br.ReadUInt32();
+        //            if (signature != 0x04034b50)
+        //                return false;
 
-                    br.ReadBytes(fileNameLength); // skip name
+        //            ushort versionNeeded = br.ReadUInt16();
+        //            ushort generalPurposeBitFlag = br.ReadUInt16();
+        //            ushort compressionMethod = br.ReadUInt16();
+        //            ushort lastModTime = br.ReadUInt16();
+        //            ushort lastModDate = br.ReadUInt16();
+        //            uint crc32 = br.ReadUInt32();
+        //            uint compressedSize = br.ReadUInt32();
+        //            uint uncompressedSize = br.ReadUInt32();
+        //            ushort fileNameLength = br.ReadUInt16();
+        //            ushort extraFieldLength = br.ReadUInt16();
 
-                    ulong uncompressedSize64 = uncompressedSize;
-                    ulong compressedSize64 = compressedSize;
+        //            br.ReadBytes(fileNameLength); // skip name
 
-                    if (compressedSize == 0xFFFFFFFF || uncompressedSize == 0xFFFFFFFF)
-                    {
-                        byte[] extraField = br.ReadBytes(extraFieldLength);
-                        using var extraFieldStream = new MemoryStream(extraField);
-                        using var extraFieldReader = new BinaryReader(extraFieldStream);
-                        while (extraFieldStream.Position < extraFieldLength)
-                        {
-                            ushort headerId = extraFieldReader.ReadUInt16();
-                            ushort dataSize = extraFieldReader.ReadUInt16();
-                            if (headerId == 0x0001)
-                            {
-                                if (uncompressedSize == 0xFFFFFFFF)
-                                    uncompressedSize64 = extraFieldReader.ReadUInt64();
-                                if (compressedSize == 0xFFFFFFFF)
-                                    compressedSize64 = extraFieldReader.ReadUInt64();
-                                long remain = dataSize - (long)(extraFieldStream.Position - 4);
-                                if (remain > 0) extraFieldReader.BaseStream.Seek(remain, SeekOrigin.Current);
-                            }
-                            else
-                            {
-                                extraFieldReader.ReadBytes(dataSize);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        br.ReadBytes(extraFieldLength);
-                    }
+        //            ulong uncompressedSize64 = uncompressedSize;
+        //            ulong compressedSize64 = compressedSize;
 
-                    Stream inputStream;
-                    if (compressionMethod == (ushort)Compression.Store)
-                        inputStream = zipStream;
-                    else if (compressionMethod == (ushort)Compression.Deflate)
-                        inputStream = new DeflateStream(zipStream, CompressionMode.Decompress, true);
-                    else if (compressionMethod == (ushort)Compression.Zstd)
-                        inputStream = new DecompressionStream(zipStream);
-                    else
-                        return false;
+        //            if (compressedSize == 0xFFFFFFFF || uncompressedSize == 0xFFFFFFFF)
+        //            {
+        //                byte[] extraField = br.ReadBytes(extraFieldLength);
+        //                using var extraFieldStream = new MemoryStream(extraField);
+        //                using var extraFieldReader = new BinaryReader(extraFieldStream);
+        //                while (extraFieldStream.Position < extraFieldLength)
+        //                {
+        //                    ushort headerId = extraFieldReader.ReadUInt16();
+        //                    ushort dataSize = extraFieldReader.ReadUInt16();
+        //                    if (headerId == 0x0001)
+        //                    {
+        //                        if (uncompressedSize == 0xFFFFFFFF)
+        //                            uncompressedSize64 = extraFieldReader.ReadUInt64();
+        //                        if (compressedSize == 0xFFFFFFFF)
+        //                            compressedSize64 = extraFieldReader.ReadUInt64();
+        //                        long remain = dataSize - (long)(extraFieldStream.Position - 4);
+        //                        if (remain > 0) extraFieldReader.BaseStream.Seek(remain, SeekOrigin.Current);
+        //                    }
+        //                    else
+        //                    {
+        //                        extraFieldReader.ReadBytes(dataSize);
+        //                    }
+        //                }
+        //            }
+        //            else
+        //            {
+        //                br.ReadBytes(extraFieldLength);
+        //            }
 
-                    uint crc32Calc = 0;
-                    byte[] buffer = new byte[32768];
-                    ulong bytesPending = uncompressedSize64;
+        //            Stream inputStream;
+        //            if (compressionMethod == (ushort)Compression.Store)
+        //                inputStream = zipStream;
+        //            else if (compressionMethod == (ushort)Compression.Deflate)
+        //                inputStream = new DeflateStream(zipStream, CompressionMode.Decompress, true);
+        //            else if (compressionMethod == (ushort)Compression.Zstd)
+        //                inputStream = new DecompressionStream(zipStream);
+        //            else
+        //                return false;
 
-                    while (bytesPending > 0)
-                    {
-                        int bytesRead = inputStream.Read(buffer, 0, (int)Math.Min(bytesPending, (ulong)buffer.Length));
-                        if (bytesRead <= 0) break;
+        //            uint crc32Calc = 0;
+        //            byte[] buffer = new byte[32768];
+        //            ulong bytesPending = uncompressedSize64;
 
-                        crc32Calc = Crc32Algorithm.Append(crc32Calc, buffer, 0, bytesRead);
-                        bytesPending -= (ulong)bytesRead;
-                        outStream.Write(buffer, 0, bytesRead);
+        //            while (bytesPending > 0)
+        //            {
+        //                int bytesRead = inputStream.Read(buffer, 0, (int)Math.Min(bytesPending, (ulong)buffer.Length));
+        //                if (bytesRead <= 0) break;
 
-                        Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
-                        Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
-                    }
+        //                crc32Calc = Crc32Algorithm.Append(crc32Calc, buffer, 0, bytesRead);
+        //                bytesPending -= (ulong)bytesRead;
+        //                outStream.Write(buffer, 0, bytesRead);
 
-                    Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
-                    Interlocked.Increment(ref FastZipDotNet.FilesWritten);
-                    outStream.Flush();
+        //                Interlocked.Add(ref FastZipDotNet.BytesWritten, bytesRead);
+        //                Interlocked.Add(ref FastZipDotNet.BytesPerSecond, bytesRead);
+        //            }
 
-                    if (compressionMethod == (ushort)Compression.Deflate || compressionMethod == (ushort)Compression.Zstd)
-                        inputStream.Dispose();
+        //            Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+        //            Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+        //            outStream.Flush();
 
-                    return zfe.Crc32 == crc32Calc;
-                }
-            }
-            finally
-            {
-                zipStream?.Dispose();
-            }
-        }
+        //            if (compressionMethod == (ushort)Compression.Deflate || compressionMethod == (ushort)Compression.Zstd)
+        //                inputStream.Dispose();
+
+        //            return zfe.Crc32 == crc32Calc;
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        zipStream?.Dispose();
+        //    }
+        //}
         #endregion
 
 

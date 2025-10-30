@@ -14,6 +14,10 @@ namespace FastZipDotNet.Zip
     public class FastZipDotNet : IDisposable
     {
 
+
+        public EncryptionAlgorithm Encryption { get; set; } = EncryptionAlgorithm.None;
+        public string Password { get; set; } = null;
+
         public AdjustableSemaphore ConcurrencyLimiter { get; }
         // Internal: have we written anything new?
         private volatile bool _dirty = false;
