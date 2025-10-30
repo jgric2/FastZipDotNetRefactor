@@ -1093,14 +1093,17 @@ long bufferThresholdBytes = DefaultBufferThreshold)
                                               FileShare.Read,
                                               1 << 20,
                                               FileOptions.SequentialScan);
-                int readTotal = 0;
-                while (readTotal < inBuffer.Length)
-                {
-                    int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
-                    if (r <= 0)
-                        throw new EndOfStreamException($"Unexpected end of file while reading '{pathFilename}'.");
-                    readTotal += r;
-                }
+
+
+                fs.Read(inBuffer, 0, inBuffer.Length);
+                //int readTotal = 0;
+                //while (readTotal < inBuffer.Length)
+                //{
+                //    int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
+                //    if (r <= 0)
+                //        throw new EndOfStreamException($"Unexpected end of file while reading '{pathFilename}'.");
+                //    readTotal += r;
+                //}
 
 
                 return AddBuffer(inBuffer,

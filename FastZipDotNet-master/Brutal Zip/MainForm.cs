@@ -164,19 +164,7 @@ namespace Brutal_Zip
             viewerView.lvArchive.SmallImageList = _icons.ImageList;
             viewerView.lvArchive.UseCompatibleStateImageBehavior = false;
 
-            viewerView.lvArchive.RetrieveVirtualItem += (s, e) =>
-            {
-                //try
-                //{
-                //    if (_rows.Count > e.ItemIndex)
-                e.Item = MakeItem(_rows[e.ItemIndex]);
-                //}
-                //catch
-                //{
-
-                //}
-
-            };
+            viewerView.lvArchive.RetrieveVirtualItem += LvArchive_RetrieveVirtualItem;
             viewerView.lvArchive.DoubleClick += (s, e) => OpenSelected();
             viewerView.lvArchive.KeyDown += (s, e) => { if (e.KeyCode == Keys.Back) NavigateUp(); };
 
@@ -218,9 +206,45 @@ namespace Brutal_Zip
 
 
             Load += MainForm_Load;
-            FormClosing += (s, e) => { _zip?.Dispose(); };
+            FormClosing += (s, e) => 
+            {
+                viewerView.lvArchive.RetrieveVirtualItem -= LvArchive_RetrieveVirtualItem;
+                _zip?.Dispose(); 
+            };
         }
 
+        private readonly ListViewItem _emptyItem =
+new ListViewItem(new[] { "", "", "", "", "", "" });
+
+        private void LvArchive_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
+        {
+            // This event can fire while _rows is being swapped/cleared
+            // or after VirtualListSize changed.
+            try
+            {
+                if (_rows == null || e.ItemIndex < 0)
+                {
+                    e.Item = _emptyItem;
+                    return;
+                }
+
+                int count = _rows.Count;
+                if (e.ItemIndex >= count)
+                {
+                    e.Item = _emptyItem;
+                    return;
+                }
+
+                var r = _rows[e.ItemIndex];
+                var it = MakeItem(r);
+                e.Item = it ?? _emptyItem;
+            }
+            catch
+            {
+                // As a last resort, don’t throw from the event
+                e.Item = _emptyItem;
+            }
+        }
 
         private bool HasSingleRoot(out string rootName)
         {
@@ -520,6 +544,13 @@ namespace Brutal_Zip
 
         private void ShowHome()
         {
+            // Stop the list from asking for stale indices
+            viewerView.lvArchive.BeginUpdate();
+            viewerView.lvArchive.VirtualListSize = 0;
+            viewerView.lvArchive.EndUpdate();
+
+            _rows.Clear();
+
             viewerView.Visible = false;
             homeView.Visible = true;
             Text = "Brutal Zip";
@@ -1059,6 +1090,12 @@ namespace Brutal_Zip
         {
             try
             {
+                // Clear current list first
+                viewerView.lvArchive.BeginUpdate();
+                viewerView.lvArchive.VirtualListSize = 0;
+                viewerView.lvArchive.EndUpdate();
+                _rows.Clear();
+
                 _zip?.Dispose();
                 _zipPath = path;
                 _zip = new FastZipDotNet.Zip.FastZipDotNet(path, Compression.Deflate, 6, Threads);
@@ -1091,7 +1128,13 @@ namespace Brutal_Zip
         {
             _zip?.Dispose(); _zip = null; _zipPath = null;
             _root = _current = null;
+
+            viewerView.lvArchive.BeginUpdate();
+            viewerView.lvArchive.VirtualListSize = 0;
+            viewerView.lvArchive.EndUpdate();
+
             _rows.Clear();
+
             ShowHome();
         }
 
@@ -1193,7 +1236,11 @@ namespace Brutal_Zip
                 _rows.Add(Row.File(f));
             }
 
+            // Sync the virtual list size with the built _rows
+            viewerView.lvArchive.BeginUpdate();
             viewerView.lvArchive.VirtualListSize = _rows.Count;
+            viewerView.lvArchive.EndUpdate();
+
             UpdateStatus();
         }
 
@@ -1205,6 +1252,8 @@ namespace Brutal_Zip
 
         private ListViewItem MakeItem(Row r)
         {
+            if (r == null) return _emptyItem;
+
             if (r.Kind == RowKind.Up)
                 return new ListViewItem(new[] { "..", "", "", "", "", "" })
                 {
