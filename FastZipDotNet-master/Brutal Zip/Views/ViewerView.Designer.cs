@@ -54,6 +54,8 @@ namespace Brutal_Zip.Views
         internal SplitContainer splitRight;           // NEW
         internal InfoPane infoPane;                   // NEW
 
+        internal ToolStripButton btnToggleInfo;   // NEW
+
 
         protected override void Dispose(bool disposing)
         {
@@ -107,6 +109,10 @@ namespace Brutal_Zip.Views
             btnComment = new ToolStripButton();
             btnWizard = new ToolStripButton();
 
+            // After btnTogglePreview is created
+            btnToggleInfo = new ToolStripButton();
+        
+
             toolStrip.SuspendLayout();
             ((ISupportInitialize)splitMain).BeginInit();
             splitMain.Panel1.SuspendLayout();
@@ -125,6 +131,7 @@ namespace Brutal_Zip.Views
                 btnOpenFolder, btnTogglePreview,
                 btnComment,                      // NEW
                 btnWizard,                       // NEW
+                    btnToggleInfo,                 // NEW
                 lblSearch, txtSearch, btnInfo, btnTest, btnSettings
             });
 
@@ -149,6 +156,14 @@ namespace Brutal_Zip.Views
                 mnuAlgoAES192,
                 mnuAlgoAES256
             });
+
+            btnToggleInfo.Name = "btnToggleInfo";
+            btnToggleInfo.Size = new Size(32, 22);
+            btnToggleInfo.Text = "Info";
+            btnToggleInfo.DisplayStyle = ToolStripItemDisplayStyle.Text;
+
+            // Insert into the toolstrip Items array (right after btnTogglePreview)
+       
 
             mnuEncryptNew.Text = "Encrypt new files";
             mnuEncryptNew.CheckOnClick = true;

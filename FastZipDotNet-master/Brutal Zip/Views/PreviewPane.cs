@@ -124,6 +124,8 @@ namespace Brutal_Zip.Views
                 hexBox.Visible = false;
         }
 
+      
+
         private async Task LoadHexAsync()
         {
             try
@@ -150,7 +152,7 @@ namespace Brutal_Zip.Views
                     int half = Max / 2;
                     data = new byte[Max + 64];
                     int off = 0;
-                    using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                     off += fs.Read(data, 0, half);
                     var marker = Encoding.ASCII.GetBytes("\r\n... (skipped) ...\r\n");
                     Buffer.BlockCopy(marker, 0, data, off, marker.Length); off += marker.Length;
@@ -625,6 +627,8 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
                 case ".kt":
                 case ".m":
                 case ".vb":
+                case ".fx":
+                case ".gml":
                     return true;
                 default: return false;
             }

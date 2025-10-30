@@ -69,7 +69,8 @@ namespace Brutal_Zip
             _addAlgorithm = addAlgo;
 
             mnuToolsCrackPassword.Click += (s, e) => CrackPasswordFromTools();
-
+            viewerView.btnTogglePreview.Click += (s, e) => TogglePreviewPane(); // you already have this
+            viewerView.InfoToggleClicked += () => ToggleInfoPane();             // NEW
 
             // HomeView encryption UI
             homeView.CreateEncryptChanged += on =>
@@ -153,6 +154,12 @@ namespace Brutal_Zip
                 }
             };
 
+
+            viewerView.infoPane.EnsureTempProvider = async (zipPath, entry) =>
+            {
+                // Extract to your session temp using the existing fast method
+                return await ExtractEntryToTempAsync(entry, CancellationToken.None);
+            };
 
             homeView.StagingRemoveMissingRequested += () =>
             {
@@ -271,7 +278,7 @@ namespace Brutal_Zip
 
             // Toolbar extras
             viewerView.btnOpenFolder.Click += (s, e) => OpenArchiveFolderInExplorer();
-            viewerView.btnTogglePreview.Click += (s, e) => TogglePreviewPane();
+          // viewerView.btnTogglePreview.Click += (s, e) => TogglePreviewPane();
 
             // Assign ImageList for icons
             RebuildRecentMenu();
@@ -280,13 +287,76 @@ namespace Brutal_Zip
             Load += MainForm_Load;
             FormClosing += (s, e) => 
             {
-                viewerView.lvArchive.RetrieveVirtualItem -= LvArchive_RetrieveVirtualItem;
-                _zip?.Dispose(); 
+                try
+                {
+                    _zip?.Dispose();
+                }
+                catch { }
+
+                try
+                {
+                    CleanupOldSessionTemp();
+                }
+                catch { }
+
+                try
+                {
+                    viewerView.lvArchive.RetrieveVirtualItem -= LvArchive_RetrieveVirtualItem;
+                }
+                catch { }
+
             };
+        }
+
+
+        private void CleanupOldSessionTemp(int olderThanMinutes = 60)
+        {
+            try
+            {
+                var di = new DirectoryInfo(_sessionTemp);
+                if (!di.Exists) return;
+                var cutoff = DateTime.UtcNow.AddMinutes(-olderThanMinutes);
+                foreach (var f in di.EnumerateFiles("*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        if (f.LastWriteTimeUtc < cutoff) f.Delete();
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+
+        private static string MakeUniquePath(string path)
+        {
+            if (!File.Exists(path)) return path;
+
+            string dir = Path.GetDirectoryName(path) ?? Path.GetTempPath();
+            string name = Path.GetFileNameWithoutExtension(path);
+            string ext = Path.GetExtension(path);
+
+            // Try numbered suffixes
+            for (int i = 1; i < 1000; i++)
+            {
+                string p2 = Path.Combine(dir, $"{name} ({i}){ext}");
+                if (!File.Exists(p2)) return p2;
+            }
+            // Fallback GUID if somehow a thousand variants exist
+            return Path.Combine(dir, $"{name}_{Guid.NewGuid():N}{ext}");
         }
 
         private readonly ListViewItem _emptyItem =
 new ListViewItem(new[] { "", "", "", "", "", "" });
+
+
+        private void ToggleInfoPane()
+        {
+            // splitRight is the vertical container that hosts (left) splitMain and (right) infoPane
+            if (viewerView.splitRight != null)
+                viewerView.splitRight.Panel2Collapsed = !viewerView.splitRight.Panel2Collapsed;
+        }
 
         private void LvArchive_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
         {
@@ -588,28 +658,33 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         // Extract one entry to temp and return path
         private async Task<string> ExtractEntryToTempAsync(ZipFileEntry e, CancellationToken ct)
         {
-            string outPath = System.IO.Path.Combine(_sessionTemp, e.FilenameInZip.Replace('/', System.IO.Path.DirectorySeparatorChar));
-            string? dir = System.IO.Path.GetDirectoryName(outPath);
-            if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+            // Build a session temp path preserving inside-archive folders and name
+            string inside = e.FilenameInZip.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
+            string outPath = Path.Combine(_sessionTemp, inside);
+
+            string? dir = Path.GetDirectoryName(outPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+
+            // Use a unique file path to avoid locking collisions with Preview/InfoPane
+            string uniqueOut = MakeUniquePath(outPath);
 
             await Task.Run(() =>
             {
-                void OnBytes(long n) { }
-                _zip.ZipDataReader.ExtractFile(e, outPath, OnBytes);
+                void OnBytes(long n) { } // not needed for temp preview
+                                         // We use our own reader to extract; it will write to 'uniqueOut'
+                _zip.ZipDataReader.ExtractFile(e, uniqueOut, OnBytes);
             }, ct);
 
-            return outPath;
+            return uniqueOut;
         }
 
         private async Task PreviewSelectedAsync()
         {
             if (_zip == null) return;
-            if (viewerView.lvArchive.SelectedIndices.Count == 0) { viewerView.previewPane.Clear(); return; }
-            if (!EnsurePasswordForEncryptedIfNeeded()) return;
-
+            if (viewerView.lvArchive.SelectedIndices.Count == 0) { viewerView.previewPane.Clear(); viewerView.infoPane.Clear(); return; }
 
             var r = _rows[viewerView.lvArchive.SelectedIndices[0]];
-            if (r.Kind != RowKind.File) { viewerView.previewPane.Clear(); return; }
+            if (r.Kind != RowKind.File) { viewerView.previewPane.Clear(); viewerView.infoPane.Clear(); return; }
 
             _previewCts?.Cancel();
             _previewCts = new CancellationTokenSource();
@@ -619,16 +694,18 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             {
                 string tempPath = await ExtractEntryToTempAsync(r.Entry, ct);
                 _lastPreviewTempFile = tempPath;
+                viewerView.infoPane.SetTempFile(tempPath);
                 await viewerView.previewPane.ShowFileAsync(tempPath);
                 if (viewerView.splitMain.Panel2Collapsed)
                     TogglePreviewPane();
-
-                viewerView.infoPane.SetTempFile(_lastPreviewTempFile);
             }
             catch (OperationCanceledException) { }
-            catch { viewerView.previewPane.Clear(); }
-
-            if (viewerView.lvArchive.SelectedIndices.Count == 0) { viewerView.previewPane.Clear(); viewerView.infoPane.Clear(); return; }
+            catch
+            {
+                // Preview unsupported – clear, but InfoPane can still use the temp extraction we already set
+                viewerView.previewPane.Clear();
+                // Optionally: viewerView.infoPane.SetTempFile(_lastPreviewTempFile) is already set above
+            }
         }
 
 

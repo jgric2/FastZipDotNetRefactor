@@ -523,6 +523,7 @@ namespace Brutal_Zip.Views
             // 
             // lblCrcFile
             // 
+            lblCrcFile.AutoEllipsis = true;
             lblCrcFile.AutoSize = true;
             lblCrcFile.Location = new Point(131, 424);
             lblCrcFile.Name = "lblCrcFile";
@@ -532,6 +533,7 @@ namespace Brutal_Zip.Views
             // 
             // lblMd5File
             // 
+            lblMd5File.AutoEllipsis = true;
             lblMd5File.AutoSize = true;
             lblMd5File.Location = new Point(131, 442);
             lblMd5File.Name = "lblMd5File";
@@ -541,6 +543,7 @@ namespace Brutal_Zip.Views
             // 
             // lblSha256File
             // 
+            lblSha256File.AutoEllipsis = true;
             lblSha256File.AutoSize = true;
             lblSha256File.Location = new Point(131, 461);
             lblSha256File.Name = "lblSha256File";

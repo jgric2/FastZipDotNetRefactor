@@ -11,9 +11,8 @@ namespace Brutal_Zip.Views
         private ZipFileEntry? _entry;
         private string _tempPath;
 
-              
-            void Key(Label l, string t) { l.Text = t; l.AutoSize = true; l.ForeColor = Color.DimGray; }
-        public void Val(Label l) { l.Text = "-"; l.AutoSize = true; l.MaximumSize = new Size(600, 0); }
+
+        public Func<string, ZipFileEntry, Task<string>> EnsureTempProvider { get; set; }
 
         public InfoPane()
         {
@@ -30,6 +29,27 @@ namespace Brutal_Zip.Views
             btnComputeSha256.Click += async (_, __) => await ComputeHashAsync("SHA256");
 
             for (int i = 0; i < table.RowCount; i++) table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
+
+        private async Task<bool> EnsureTempAvailableAsync()
+        {
+            if (!string.IsNullOrEmpty(_tempPath) && File.Exists(_tempPath))
+                return true;
+
+            if (_entry == null || EnsureTempProvider == null)
+                return false;
+
+            try
+            {
+                var p = await EnsureTempProvider(_archivePath, _entry.Value);
+                if (!string.IsNullOrEmpty(p) && File.Exists(p))
+                {
+                    _tempPath = p;
+                    return true;
+                }
+            }
+            catch { }
+            return false;
         }
 
         public void Clear()
@@ -99,6 +119,9 @@ namespace Brutal_Zip.Views
         {
             try
             {
+                if (!await EnsureTempAvailableAsync())
+                    return;
+
                 string p = _tempPath;
                 if (string.IsNullOrEmpty(p) || !File.Exists(p)) return;
 
@@ -108,7 +131,7 @@ namespace Brutal_Zip.Views
                 // Try image dimensions
                 try
                 {
-                    using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
+                    using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 20, FileOptions.SequentialScan);
                     using var img = Image.FromStream(fs, useEmbeddedColorManagement: false, validateImageData: false);
                     dim = $"{img.Width} × {img.Height}";
                 }
@@ -150,18 +173,19 @@ namespace Brutal_Zip.Views
         {
             try
             {
-                string p = _tempPath;
-                if (string.IsNullOrEmpty(p) || !File.Exists(p))
+                if (!await EnsureTempAvailableAsync())
                 {
-                    MessageBox.Show(this, "Preview the file first.", "Hash");
+                    MessageBox.Show(this, "Unable to access a temp copy of the file.", "Hash");
                     return;
                 }
+
+                string p = _tempPath;
 
                 if (kind == "CRC32")
                 {
                     uint crc = await Task.Run(() =>
                     {
-                        using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
+                        using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 20, FileOptions.SequentialScan);
                         return Crc32Helpers.ComputeCrc32(fs);
                     });
                     lblCrcFile.Text = $"CRC32: 0x{crc:X8}";
@@ -170,7 +194,7 @@ namespace Brutal_Zip.Views
                 {
                     var md5 = await Task.Run(() =>
                     {
-                        using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
+                        using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 20, FileOptions.SequentialScan);
                         using var h = MD5.Create();
                         var bytes = h.ComputeHash(fs);
                         return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
@@ -181,7 +205,7 @@ namespace Brutal_Zip.Views
                 {
                     var sha = await Task.Run(() =>
                     {
-                        using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
+                        using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1 << 20, FileOptions.SequentialScan);
                         using var h = SHA256.Create();
                         var bytes = h.ComputeHash(fs);
                         return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();

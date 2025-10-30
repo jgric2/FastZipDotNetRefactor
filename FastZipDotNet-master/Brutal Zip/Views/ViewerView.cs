@@ -81,7 +81,7 @@ namespace Brutal_Zip.Views
             btnComment.Click += (s, e) => CommentClicked?.Invoke();
             btnWizard.Click += (s, e) => WizardClicked?.Invoke();
 
-
+            btnToggleInfo.Click += (s, e) => InfoToggleClicked?.Invoke(); // NEW
         }
 
 
@@ -120,7 +120,7 @@ namespace Brutal_Zip.Views
         public event Action<bool> EncryptNewItemsChanged;
         public event Action SetAddPasswordClicked;
         public event Action<EncryptionAlgorithm> AddEncryptionAlgorithmChanged;
-
+        public event Action InfoToggleClicked; // NEW
 
         public event Action<string> SearchTextChanged;
 
