@@ -41,6 +41,16 @@ namespace Brutal_Zip
             : Math.Max(1, SettingsService.Current.Threads);
 
 
+
+        // Encryption state for Create
+        private string _createPassword;
+        private EncryptionAlgorithm _createAlgorithm = EncryptionAlgorithm.ZipCrypto;
+
+        // Encryption for additions in open archive
+        private bool _encryptNewAdds = false;
+        private string _addPassword;
+        private EncryptionAlgorithm _addAlgorithm = EncryptionAlgorithm.ZipCrypto;
+
         private class StagedItem
         {
             public string Path;
@@ -54,6 +64,43 @@ namespace Brutal_Zip
         public MainForm()
         {
             InitializeComponent();
+
+
+
+            // HomeView encryption UI
+            homeView.CreateEncryptChanged += on =>
+            {
+                // nothing special; UI enabled state handled in view
+            };
+            homeView.CreateEncryptAlgorithmChanged += idx =>
+            {
+                // 0 = ZipCrypto, 1 = AES-256 (soon)
+                _createAlgorithm = (idx == 0) ? EncryptionAlgorithm.ZipCrypto : EncryptionAlgorithm.Aes256;
+            };
+            homeView.CreateSetPasswordClicked += () =>
+            {
+                using var dlg = new PasswordDialog();
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    _createPassword = dlg.Password;
+                    homeView.SetCreatePasswordStatus(!string.IsNullOrEmpty(_createPassword));
+                }
+            };
+
+            // ViewerView encryption dropdown
+            viewerView.EncryptNewItemsChanged += on => _encryptNewAdds = on;
+            viewerView.SetAddPasswordClicked += () =>
+            {
+                using var dlg = new PasswordDialog();
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    _addPassword = dlg.Password;
+                    // we can show a small tooltip or change dropdown text, but not required
+                }
+            };
+            viewerView.AddEncryptionAlgorithmChanged += algo => _addAlgorithm = algo;
+
+
 
             // Home events
             homeView.AddFilesClicked += AddCreateFiles;
@@ -458,15 +505,45 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         {
             if (_staging.Count == 0) { MessageBox.Show(this, "Add files or folders first."); return; }
 
-            // Auto destination: next to first staged item
+            // Auto-destination: next to first staged item
             var first = _staging[0];
-            var baseDir = first.IsFolder ? Path.GetDirectoryName(first.Path) : Path.GetDirectoryName(first.Path);
-            var baseName = first.IsFolder ? new DirectoryInfo(first.Path).Name : Path.GetFileNameWithoutExtension(first.Path);
-            string dest = Path.Combine(baseDir ?? ".", baseName + ".zip");
+            string baseDir;
+            string baseName;
+
+            try
+            {
+                if (first.IsFolder)
+                {
+                    var di = new DirectoryInfo(first.Path);
+                    baseDir = di.Parent?.FullName ?? di.FullName;
+                    baseName = di.Name;
+                }
+                else
+                {
+                    var fi = new FileInfo(first.Path);
+                    baseDir = fi.DirectoryName ?? ".";
+                    baseName = Path.GetFileNameWithoutExtension(fi.Name);
+                }
+            }
+            catch
+            {
+                baseDir = Path.GetDirectoryName(first.Path) ?? ".";
+                baseName = first.IsFolder ? new DirectoryInfo(first.Path).Name : Path.GetFileNameWithoutExtension(first.Path);
+            }
+
+            string dest = Path.Combine(baseDir, baseName + ".zip");
 
             homeView.CreateDestination = dest;
-            homeView.CreateMethodIndex = SettingsService.Current.DefaultMethod switch { "Store" => 0, "Zstd" => 2, _ => 1 };
-            homeView.CreateLevel = SettingsService.Current.DefaultLevel;
+
+            // Respect current defaults (method/level come from HomeView)
+            // Encryption UI is used as-is. If encryption is enabled but no password, prompt now.
+            if (homeView.CreateEncryptEnabled && string.IsNullOrEmpty(_createPassword))
+            {
+                using var dlg = new PasswordDialog();
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                _createPassword = dlg.Password;
+                homeView.SetCreatePasswordStatus(!string.IsNullOrEmpty(_createPassword));
+            }
 
             await DoCreateAsync();
         }
@@ -792,79 +869,96 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             };
             int level = homeView.CreateLevel;
 
-            // Build all file jobs and collect empty folder entries for each staged root
+            // Encryption choices
+            bool encOn = homeView.CreateEncryptEnabled;
+            EncryptionAlgorithm encAlgo = (homeView.CreateEncryptAlgorithmIndex == 0)
+                ? EncryptionAlgorithm.ZipCrypto
+                : EncryptionAlgorithm.Aes256; // AES to be enabled in next step
+
+            if (encOn && string.IsNullOrEmpty(_createPassword))
+            {
+                using var dlg = new PasswordDialog();
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                _createPassword = dlg.Password;
+                homeView.SetCreatePasswordStatus(!string.IsNullOrEmpty(_createPassword));
+            }
+
+            // Build jobs: files to add and empty folders to preserve
             var jobs = new List<(string fullPath, string internalName, long size)>();
-            var emptyFolderEntries = new List<string>(); // internal names (e.g., "Root/EmptySub/")
+            var emptyFolderEntries = new List<string>();
 
             foreach (var s in _staging)
             {
-                if (s.IsFolder && Directory.Exists(s.Path))
+                try
                 {
-                    string rootName = new DirectoryInfo(s.Path).Name;
-
-                    // Enumerate all subdirectories (relative)
-                    var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    try
+                    if (s.IsFolder && Directory.Exists(s.Path))
                     {
-                        foreach (var dir in Directory.EnumerateDirectories(s.Path, "*", SearchOption.AllDirectories))
+                        string rootName = new DirectoryInfo(s.Path).Name;
+
+                        // Enumerate all subdirectories relative to s.Path
+                        var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        try
                         {
-                            string rel = Path.GetRelativePath(s.Path, dir).Replace('\\', '/').Trim('/');
-                            if (!string.IsNullOrEmpty(rel))
-                                allDirsRel.Add(rel);
-                        }
-                    }
-                    catch { }
-
-                    // Track directories that have at least one file under them
-                    var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                    // Enumerate files and create jobs
-                    int filesInThisRoot = 0;
-                    try
-                    {
-                        foreach (var file in Directory.EnumerateFiles(s.Path, "*", SearchOption.AllDirectories))
-                        {
-                            string rel = Path.GetRelativePath(s.Path, file).Replace('\\', '/').Trim('/');
-                            string internalName = CombineZipPath(rootName, rel);
-
-                            long size = 0; try { size = new FileInfo(file).Length; } catch { }
-                            jobs.Add((file, internalName, size));
-                            filesInThisRoot++;
-
-                            // Mark all ancestor dirs of rel as non-empty
-                            var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
-                            while (!string.IsNullOrEmpty(dirRel))
+                            foreach (var dir in Directory.EnumerateDirectories(s.Path, "*", SearchOption.AllDirectories))
                             {
-                                nonEmptyDirsRel.Add(dirRel);
-                                dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+                                string rel = Path.GetRelativePath(s.Path, dir).Replace('\\', '/').Trim('/');
+                                if (!string.IsNullOrEmpty(rel))
+                                    allDirsRel.Add(rel);
                             }
                         }
-                    }
-                    catch { }
+                        catch { }
 
-                    // Empty directories = allDirsRel - nonEmptyDirsRel
-                    foreach (var dRel in allDirsRel)
-                    {
-                        if (!nonEmptyDirsRel.Contains(dRel))
+                        // Track directories that contain at least one file inside
+                        var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        int filesInThisRoot = 0;
+
+                        // Enumerate files
+                        try
                         {
-                            // Preserve this empty folder entry
-                            string internalFolder = CombineZipPath(rootName, dRel);
-                            emptyFolderEntries.Add(internalFolder);
+                            foreach (var file in Directory.EnumerateFiles(s.Path, "*", SearchOption.AllDirectories))
+                            {
+                                string rel = Path.GetRelativePath(s.Path, file).Replace('\\', '/').Trim('/');
+                                string internalName = (rootName + "/" + rel).Replace('\\', '/').Trim('/');
+
+                                long size = 0; try { size = new FileInfo(file).Length; } catch { }
+                                jobs.Add((file, internalName, size));
+                                filesInThisRoot++;
+
+                                // mark ancestors of rel
+                                var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+                                while (!string.IsNullOrEmpty(dirRel))
+                                {
+                                    nonEmptyDirsRel.Add(dirRel);
+                                    dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+                                }
+                            }
+                        }
+                        catch { }
+
+                        // Empty directories to preserve
+                        foreach (var dRel in allDirsRel)
+                        {
+                            if (!nonEmptyDirsRel.Contains(dRel))
+                            {
+                                string internalFolder = (rootName + "/" + dRel).Replace('\\', '/').Trim('/');
+                                emptyFolderEntries.Add(internalFolder);
+                            }
+                        }
+
+                        // If the folder is completely empty (no files, no subdirs)
+                        if (filesInThisRoot == 0 && allDirsRel.Count == 0)
+                        {
+                            emptyFolderEntries.Add(rootName);
                         }
                     }
-
-                    // If the entire root had no files and no subdirs with files, add the root folder as empty
-                    if (filesInThisRoot == 0 && allDirsRel.Count == 0)
+                    else if (!s.IsFolder && File.Exists(s.Path))
                     {
-                        emptyFolderEntries.Add(rootName);
+                        string internalName = Path.GetFileName(s.Path);
+                        long size = 0; try { size = new FileInfo(s.Path).Length; } catch { }
+                        jobs.Add((s.Path, internalName, size));
                     }
                 }
-                else if (!s.IsFolder && File.Exists(s.Path))
-                {
-                    string internalName = Path.GetFileName(s.Path);
-                    long size = 0; try { size = new FileInfo(s.Path).Length; } catch { }
-                    jobs.Add((s.Path, internalName, size));
-                }
+                catch { /* ignore bad path */ }
             }
 
             if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
@@ -887,10 +981,18 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             {
                 using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
 
-                zip.Encryption = EncryptionAlgorithm.ZipCrypto;
-                zip.Password = "Aussie111:)";
+                if (encOn)
+                {
+                    zip.Encryption = encAlgo;         // ZipCrypto now; AES soon
+                    zip.Password = _createPassword;   // required
+                }
+                else
+                {
+                    zip.Encryption = EncryptionAlgorithm.None;
+                    zip.Password = null;
+                }
 
-                // Live engine thread control
+                // Live thread control
                 pf.ConfigureThreads(maxThreads, curThreads, n =>
                 {
                     try
@@ -904,7 +1006,7 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                     catch { }
                 });
 
-                var sem = zip.ConcurrencyLimiter; // adjustable
+                var sem = zip.ConcurrencyLimiter;
 
                 long aggBytes = 0;
                 int aggFiles = 0;
@@ -936,20 +1038,22 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                     }
                 });
 
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(pf.Token);
                 var tasks = new List<Task>(jobs.Count);
+
                 foreach (var job in jobs)
                 {
-                    pf.Token.ThrowIfCancellationRequested();
+                    linkedCts.Token.ThrowIfCancellationRequested();
 
                     tasks.Add(Task.Run(() =>
                     {
-                        sem.WaitOne(pf.Token);
+                        sem.WaitOne(linkedCts.Token);
                         try
                         {
                             Volatile.Write(ref currentName, job.internalName);
 
                             void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
-                            void OnComp(long n) { }
+                            void OnComp(long n) { /* compressed count not needed for UI here */ }
 
                             zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
                             Interlocked.Increment(ref aggFiles);
@@ -958,14 +1062,14 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                         {
                             sem.Release();
                         }
-                    }, pf.Token));
+                    }, linkedCts.Token));
                 }
 
                 await Task.WhenAll(tasks);
                 reportCts.Cancel();
                 try { await reporter; } catch { }
 
-                // Add empty folders (sequential; negligible time)
+                // Preserve empty folders (sequential)
                 foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
@@ -1095,7 +1199,7 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
         {
             try
             {
-                // Clear current list first
+                // Stop the list from asking for stale indices
                 viewerView.lvArchive.BeginUpdate();
                 viewerView.lvArchive.VirtualListSize = 0;
                 viewerView.lvArchive.EndUpdate();
@@ -1103,8 +1207,11 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
 
                 _zip?.Dispose();
                 _zipPath = path;
+
+                // Open in read/write to allow adding later (writer will use random access)
                 _zip = new FastZipDotNet.Zip.FastZipDotNet(path, Compression.Deflate, 6, Threads);
 
+                // We do not support multi-part yet
                 if (_zip.ZipFileEntries.Any(e => e.DiskNumberStart != 0))
                 {
                     MessageBox.Show(this, "Multi-part ZIP not supported.", "Not supported");
@@ -1112,14 +1219,37 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                     return;
                 }
 
+                // Build tree & show viewer
                 BuildTree(_zip.ZipFileEntries);
                 NavigateTo(_root);
                 ShowViewer();
                 Text = "Brutal Zip — " + Path.GetFileName(path);
 
+                // Recent list
                 RecentManager.Add(path);
                 RebuildRecentMenu();
 
+                // Encryption defaults for adding new files
+                bool anyEncrypted = _zip.ZipFileEntries.Any(e => e.IsEncrypted);
+                _encryptNewAdds = anyEncrypted;
+                if (viewerView.mnuEncryptNew != null)
+                    viewerView.mnuEncryptNew.Checked = anyEncrypted;
+
+                // Decide default algorithm based on entries; AES not active yet, but detect it
+                _addAlgorithm = _zip.ZipFileEntries.Any(e => e.IsAes)
+                    ? EncryptionAlgorithm.Aes256   // will be enabled in next AES step
+                    : EncryptionAlgorithm.ZipCrypto;
+
+                // If the archive has encrypted entries and we plan to add to it,
+                // capture (or prompt for) the password now and reuse for additions.
+                if (anyEncrypted)
+                {
+                    if (!EnsurePasswordForEncryptedIfNeeded())
+                    {
+                        // User cancelled; we still opened the archive for browsing
+                    }
+                    _addPassword = _zip.Password; // reuse for future additions
+                }
             }
             catch (Exception ex)
             {
@@ -1764,23 +1894,26 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             var list = paths?.ToList();
             if (list == null || list.Count == 0) return;
 
-            // Current inside-archive folder (breadcrumb) e.g., "" or "path/in/archive/"
+            // Inside-archive destination (breadcrumb path)
             string currentPrefix = GetCurrentPathPrefix().Trim('/');
 
+            // Build jobs and record empty dirs to preserve
             var jobs = new List<(string fullPath, string internalName, long size)>();
-            var emptyFolderEntries = new List<string>(); // internal folder names
+            var emptyFolderEntries = new List<string>();
 
             foreach (var p in list)
             {
                 try
                 {
                     var full = Path.GetFullPath(p);
+
                     if (Directory.Exists(full))
                     {
-                        string rootName = new DirectoryInfo(full).Name;
+                        var di = new DirectoryInfo(full);
+                        string rootName = di.Name;
                         string basePrefix = string.IsNullOrEmpty(currentPrefix) ? rootName : (currentPrefix + "/" + rootName);
 
-                        // All subdirectories (relative)
+                        // All subdirectories relative to root
                         var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                         try
                         {
@@ -1793,28 +1926,34 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                         }
                         catch { }
 
+                        // Track directories that contain at least one file
                         var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                         int filesInRoot = 0;
 
-                        foreach (var file in Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories))
+                        // Files under this folder
+                        try
                         {
-                            string rel = Path.GetRelativePath(full, file).Replace('\\', '/').Trim('/');
-                            string internalName = (basePrefix + "/" + rel).Replace('\\', '/').Trim('/');
-
-                            long size = 0; try { size = new FileInfo(file).Length; } catch { }
-                            jobs.Add((file, internalName, size));
-                            filesInRoot++;
-
-                            // mark ancestors
-                            var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
-                            while (!string.IsNullOrEmpty(dirRel))
+                            foreach (var file in Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories))
                             {
-                                nonEmptyDirsRel.Add(dirRel);
-                                dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+                                string rel = Path.GetRelativePath(full, file).Replace('\\', '/').Trim('/');
+                                string internalName = (basePrefix + "/" + rel).Replace('\\', '/').Trim('/');
+
+                                long size = 0; try { size = new FileInfo(file).Length; } catch { }
+                                jobs.Add((file, internalName, size));
+                                filesInRoot++;
+
+                                // Mark ancestors of rel
+                                var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+                                while (!string.IsNullOrEmpty(dirRel))
+                                {
+                                    nonEmptyDirsRel.Add(dirRel);
+                                    dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+                                }
                             }
                         }
+                        catch { }
 
-                        // empty dirs under this root
+                        // Empty directories to preserve
                         foreach (var dRel in allDirsRel)
                         {
                             if (!nonEmptyDirsRel.Contains(dRel))
@@ -1824,7 +1963,7 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                             }
                         }
 
-                        // if the folder is completely empty (no files, no subdirs)
+                        // If the folder is completely empty
                         if (filesInRoot == 0 && allDirsRel.Count == 0)
                         {
                             emptyFolderEntries.Add(basePrefix);
@@ -1836,14 +1975,52 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                         string internalName = string.IsNullOrEmpty(currentPrefix)
                             ? name
                             : (currentPrefix + "/" + name).Replace('\\', '/').Trim('/');
+
                         long size = 0; try { size = new FileInfo(full).Length; } catch { }
                         jobs.Add((full, internalName, size));
                     }
                 }
-                catch { }
+                catch
+                {
+                    // Ignore bad path and continue
+                }
             }
 
             if (jobs.Count == 0 && emptyFolderEntries.Count == 0) return;
+
+            // Apply encryption preference for additions
+            if (_encryptNewAdds)
+            {
+                // Try reuse archive’s known password for additions
+                if (string.IsNullOrEmpty(_addPassword))
+                {
+                    if (!string.IsNullOrEmpty(_zip.Password))
+                    {
+                        _addPassword = _zip.Password;
+                    }
+                    else
+                    {
+                        using var dlg = new PasswordDialog();
+                        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                        _addPassword = dlg.Password;
+                        _zip.Password = _addPassword; // also keep on the open zip for future reads
+                    }
+                }
+
+                // For now only ZipCrypto is implemented; AES will be enabled in next step.
+                var effectiveAlgo = (_addAlgorithm == EncryptionAlgorithm.ZipCrypto)
+                    ? EncryptionAlgorithm.ZipCrypto
+                    : EncryptionAlgorithm.ZipCrypto; // clamp to ZipCrypto until AES step
+
+                _zip.Encryption = effectiveAlgo;
+                _zip.Password = _addPassword;
+            }
+            else
+            {
+                // Explicitly disable encryption for these additions
+                _zip.Encryption = EncryptionAlgorithm.None;
+                // Don't clear _zip.Password here; reader may still need it for other operations
+            }
 
             long grandBytes = 0; int grandFiles = 0;
             foreach (var j in jobs) { grandBytes += j.size; grandFiles++; }
@@ -1857,7 +2034,7 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
 
             try
             {
-                // Live engine thread control
+                // Live engine thread control for additions
                 pf.ConfigureThreads(maxThreads, curThreads, n =>
                 {
                     try
@@ -1903,43 +2080,51 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                     }
                 });
 
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(pf.Token);
                 var tasks = new List<Task>(jobs.Count);
+
                 foreach (var job in jobs)
                 {
-                    pf.Token.ThrowIfCancellationRequested();
+                    linkedCts.Token.ThrowIfCancellationRequested();
 
                     tasks.Add(Task.Run(() =>
                     {
-                        sem.WaitOne(pf.Token);
+                        sem.WaitOne(linkedCts.Token);
                         try
                         {
                             Volatile.Write(ref currentName, job.internalName);
+
                             void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
-                            void OnComp(long n) { }
+                            void OnComp(long n) { /* compressed accounting optional */ }
+
+                            // This call uses _zip.Encryption/_zip.Password set above
                             _zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, _zip.CompressionLevelValue, "", OnUnc, OnComp);
+
                             Interlocked.Increment(ref aggFiles);
                         }
                         finally
                         {
                             sem.Release();
                         }
-                    }, pf.Token));
+                    }, linkedCts.Token));
                 }
 
                 await Task.WhenAll(tasks);
                 reportCts.Cancel();
                 try { await reporter; } catch { }
 
-                // Add empty folders
+                // Preserve empty folders after files are added
                 foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     try { _zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
                 }
 
-                // Commit and refresh
+                // Commit and reload archive view
                 await Task.Run(() => _zip.Close());
-                OpenArchive(_zipPath);
-                NavigateTo(_current);
+                OpenArchive(_zipPath); // reopens and rebuilds tree/index
+                                       // NavigateTo(_current) is not necessary because OpenArchive navigates to root;
+                                       // if you want to stay at the same folder, you could preserve and re-nav here.
+
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Add error"); }
@@ -1965,14 +2150,6 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             if (_zip == null) return true;
             bool anyEncrypted = _zip.ZipFileEntries.Any(e => e.IsEncrypted);
             if (!anyEncrypted) return true;
-
-            // If AES seen, we'll add support in next step; warn now
-            if (_zip.ZipFileEntries.Any(e => e.IsAes))
-            {
-                MessageBox.Show(this, "AES-encrypted entries detected. AES decryption will be added in the next step.", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                // For now, return false to avoid failure paths; or prompt anyway in anticipation.
-                // return false;
-            }
 
             if (!string.IsNullOrEmpty(_zip.Password)) return true;
             using var dlg = new PasswordDialog();

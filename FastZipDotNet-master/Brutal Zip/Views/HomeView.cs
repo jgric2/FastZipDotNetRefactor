@@ -8,6 +8,21 @@ namespace Brutal_Zip.Views
         {
             InitializeComponent();
 
+
+            chkEncrypt.Checked = false;
+            cmbEncrypt.SelectedIndex = 0;
+            cmbEncrypt.Enabled = false;
+            btnCreateSetPassword.Enabled = false;
+
+            chkEncrypt.CheckedChanged += (s, e) =>
+            {
+                cmbEncrypt.Enabled = chkEncrypt.Checked;
+                btnCreateSetPassword.Enabled = chkEncrypt.Checked;
+                CreateEncryptChanged?.Invoke(chkEncrypt.Checked);
+            };
+            cmbEncrypt.SelectedIndexChanged += (s, e) => CreateEncryptAlgorithmChanged?.Invoke(cmbEncrypt.SelectedIndex);
+            btnCreateSetPassword.Click += (s, e) => CreateSetPasswordClicked?.Invoke();
+
             // CREATE: big drop zone (add files/folders to staging)
             pnlCreateDrop.AllowDrop = true;
             pnlCreateDrop.DragEnter += (s, e) =>
@@ -92,6 +107,22 @@ namespace Brutal_Zip.Views
             };
         }
 
+
+        public bool CreateEncryptEnabled
+        {
+            get => chkEncrypt.Checked;
+            set => chkEncrypt.Checked = value;
+        }
+        public int CreateEncryptAlgorithmIndex
+        {
+            get => cmbEncrypt.SelectedIndex;
+            set => cmbEncrypt.SelectedIndex = value;
+        }
+        public void SetCreatePasswordStatus(bool set)
+            => lblPwdStatus.Text = set ? "Password: (set)" : "Password: (not set)";
+
+
+
         // Events consumed by MainForm
         public event Action<string[]> FilesDroppedForCreate;
         public event Action AddFilesClicked;
@@ -113,6 +144,11 @@ namespace Brutal_Zip.Views
 
         public event Action<int> ThreadsSliderChanged;
         public event Action<bool> ThreadsAutoChanged;
+
+        public event Action<bool> CreateEncryptChanged;
+        public event Action<int> CreateEncryptAlgorithmChanged;
+        public event Action CreateSetPasswordClicked;
+
 
         // Accessors used by MainForm
         public ListView StagingListView => lvStaging;

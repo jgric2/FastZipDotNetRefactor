@@ -38,6 +38,14 @@ namespace Brutal_Zip.Views
 
         internal PreviewPane previewPane;
 
+
+        internal ToolStripDropDownButton btnEncryptAdd;
+        internal ToolStripMenuItem mnuEncryptNew;
+        internal ToolStripMenuItem mnuSetAddPassword;
+        internal ToolStripMenuItem mnuAlgoZipCrypto;
+        internal ToolStripMenuItem mnuAlgoAES256;
+
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null)) components.Dispose();
@@ -52,6 +60,13 @@ namespace Brutal_Zip.Views
             btnAddFiles = new ToolStripButton();
             btnAddFolder = new ToolStripButton();
             btnExtractSplit = new ToolStripSplitButton();
+            // NEW encryption dropdown
+            btnEncryptAdd = new ToolStripDropDownButton();
+            mnuEncryptNew = new ToolStripMenuItem();
+            mnuSetAddPassword = new ToolStripMenuItem();
+            mnuAlgoZipCrypto = new ToolStripMenuItem();
+            mnuAlgoAES256 = new ToolStripMenuItem();
+
             btnOpenFolder = new ToolStripButton();
             btnTogglePreview = new ToolStripButton();
             lblSearch = new ToolStripLabel();
@@ -89,7 +104,38 @@ namespace Brutal_Zip.Views
             // 
             // toolStrip
             // 
-            toolStrip.Items.AddRange(new ToolStripItem[] { btnBackHome, btnAddFiles, btnAddFolder, btnExtractSplit, btnOpenFolder, btnTogglePreview, lblSearch, txtSearch, btnInfo, btnTest, btnSettings });
+            // toolStrip
+            toolStrip.Items.AddRange(new ToolStripItem[] 
+            {
+                btnBackHome, btnAddFiles, btnAddFolder, btnExtractSplit,
+                btnEncryptAdd,   // NEW here
+                btnOpenFolder, btnTogglePreview,
+                lblSearch, txtSearch, btnInfo, btnTest, btnSettings
+            });
+
+            // NEW: btnEncryptAdd dropdown and items
+            btnEncryptAdd.Text = "Encrypt";
+            btnEncryptAdd.DropDownItems.AddRange(new ToolStripItem[] 
+            {
+                mnuEncryptNew,
+                mnuSetAddPassword,
+                mnuAlgoZipCrypto,
+                mnuAlgoAES256
+            });
+
+            mnuEncryptNew.Text = "Encrypt new files";
+            mnuEncryptNew.CheckOnClick = true;
+
+            mnuSetAddPassword.Text = "Set password…";
+
+            mnuAlgoZipCrypto.Text = "ZipCrypto";
+            mnuAlgoZipCrypto.Checked = true;
+
+            mnuAlgoAES256.Text = "AES-256 (soon)";
+            mnuAlgoAES256.Enabled = false;
+
+
+
             toolStrip.Location = new Point(0, 0);
             toolStrip.Name = "toolStrip";
             toolStrip.Size = new Size(1000, 25);

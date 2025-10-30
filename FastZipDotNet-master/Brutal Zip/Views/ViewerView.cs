@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 
 namespace Brutal_Zip.Views
 {
@@ -35,6 +36,18 @@ namespace Brutal_Zip.Views
             btnTest.Click += (s, e) => TestClicked?.Invoke();
             btnSettings.Click += (s, e) => SettingsClicked?.Invoke();
             txtSearch.TextChanged += (s, e) => SearchTextChanged?.Invoke(txtSearch.Text);
+
+
+            mnuEncryptNew.CheckedChanged += (s, e) => EncryptNewItemsChanged?.Invoke(mnuEncryptNew.Checked);
+            mnuSetAddPassword.Click += (s, e) => SetAddPasswordClicked?.Invoke();
+
+            mnuAlgoZipCrypto.Click += (s, e) =>
+            {
+                mnuAlgoZipCrypto.Checked = true;
+                // leave AES disabled for now
+                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.ZipCrypto);
+            };
+
         }
 
         public event Action BackHomeClicked;
@@ -48,6 +61,11 @@ namespace Brutal_Zip.Views
         public event Action InfoClicked;
         public event Action TestClicked;
         public event Action SettingsClicked;
+
+        public event Action<bool> EncryptNewItemsChanged;
+        public event Action SetAddPasswordClicked;
+        public event Action<EncryptionAlgorithm> AddEncryptionAlgorithmChanged;
+
 
         public event Action<string> SearchTextChanged;
 

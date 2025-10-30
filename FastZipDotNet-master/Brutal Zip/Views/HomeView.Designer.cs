@@ -29,6 +29,14 @@ namespace Brutal_Zip.Views
         internal Label lblThreadsValue;
         internal CheckBox chkThreadsAutoMain;
 
+
+        // NEW encryption UI
+        internal CheckBox chkEncrypt;
+        private Label lblEncrypt;
+        internal ComboBox cmbEncrypt;
+        internal Button btnCreateSetPassword;
+        internal Label lblPwdStatus;
+
         // Staging
         internal ListView lvStaging;
         private ColumnHeader colStName;
@@ -77,6 +85,11 @@ namespace Brutal_Zip.Views
             lblThreadsText = new Label();
             lblThreadsValue = new Label();
             chkThreadsAutoMain = new CheckBox();
+            chkEncrypt = new CheckBox();
+            lblEncrypt = new Label();
+            cmbEncrypt = new ComboBox();
+            btnCreateSetPassword = new Button();
+            lblPwdStatus = new Label();
             btnCreate = new Button();
             btnCreateQuick = new Button();
             lvStaging = new ListView();
@@ -125,6 +138,11 @@ namespace Brutal_Zip.Views
             grpCreate.Controls.Add(lblThreadsText);
             grpCreate.Controls.Add(lblThreadsValue);
             grpCreate.Controls.Add(chkThreadsAutoMain);
+            grpCreate.Controls.Add(chkEncrypt);
+            grpCreate.Controls.Add(lblEncrypt);
+            grpCreate.Controls.Add(cmbEncrypt);
+            grpCreate.Controls.Add(btnCreateSetPassword);
+            grpCreate.Controls.Add(lblPwdStatus);
             grpCreate.Controls.Add(btnCreate);
             grpCreate.Controls.Add(btnCreateQuick);
             grpCreate.Controls.Add(lvStaging);
@@ -132,7 +150,7 @@ namespace Brutal_Zip.Views
             grpCreate.Controls.Add(tbThreads);
             grpCreate.Location = new Point(20, 20);
             grpCreate.Name = "grpCreate";
-            grpCreate.Size = new Size(450, 600);
+            grpCreate.Size = new Size(450, 663);
             grpCreate.TabIndex = 1;
             grpCreate.TabStop = false;
             grpCreate.Text = "Create";
@@ -256,9 +274,51 @@ namespace Brutal_Zip.Views
             chkThreadsAutoMain.TabIndex = 13;
             chkThreadsAutoMain.Text = "Auto";
             // 
+            // chkEncrypt
+            // 
+            chkEncrypt.Location = new Point(20, 400);
+            chkEncrypt.Name = "chkEncrypt";
+            chkEncrypt.Size = new Size(200, 20);
+            chkEncrypt.TabIndex = 14;
+            chkEncrypt.Text = "Encrypt archive";
+            // 
+            // lblEncrypt
+            // 
+            lblEncrypt.Location = new Point(20, 426);
+            lblEncrypt.Name = "lblEncrypt";
+            lblEncrypt.Size = new Size(60, 20);
+            lblEncrypt.TabIndex = 15;
+            lblEncrypt.Text = "Algo:";
+            // 
+            // cmbEncrypt
+            // 
+            cmbEncrypt.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbEncrypt.Items.AddRange(new object[] { "ZipCrypto", "AES-256 (soon)" });
+            cmbEncrypt.Location = new Point(80, 423);
+            cmbEncrypt.Name = "cmbEncrypt";
+            cmbEncrypt.Size = new Size(150, 23);
+            cmbEncrypt.TabIndex = 16;
+            // 
+            // btnCreateSetPassword
+            // 
+            btnCreateSetPassword.Location = new Point(240, 421);
+            btnCreateSetPassword.Name = "btnCreateSetPassword";
+            btnCreateSetPassword.Size = new Size(100, 26);
+            btnCreateSetPassword.TabIndex = 17;
+            btnCreateSetPassword.Text = "Set password…";
+            // 
+            // lblPwdStatus
+            // 
+            lblPwdStatus.ForeColor = Color.DimGray;
+            lblPwdStatus.Location = new Point(20, 450);
+            lblPwdStatus.Name = "lblPwdStatus";
+            lblPwdStatus.Size = new Size(410, 18);
+            lblPwdStatus.TabIndex = 18;
+            lblPwdStatus.Text = "Password: (not set)";
+            // 
             // btnCreate
             // 
-            btnCreate.Location = new Point(20, 396);
+            btnCreate.Location = new Point(20, 470);
             btnCreate.Name = "btnCreate";
             btnCreate.Size = new Size(100, 28);
             btnCreate.TabIndex = 14;
@@ -267,7 +327,7 @@ namespace Brutal_Zip.Views
             // 
             // btnCreateQuick
             // 
-            btnCreateQuick.Location = new Point(130, 396);
+            btnCreateQuick.Location = new Point(130, 470);
             btnCreateQuick.Name = "btnCreateQuick";
             btnCreateQuick.Size = new Size(160, 28);
             btnCreateQuick.TabIndex = 15;
@@ -278,7 +338,7 @@ namespace Brutal_Zip.Views
             lvStaging.Columns.AddRange(new ColumnHeader[] { colStName, colStType, colStSize, colStItems, colStPath });
             lvStaging.ContextMenuStrip = cmsStaging;
             lvStaging.FullRowSelect = true;
-            lvStaging.Location = new Point(20, 430);
+            lvStaging.Location = new Point(20, 504);
             lvStaging.Name = "lvStaging";
             lvStaging.Size = new Size(410, 120);
             lvStaging.TabIndex = 16;
@@ -338,7 +398,7 @@ namespace Brutal_Zip.Views
             // lblCreateHint
             // 
             lblCreateHint.AutoEllipsis = true;
-            lblCreateHint.Location = new Point(20, 558);
+            lblCreateHint.Location = new Point(20, 632);
             lblCreateHint.Name = "lblCreateHint";
             lblCreateHint.Size = new Size(410, 20);
             lblCreateHint.TabIndex = 17;
