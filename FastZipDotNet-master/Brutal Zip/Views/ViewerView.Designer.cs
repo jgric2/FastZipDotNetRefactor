@@ -51,6 +51,9 @@ namespace Brutal_Zip.Views
         internal ToolStripButton btnComment;   // NEW
         internal ToolStripButton btnWizard;    // NEW
 
+        internal SplitContainer splitRight;           // NEW
+        internal InfoPane infoPane;                   // NEW
+
 
         protected override void Dispose(bool disposing)
         {
@@ -375,7 +378,21 @@ namespace Brutal_Zip.Views
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            Controls.Add(splitMain);
+            splitRight = new SplitContainer();
+            splitRight.Dock = DockStyle.Fill;
+            splitRight.Orientation = Orientation.Vertical;
+            splitRight.SplitterDistance = 740; // adjust to taste
+
+            // Left: existing list+preview
+            splitRight.Panel1.Controls.Add(splitMain);
+
+            // Right: info pane
+            infoPane = new Brutal_Zip.Views.InfoPane();
+            infoPane.Dock = DockStyle.Fill;
+            splitRight.Panel2.Controls.Add(infoPane);
+
+            // Root controls
+            Controls.Add(splitRight);
             Controls.Add(breadcrumb);
             Controls.Add(toolStrip);
             Controls.Add(statusStrip);

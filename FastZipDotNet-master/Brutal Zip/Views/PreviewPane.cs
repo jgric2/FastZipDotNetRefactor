@@ -1,14 +1,15 @@
-﻿using System;
+﻿using Microsoft.Web.WebView2.Core;
+using ScintillaNET;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
-using Microsoft.Web.WebView2.Core;
-using ScintillaNET;
 
 namespace Brutal_Zip.Views
 {
@@ -17,6 +18,12 @@ namespace Brutal_Zip.Views
         public PreviewPane()
         {
             InitializeComponent();
+
+
+            btnFindNext.Click += (_, __) => DoFind();
+            btnCopyPreview.Click += (_, __) => DoCopy();
+            btnSaveAs.Click += (_, __) => DoSaveAs();
+            chkHex.CheckedChanged += (_, __) => ToggleHex();
 
             btnOpenExternal.Click += (s, e) => OpenExternal();
             btnPlayPause.Click += (s, e) => TogglePlay();
@@ -32,6 +39,7 @@ namespace Brutal_Zip.Views
 
         private string _mappedHost = "localfiles";
         private string _mappedFolder;
+        private RichTextBox hexBox;  // NEW hex viewer
 
         private enum PreviewKind { None, Image, Text, Code, Media }
 
@@ -44,6 +52,142 @@ namespace Brutal_Zip.Views
             lblInfo.Text = "";
             ShowOnly(null);
         }
+
+
+        private void DoFind()
+        {
+            string q = txtFind.Text;
+            if (string.IsNullOrEmpty(q)) return;
+
+            if (txtPreview.Visible)
+            {
+                int start = txtPreview.SelectionStart + txtPreview.SelectionLength;
+                int idx = txtPreview.Text.IndexOf(q, start, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) idx = txtPreview.Text.IndexOf(q, 0, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0) { txtPreview.Select(idx, q.Length); txtPreview.ScrollToCaret(); }
+            }
+            else if (scintilla.Visible)
+            {
+                var text = scintilla.Text;
+                int start = scintilla.CurrentPosition + 1;
+                int idx = text.IndexOf(q, start >= text.Length ? 0 : start, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) idx = text.IndexOf(q, 0, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0)
+                {
+                    scintilla.SelectionStart = idx;
+                    scintilla.SelectionEnd = idx + q.Length;
+                    scintilla.ScrollCaret();
+                }
+            }
+            else if (hexBox.Visible)
+            {
+                int start = hexBox.SelectionStart + hexBox.SelectionLength;
+                int idx = hexBox.Text.IndexOf(q, start, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) idx = hexBox.Text.IndexOf(q, 0, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0) { hexBox.Select(idx, q.Length); hexBox.ScrollToCaret(); }
+            }
+        }
+
+        private void DoCopy()
+        {
+            try
+            {
+                if (txtPreview.Visible && !string.IsNullOrEmpty(txtPreview.SelectedText))
+                    Clipboard.SetText(txtPreview.SelectedText);
+                else if (scintilla.Visible)
+                {
+                    var sel = scintilla.SelectedText;
+                    if (!string.IsNullOrEmpty(sel)) Clipboard.SetText(sel);
+                }
+                else if (hexBox.Visible && !string.IsNullOrEmpty(hexBox.SelectedText))
+                    Clipboard.SetText(hexBox.SelectedText);
+            }
+            catch { }
+        }
+
+        private void DoSaveAs()
+        {
+            if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath)) return;
+            using var sfd = new SaveFileDialog { FileName = Path.GetFileName(_currentFilePath) };
+            if (sfd.ShowDialog(this) == DialogResult.OK)
+            {
+                try { File.Copy(_currentFilePath, sfd.FileName, overwrite: true); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Save As"); }
+            }
+        }
+
+        private void ToggleHex()
+        {
+            if (chkHex.Checked)
+                _ = LoadHexAsync();
+            else
+                hexBox.Visible = false;
+        }
+
+        private async Task LoadHexAsync()
+        {
+            try
+            {
+                string p = _currentFilePath;
+                if (string.IsNullOrEmpty(p) || !File.Exists(p))
+                {
+                    chkHex.Checked = false;
+                    return;
+                }
+
+                // Limit to ~4MB to keep UI responsive; otherwise sample head+tail
+                const int Max = 4 * 1024 * 1024;
+
+                byte[] data;
+                var fi = new FileInfo(p);
+                if (fi.Length <= Max)
+                {
+                    data = await File.ReadAllBytesAsync(p);
+                }
+                else
+                {
+                    // Read first 2MB and last 2MB with gap marker
+                    int half = Max / 2;
+                    data = new byte[Max + 64];
+                    int off = 0;
+                    using var fs = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    off += fs.Read(data, 0, half);
+                    var marker = Encoding.ASCII.GetBytes("\r\n... (skipped) ...\r\n");
+                    Buffer.BlockCopy(marker, 0, data, off, marker.Length); off += marker.Length;
+                    fs.Seek(-half, SeekOrigin.End);
+                    off += fs.Read(data, off, half);
+                    Array.Resize(ref data, off);
+                }
+
+                var sb = new StringBuilder(data.Length * 3);
+                int row = 0;
+                for (int i = 0; i < data.Length; i += 16)
+                {
+                    sb.AppendFormat("{0:X8}  ", row);
+                    int j;
+                    for (j = 0; j < 16 && i + j < data.Length; j++)
+                        sb.AppendFormat("{0:X2} ", data[i + j]);
+                    for (; j < 16; j++) sb.Append("   ");
+                    sb.Append(" ");
+                    for (j = 0; j < 16 && i + j < data.Length; j++)
+                    {
+                        byte c = data[i + j];
+                        sb.Append(c >= 32 && c < 127 ? (char)c : '.');
+                    }
+                    sb.AppendLine();
+                    row += 16;
+                }
+
+                hexBox.Text = sb.ToString();
+                ShowOnly(hexBox);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Hex View");
+                chkHex.Checked = false;
+            }
+        }
+
 
         public async Task ShowFileAsync(string path)
         {
@@ -395,18 +539,13 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             scintilla.Visible = false;
             lblUnsupported.Visible = false;
             webView.Visible = false;
+            hexBox.Visible = false;
 
             btnPlayPause.Enabled = (_kind == PreviewKind.Media && webView.CoreWebView2 != null);
             btnStop.Enabled = (_kind == PreviewKind.Media && webView.CoreWebView2 != null);
 
-            if (c == null)
-            {
-                lblUnsupported.Visible = true;
-            }
-            else
-            {
-                c.Visible = true;
-            }
+            if (c == null) lblUnsupported.Visible = true;
+            else c.Visible = true;
         }
 
         private void ShowUnsupported()

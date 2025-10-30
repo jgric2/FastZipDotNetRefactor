@@ -73,6 +73,9 @@
     <Compile Update="Views\HomeView.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Views\InfoPane.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Views\PreviewPane.cs">
       <SubType>UserControl</SubType>
     </Compile>

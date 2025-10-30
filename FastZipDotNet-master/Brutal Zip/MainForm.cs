@@ -221,6 +221,13 @@ namespace Brutal_Zip
             viewerView.lvArchive.KeyPress += (s, e) => OnArchiveTypeFilter(e.KeyChar);
 
 
+
+            viewerView.lvArchive.SelectedIndexChanged += async (s, e) =>
+            {
+                await PreviewSelectedAsync();
+                UpdateInfoPaneFromSelection();
+            };
+
             this.KeyPreview = true;
             this.KeyDown += (s, e) => { if (e.Control && e.KeyCode == Keys.F) viewerView.txtSearch.Focus(); };
 
@@ -615,9 +622,13 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                 await viewerView.previewPane.ShowFileAsync(tempPath);
                 if (viewerView.splitMain.Panel2Collapsed)
                     TogglePreviewPane();
+
+                viewerView.infoPane.SetTempFile(_lastPreviewTempFile);
             }
             catch (OperationCanceledException) { }
             catch { viewerView.previewPane.Clear(); }
+
+            if (viewerView.lvArchive.SelectedIndices.Count == 0) { viewerView.previewPane.Clear(); viewerView.infoPane.Clear(); return; }
         }
 
 
@@ -1373,6 +1384,46 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             // No further action required; the wizard operates standalone using the engine.
         }
 
+
+        private void UpdateInfoPaneFromSelection()
+        {
+            if (_zip == null) { viewerView.infoPane.Clear(); return; }
+            if (viewerView.lvArchive.SelectedIndices.Count == 0) { viewerView.infoPane.Clear(); return; }
+
+            var r = _rows[viewerView.lvArchive.SelectedIndices[0]];
+            if (r.Kind == RowKind.File)
+                viewerView.infoPane.ShowEntry(_zip.ZipFileName, r.Entry);
+            else if (r.Kind == RowKind.Dir)
+            {
+                // Show folder summary by synthesizing some fields
+                var fake = new ZipFileEntry
+                {
+                    FilenameInZip = string.Join("/", GetCurrentPathParts().Append(r.Name)) + "/",
+                    Method = FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Store,
+                    FileSize = 0,
+                    CompressedSize = 0,
+                    ModifyTime = DateTime.MinValue,
+                    Crc32 = 0,
+                    EncodeUTF8 = true,
+                    Comment = "",
+                    ExternalFileAttr = 0
+                };
+                viewerView.infoPane.ShowEntry(_zip.ZipFileName, fake);
+            }
+        }
+
+        private IEnumerable<string> GetCurrentPathParts()
+        {
+            var parts = new List<string>();
+            var n = _current;
+            while (n != null && n.Name != "")
+            {
+                parts.Add(n.Name);
+                n = n.Parent;
+            }
+            parts.Reverse();
+            return parts;
+        }
 
         private void CrackPasswordFromTools()
         {

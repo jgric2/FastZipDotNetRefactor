@@ -21,6 +21,15 @@ namespace Brutal_Zip.Views
         private RichTextBox txtPreview;
         private Label lblUnsupported;
 
+
+        private Panel panelTop;                 // NEW
+        private TextBox txtFind;                // NEW
+        private Button btnFindNext;             // NEW
+        private Button btnCopyPreview;          // NEW
+        private Button btnSaveAs;               // NEW
+        private CheckBox chkHex;                // NEW
+
+
         // WebView2 for media
         private WebView2 webView;
 
@@ -46,14 +55,22 @@ namespace Brutal_Zip.Views
             btnStop = new Button();
             btnPlayPause = new Button();
             panelContent = new Panel();
+            hexBox = new RichTextBox();
             webView = new WebView2();
             picture = new PictureBox();
             txtPreview = new RichTextBox();
             scintilla = new Scintilla();
             lblUnsupported = new Label();
+            panelTop = new Panel();
+            txtFind = new TextBox();
+            btnFindNext = new Button();
+            btnCopyPreview = new Button();
+            btnSaveAs = new Button();
+            chkHex = new CheckBox();
             panelContent.SuspendLayout();
             ((ISupportInitialize)webView).BeginInit();
             ((ISupportInitialize)picture).BeginInit();
+            panelTop.SuspendLayout();
             SuspendLayout();
             // 
             // lblFileName
@@ -68,7 +85,7 @@ namespace Brutal_Zip.Views
             // lblInfo
             // 
             lblInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            lblInfo.Location = new Point(12, 28);
+            lblInfo.Location = new Point(12, 37);
             lblInfo.Name = "lblInfo";
             lblInfo.Size = new Size(560, 18);
             lblInfo.TabIndex = 1;
@@ -107,6 +124,7 @@ namespace Brutal_Zip.Views
             // 
             panelContent.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             panelContent.BackColor = Color.Black;
+            panelContent.Controls.Add(hexBox);
             panelContent.Controls.Add(webView);
             panelContent.Controls.Add(picture);
             panelContent.Controls.Add(txtPreview);
@@ -116,6 +134,20 @@ namespace Brutal_Zip.Views
             panelContent.Name = "panelContent";
             panelContent.Size = new Size(776, 163);
             panelContent.TabIndex = 5;
+            // 
+            // hexBox
+            // 
+            hexBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            hexBox.BackColor = Color.White;
+            hexBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            hexBox.Font = new Font("Consolas", 9F);
+            hexBox.Location = new Point(0, 0);
+            hexBox.Name = "hexBox";
+            hexBox.ReadOnly = true;
+            hexBox.Size = new Size(776, 163);
+            hexBox.TabIndex = 0;
+            hexBox.Text = "";
+            hexBox.Visible = false;
             // 
             // webView
             // 
@@ -186,10 +218,65 @@ namespace Brutal_Zip.Views
             lblUnsupported.Text = "No preview available. Use Open to view.";
             lblUnsupported.TextAlign = ContentAlignment.MiddleCenter;
             // 
+            // panelTop
+            // 
+            panelTop.Controls.Add(txtFind);
+            panelTop.Controls.Add(btnFindNext);
+            panelTop.Controls.Add(btnCopyPreview);
+            panelTop.Controls.Add(btnSaveAs);
+            panelTop.Controls.Add(chkHex);
+            panelTop.Dock = DockStyle.Top;
+            panelTop.Location = new Point(0, 0);
+            panelTop.Name = "panelTop";
+            panelTop.Padding = new Padding(6);
+            panelTop.Size = new Size(800, 34);
+            panelTop.TabIndex = 0;
+            // 
+            // txtFind
+            // 
+            txtFind.Location = new Point(8, 6);
+            txtFind.Name = "txtFind";
+            txtFind.Size = new Size(180, 23);
+            txtFind.TabIndex = 0;
+            // 
+            // btnFindNext
+            // 
+            btnFindNext.Location = new Point(194, 4);
+            btnFindNext.Name = "btnFindNext";
+            btnFindNext.Size = new Size(50, 26);
+            btnFindNext.TabIndex = 1;
+            btnFindNext.Text = "Find";
+            // 
+            // btnCopyPreview
+            // 
+            btnCopyPreview.Location = new Point(250, 4);
+            btnCopyPreview.Name = "btnCopyPreview";
+            btnCopyPreview.Size = new Size(60, 26);
+            btnCopyPreview.TabIndex = 2;
+            btnCopyPreview.Text = "Copy";
+            // 
+            // btnSaveAs
+            // 
+            btnSaveAs.Location = new Point(316, 4);
+            btnSaveAs.Name = "btnSaveAs";
+            btnSaveAs.Size = new Size(80, 26);
+            btnSaveAs.TabIndex = 3;
+            btnSaveAs.Text = "Save As…";
+            // 
+            // chkHex
+            // 
+            chkHex.AutoSize = true;
+            chkHex.Location = new Point(404, 8);
+            chkHex.Name = "chkHex";
+            chkHex.Size = new Size(46, 19);
+            chkHex.TabIndex = 4;
+            chkHex.Text = "Hex";
+            // 
             // PreviewPane
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
+            Controls.Add(panelTop);
             Controls.Add(lblFileName);
             Controls.Add(lblInfo);
             Controls.Add(btnPlayPause);
@@ -201,6 +288,8 @@ namespace Brutal_Zip.Views
             panelContent.ResumeLayout(false);
             ((ISupportInitialize)webView).EndInit();
             ((ISupportInitialize)picture).EndInit();
+            panelTop.ResumeLayout(false);
+            panelTop.PerformLayout();
             ResumeLayout(false);
         }
     }
