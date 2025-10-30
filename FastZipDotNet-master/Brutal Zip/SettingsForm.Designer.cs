@@ -21,6 +21,11 @@ namespace BrutalZip
         private RadioButton rdoExtractSmart;
         private RadioButton rdoExtractHere;
 
+        private GroupBox grpEncryptDefault;         // NEW
+        private CheckBox chkEncryptNewDefault;      // NEW
+        private Label lblEncryptAlgo;               // NEW
+        private ComboBox cmbEncryptAlgo;            // NEW
+
         private CheckBox chkOpenExplorerAfterCreate;
         private CheckBox chkOpenExplorerAfterExtract;
         private CheckBox chkContextMenu;
@@ -52,6 +57,11 @@ namespace BrutalZip
             this.rdoExtractSmart = new RadioButton();
             this.rdoExtractHere = new RadioButton();
 
+            this.grpEncryptDefault = new GroupBox();       // NEW
+            this.chkEncryptNewDefault = new CheckBox();    // NEW
+            this.lblEncryptAlgo = new Label();             // NEW
+            this.cmbEncryptAlgo = new ComboBox();          // NEW
+
             this.chkOpenExplorerAfterCreate = new CheckBox();
             this.chkOpenExplorerAfterExtract = new CheckBox();
             this.chkContextMenu = new CheckBox();
@@ -62,6 +72,7 @@ namespace BrutalZip
             ((ISupportInitialize)(this.numLevel)).BeginInit();
             ((ISupportInitialize)(this.tbDefaultThreads)).BeginInit();
             this.grpExtractDefault.SuspendLayout();
+            this.grpEncryptDefault.SuspendLayout(); // NEW
             this.SuspendLayout();
 
             // SettingsForm
@@ -71,7 +82,7 @@ namespace BrutalZip
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.ClientSize = new Size(520, 330);
+            this.ClientSize = new Size(520, 430); // increased height
 
             // Default method
             this.lblMethod.Text = "Default method:";
@@ -102,7 +113,7 @@ namespace BrutalZip
             this.tbDefaultThreads.Location = new Point(160, 84);
             this.tbDefaultThreads.Size = new Size(220, 45);
             this.tbDefaultThreads.Minimum = 1;
-            this.tbDefaultThreads.Maximum = 4; // will be overridden in code-behind LoadUi
+            this.tbDefaultThreads.Maximum = 4; // overridden in code-behind LoadUi
             this.tbDefaultThreads.TickFrequency = 1;
             this.tbDefaultThreads.SmallChange = 1;
             this.tbDefaultThreads.LargeChange = 1;
@@ -134,27 +145,49 @@ namespace BrutalZip
             this.grpExtractDefault.Controls.Add(this.rdoExtractSmart);
             this.grpExtractDefault.Controls.Add(this.rdoExtractHere);
 
+            // NEW: Default encryption group
+            this.grpEncryptDefault.Text = "Default encryption for new archives";
+            this.grpEncryptDefault.Location = new Point(16, 206);
+            this.grpEncryptDefault.Size = new Size(488, 72);
+
+            this.chkEncryptNewDefault.Text = "Encrypt new archives by default";
+            this.chkEncryptNewDefault.Location = new Point(12, 22);
+            this.chkEncryptNewDefault.Size = new Size(240, 20);
+
+            this.lblEncryptAlgo.Text = "Algorithm:";
+            this.lblEncryptAlgo.Location = new Point(12, 46);
+            this.lblEncryptAlgo.Size = new Size(70, 20);
+
+            this.cmbEncryptAlgo.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbEncryptAlgo.Items.AddRange(new object[] { "ZipCrypto", "AES-128", "AES-192", "AES-256" });
+            this.cmbEncryptAlgo.Location = new Point(90, 44);
+            this.cmbEncryptAlgo.Size = new Size(160, 23);
+
+            this.grpEncryptDefault.Controls.Add(this.chkEncryptNewDefault);
+            this.grpEncryptDefault.Controls.Add(this.lblEncryptAlgo);
+            this.grpEncryptDefault.Controls.Add(this.cmbEncryptAlgo);
+
             // Explorer options
             this.chkOpenExplorerAfterCreate.Text = "Open Explorer after create";
-            this.chkOpenExplorerAfterCreate.Location = new Point(16, 206);
+            this.chkOpenExplorerAfterCreate.Location = new Point(16, 286);
             this.chkOpenExplorerAfterCreate.Size = new Size(230, 24);
 
             this.chkOpenExplorerAfterExtract.Text = "Open Explorer after extract";
-            this.chkOpenExplorerAfterExtract.Location = new Point(16, 230);
+            this.chkOpenExplorerAfterExtract.Location = new Point(16, 310);
             this.chkOpenExplorerAfterExtract.Size = new Size(230, 24);
 
             this.chkContextMenu.Text = "Add to Explorer context menu";
-            this.chkContextMenu.Location = new Point(16, 254);
+            this.chkContextMenu.Location = new Point(16, 334);
             this.chkContextMenu.Size = new Size(260, 24);
 
             // Buttons
             this.btnOK.Text = "OK";
-            this.btnOK.Location = new Point(320, 284);
+            this.btnOK.Location = new Point(320, 378);
             this.btnOK.Size = new Size(88, 28);
             this.btnOK.DialogResult = DialogResult.OK;
 
             this.btnCancel.Text = "Cancel";
-            this.btnCancel.Location = new Point(416, 284);
+            this.btnCancel.Location = new Point(416, 378);
             this.btnCancel.Size = new Size(88, 28);
             this.btnCancel.DialogResult = DialogResult.Cancel;
 
@@ -170,15 +203,18 @@ namespace BrutalZip
             this.Controls.Add(this.chkThreadsAuto);
 
             this.Controls.Add(this.grpExtractDefault);
+            this.Controls.Add(this.grpEncryptDefault); // NEW group
             this.Controls.Add(this.chkOpenExplorerAfterCreate);
             this.Controls.Add(this.chkOpenExplorerAfterExtract);
             this.Controls.Add(this.chkContextMenu);
+
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.btnCancel);
 
             ((ISupportInitialize)(this.numLevel)).EndInit();
             ((ISupportInitialize)(this.tbDefaultThreads)).EndInit();
             this.grpExtractDefault.ResumeLayout(false);
+            this.grpEncryptDefault.ResumeLayout(false);
             this.ResumeLayout(false);
         }
     }

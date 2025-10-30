@@ -61,5 +61,10 @@ namespace BrutalZip
         // NEW:
         public List<string> RecentArchives { get; set; } = new List<string>();
         public int RecentMax { get; set; } = 10;
+
+        // NEW: global default encryption for new archives
+        public bool EncryptNewArchivesByDefault { get; set; } = false;
+        // Accepted values: "ZipCrypto", "AES128", "AES192", "AES256"
+        public string DefaultEncryptAlgorithm { get; set; } = "ZipCrypto";
     }
 }

@@ -58,6 +58,8 @@
             // 
             homeView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             homeView.CreateDestination = "";
+            homeView.CreateEncryptAlgorithmIndex = 0;
+            homeView.CreateEncryptEnabled = false;
             homeView.CreateLevel = 6;
             homeView.CreateMethodIndex = -1;
             homeView.ExtractDestination = "";
@@ -187,7 +189,7 @@
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Brutal Zip";
-            Load += MainForm_Load_2;
+            Load += MainForm_Load;
             menuMain.ResumeLayout(false);
             menuMain.PerformLayout();
             ResumeLayout(false);

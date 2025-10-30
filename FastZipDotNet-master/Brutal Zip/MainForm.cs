@@ -1,16 +1,7 @@
-﻿using Brutal_Zip.Views;
-using BrutalZip;
+﻿using BrutalZip;
 using FastZipDotNet.Zip;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 using static FastZipDotNet.Zip.Structure.ZipEntryStructs;
 
@@ -64,6 +55,19 @@ namespace Brutal_Zip
         public MainForm()
         {
             InitializeComponent();
+
+
+            viewerView.mnuEncryptNew.Checked = SettingsService.Current.EncryptNewArchivesByDefault;
+            var addAlgo = EncryptAlgoIndexFromString(SettingsService.Current.DefaultEncryptAlgorithm) switch
+            {
+                1 => EncryptionAlgorithm.Aes128,
+                2 => EncryptionAlgorithm.Aes192,
+                3 => EncryptionAlgorithm.Aes256,
+                _ => EncryptionAlgorithm.ZipCrypto
+            };
+            viewerView.SetAddEncryptionSelection(addAlgo);
+            _addAlgorithm = addAlgo;
+
 
 
 
@@ -617,6 +621,11 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                 homeView.rdoExtractHere.Checked = true;
             else
                 homeView.rdoExtractToFolderName.Checked = true;
+
+            homeView.CreateEncryptEnabled = SettingsService.Current.EncryptNewArchivesByDefault;
+            homeView.CreateEncryptAlgorithmIndex = EncryptAlgoIndexFromString(SettingsService.Current.DefaultEncryptAlgorithm);
+            // Optional: reflect password status (we don’t persist a password globally, by design)
+            homeView.SetCreatePasswordStatus(false);
 
             ShowHome();
         }
@@ -1564,7 +1573,7 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             using var dlg = new SettingsForm();
             if (dlg.ShowDialog(this) == DialogResult.OK)
             {
-                // Apply changed defaults to the Home view
+                // Apply changed defaults to the Home view (method/level already existed)
                 homeView.CreateMethodIndex = SettingsService.Current.DefaultMethod switch
                 {
                     "Store" => 0,
@@ -1572,6 +1581,18 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                     _ => 1
                 };
                 homeView.CreateLevel = SettingsService.Current.DefaultLevel;
+
+                // NEW: apply default encryption settings to Create UI
+                homeView.CreateEncryptEnabled = SettingsService.Current.EncryptNewArchivesByDefault;
+                homeView.CreateEncryptAlgorithmIndex = SettingsService.Current.DefaultEncryptAlgorithm?.ToUpperInvariant() switch
+                {
+                    "AES128" => 1,
+                    "AES192" => 2,
+                    "AES256" => 3,
+                    _ => 0 // ZipCrypto
+                };
+                // Password is not persisted globally; keep status as not set
+                homeView.SetCreatePasswordStatus(false);
             }
         }
 
@@ -2152,13 +2173,27 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             finally { pf.Close(); }
         }
 
-        private static string CombineZipPath(string prefix, string name)
+
+        private static int EncryptAlgoIndexFromString(string s)
         {
-            prefix = (prefix ?? "").Trim('/');
-            name = (name ?? "").Trim('/');
-            if (string.IsNullOrEmpty(prefix)) return name.Replace('\\','/');
-            if (string.IsNullOrEmpty(name)) return prefix.Replace('\\','/');
-            return (prefix + "/" + name).Replace('\\','/');
+            return s?.Trim()?.ToUpperInvariant() switch
+            {
+                "AES128" => 1,
+                "AES192" => 2,
+                "AES256" => 3,
+                _ => 0 // ZipCrypto
+            };
+        }
+
+        private static string EncryptAlgoStringFromEnum(EncryptionAlgorithm algo)
+        {
+            return algo switch
+            {
+                EncryptionAlgorithm.Aes128 => "AES128",
+                EncryptionAlgorithm.Aes192 => "AES192",
+                EncryptionAlgorithm.Aes256 => "AES256",
+                _ => "ZipCrypto"
+            };
         }
 
         private void MainForm_Load_1(object sender, EventArgs e)

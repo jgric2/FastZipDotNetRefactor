@@ -25,9 +25,15 @@ namespace BrutalZip
                 tbDefaultThreads.Enabled = !chkThreadsAuto.Checked;
             };
 
+            // Enable/disable algo choice with master checkbox
+            chkEncryptNewDefault.CheckedChanged += (s, e) =>
+            {
+                cmbEncryptAlgo.Enabled = chkEncryptNewDefault.Checked;
+            };
+
             btnOK.Click += (s, e) =>
             {
-                // Persist
+                // Persist method/level
                 SettingsService.Current.DefaultMethod = cmbMethod.SelectedIndex switch
                 {
                     0 => "Store",
@@ -36,19 +42,28 @@ namespace BrutalZip
                 };
                 SettingsService.Current.DefaultLevel = (int)numLevel.Value;
 
+                // Persist threads
                 SettingsService.Current.ThreadsAuto = chkThreadsAuto.Checked;
                 SettingsService.Current.Threads = tbDefaultThreads.Value;
 
+                // Persist extract defaults
                 SettingsService.Current.ExtractDefault = rdoExtractHere.Checked ? "Here" : "Smart";
+
+                // Persist Explorer options
                 SettingsService.Current.OpenExplorerAfterCreate = chkOpenExplorerAfterCreate.Checked;
                 SettingsService.Current.OpenExplorerAfterExtract = chkOpenExplorerAfterExtract.Checked;
                 SettingsService.Current.AddContextMenu = chkContextMenu.Checked;
+
+                // Persist encryption defaults (NEW)
+                SettingsService.Current.EncryptNewArchivesByDefault = chkEncryptNewDefault.Checked;
+                SettingsService.Current.DefaultEncryptAlgorithm = AlgoStringFromIndex(cmbEncryptAlgo.SelectedIndex);
 
                 try
                 {
                     SettingsService.Save();
                     if (SettingsService.Current.AddContextMenu) ShellIntegration.Install();
                     else ShellIntegration.Uninstall();
+
                     DialogResult = DialogResult.OK;
                 }
                 catch (Exception ex)
@@ -83,7 +98,7 @@ namespace BrutalZip
             chkThreadsAuto.Checked = SettingsService.Current.ThreadsAuto;
             tbDefaultThreads.Enabled = !chkThreadsAuto.Checked;
 
-            // Extract defaults
+            // Extract default
             if (string.Equals(SettingsService.Current.ExtractDefault, "Here", StringComparison.OrdinalIgnoreCase))
             {
                 rdoExtractHere.Checked = true;
@@ -99,6 +114,33 @@ namespace BrutalZip
             chkOpenExplorerAfterCreate.Checked = SettingsService.Current.OpenExplorerAfterCreate;
             chkOpenExplorerAfterExtract.Checked = SettingsService.Current.OpenExplorerAfterExtract;
             chkContextMenu.Checked = SettingsService.Current.AddContextMenu;
+
+            // Encryption defaults (NEW)
+            chkEncryptNewDefault.Checked = SettingsService.Current.EncryptNewArchivesByDefault;
+            cmbEncryptAlgo.SelectedIndex = AlgoIndexFromString(SettingsService.Current.DefaultEncryptAlgorithm);
+            cmbEncryptAlgo.Enabled = chkEncryptNewDefault.Checked;
+        }
+
+        private static int AlgoIndexFromString(string s)
+        {
+            return s?.Trim()?.ToUpperInvariant() switch
+            {
+                "AES128" => 1,
+                "AES192" => 2,
+                "AES256" => 3,
+                _ => 0 // ZipCrypto
+            };
+        }
+
+        private static string AlgoStringFromIndex(int index)
+        {
+            return index switch
+            {
+                1 => "AES128",
+                2 => "AES192",
+                3 => "AES256",
+                _ => "ZipCrypto"
+            };
         }
     }
 }
