@@ -14,6 +14,17 @@ namespace FastZipDotNet.Zip
     public class FastZipDotNet : IDisposable
     {
 
+        // NEW: archive comment editor
+        public string ArchiveComment
+        {
+            get => _zipComment;
+            set
+            {
+                _zipComment = value ?? string.Empty;
+                _dirty = true; // mark for rewrite of central directory
+            }
+        }
+
 
         public EncryptionAlgorithm Encryption { get; set; } = EncryptionAlgorithm.None;
         public string Password { get; set; } = null;
@@ -283,6 +294,9 @@ namespace FastZipDotNet.Zip
                 ZipInfoStruct = zipInfo;
                 ZipFileEntries = ZipInfoStruct.ZipFileEntries;
 
+                // initialize comment field from existing archive (do not mark dirty here)
+                _zipComment = ZipInfoStruct.ZipComment ?? string.Empty;
+
                 // Initialize append pointer for single-part mode
                 InitializeAppendOffsetForSinglePart();
             }
@@ -338,6 +352,9 @@ namespace FastZipDotNet.Zip
             }
             ZipInfoStruct = zipInfo;
             ZipFileEntries = ZipInfoStruct.ZipFileEntries;
+
+            // initialize comment field from existing archive (do not mark dirty here)
+            _zipComment = ZipInfoStruct.ZipComment ?? string.Empty;
 
             SetCompressionLevel(CompressionLevelValue);
         }

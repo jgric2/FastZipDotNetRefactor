@@ -78,6 +78,10 @@ namespace Brutal_Zip.Views
             };
 
 
+            btnComment.Click += (s, e) => CommentClicked?.Invoke();
+            btnWizard.Click += (s, e) => WizardClicked?.Invoke();
+
+
         }
 
 
@@ -97,6 +101,9 @@ namespace Brutal_Zip.Views
             }
         }
 
+
+        public event Action CommentClicked;
+        public event Action WizardClicked;
 
         public event Action BackHomeClicked;
         public event Action AddFilesClicked;

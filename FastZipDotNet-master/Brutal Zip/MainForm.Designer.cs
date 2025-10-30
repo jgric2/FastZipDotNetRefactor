@@ -25,6 +25,11 @@
         private ToolStripSeparator sepTools2;               // NEW
         private ToolStripSeparator sepFile1;                 // NEW
 
+        private ToolStripMenuItem mnuToolsSetComment;    // NEW
+        private ToolStripMenuItem mnuToolsWizard;        // NEW
+        private ToolStripSeparator sepTools4;            // NEW
+
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null)) components.Dispose();
@@ -51,6 +56,11 @@
             mnuToolsFind = new ToolStripMenuItem();
             mnuHelp = new ToolStripMenuItem();
             mnuHelpAbout = new ToolStripMenuItem();
+
+            mnuToolsSetComment = new ToolStripMenuItem();
+            mnuToolsWizard = new ToolStripMenuItem();
+            sepTools4 = new ToolStripSeparator();
+
             menuMain.SuspendLayout();
             SuspendLayout();
             // 
@@ -179,6 +189,15 @@
             // MainForm
             // 
 
+            mnuToolsSetComment.Name = "mnuToolsSetComment";
+            mnuToolsSetComment.Size = new Size(213, 22);
+            mnuToolsSetComment.Text = "Set Comment…";
+
+            mnuToolsWizard.Name = "mnuToolsWizard";
+            mnuToolsWizard.Size = new Size(213, 22);
+            mnuToolsWizard.Text = "Wizard…";
+
+
             sepTools3 = new ToolStripSeparator();
             mnuToolsCrackPassword = new ToolStripMenuItem();
 
@@ -192,7 +211,8 @@
                 sepTools2,
                 mnuToolsFind,
                 sepTools3,                 // NEW
-                mnuToolsCrackPassword      // NEW
+                mnuToolsCrackPassword,
+                  sepTools4, mnuToolsSetComment, mnuToolsWizard
             });
 
             // mnuToolsCrackPassword

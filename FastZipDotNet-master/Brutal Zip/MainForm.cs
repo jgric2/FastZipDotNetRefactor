@@ -126,6 +126,20 @@ namespace Brutal_Zip
             homeView.StagingListView.UseCompatibleStateImageBehavior = false;
             mnuToolsFind.Click += (s, e) => DoFindInArchive();
 
+
+            // Viewer toolbar actions
+            viewerView.CommentClicked += () => ShowCommentEditor();
+            viewerView.WizardClicked += () => ShowWizard();
+
+            // Tools menu
+            mnuToolsSetComment.Click += (s, e) => ShowCommentEditor();
+            mnuToolsWizard.Click += (s, e) => ShowWizard();
+
+            // initially disabled until an archive is open
+            mnuToolsSetComment.Enabled = false;
+            mnuToolsWizard.Enabled = true; // wizard can be used anytime
+
+
             homeView.StagingListView.KeyDown += (s, e) =>
             {
                 if (e.Control && e.KeyCode == Keys.V)
@@ -1290,6 +1304,12 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
                     }
                     _addPassword = _zip.Password; // reuse for future additions
                 }
+
+
+                // enable comment editing when an archive is open
+                mnuToolsSetComment.Enabled = true;
+                viewerView.btnComment.Enabled = true;
+
             }
             catch (Exception ex)
             {
@@ -1310,7 +1330,47 @@ new ListViewItem(new[] { "", "", "", "", "", "" });
             mnuToolsCrackPassword.Enabled = false;
             _rows.Clear();
 
+            mnuToolsSetComment.Enabled = false;
+            viewerView.btnComment.Enabled = false;
+
             ShowHome();
+        }
+
+
+
+        private void ShowCommentEditor()
+        {
+            if (_zip == null)
+            {
+                MessageBox.Show(this, "Open an archive first.", "Archive Comment");
+                return;
+            }
+
+            using var dlg = new ArchiveCommentForm();
+            dlg.Comment = _zip.ArchiveComment ?? _zip.ZipInfoStruct.ZipComment ?? string.Empty;
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                try
+                {
+                    _zip.ArchiveComment = dlg.Comment ?? string.Empty; // marks _dirty
+                                                                       // Rewrite the central directory to update comment
+                    _zip.Close();
+                    // Reopen for viewing
+                    OpenArchive(_zipPath);
+                    MessageBox.Show(this, "Archive comment updated.", "Archive Comment");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "Failed to update comment:\n" + ex.Message, "Archive Comment");
+                }
+            }
+        }
+
+        private void ShowWizard()
+        {
+            using var wz = new WizardForm();
+            wz.ShowDialog(this);
+            // No further action required; the wizard operates standalone using the engine.
         }
 
 

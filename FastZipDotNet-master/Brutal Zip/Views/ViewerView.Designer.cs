@@ -48,6 +48,10 @@ namespace Brutal_Zip.Views
         internal ToolStripMenuItem mnuAlgoAES256;
 
 
+        internal ToolStripButton btnComment;   // NEW
+        internal ToolStripButton btnWizard;    // NEW
+
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null)) components.Dispose();
@@ -97,6 +101,9 @@ namespace Brutal_Zip.Views
             toolStripMenuItem2 = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             toolStripMenuItem4 = new ToolStripMenuItem();
+            btnComment = new ToolStripButton();
+            btnWizard = new ToolStripButton();
+
             toolStrip.SuspendLayout();
             ((ISupportInitialize)splitMain).BeginInit();
             splitMain.Panel1.SuspendLayout();
@@ -112,10 +119,21 @@ namespace Brutal_Zip.Views
             toolStrip.Items.AddRange(new ToolStripItem[] 
             {
                 btnBackHome, btnAddFiles, btnAddFolder, btnExtractSplit,
-                btnEncryptAdd,   // NEW here
                 btnOpenFolder, btnTogglePreview,
+                btnComment,                      // NEW
+                btnWizard,                       // NEW
                 lblSearch, txtSearch, btnInfo, btnTest, btnSettings
             });
+
+            // btnComment
+            btnComment.Name = "btnComment";
+            btnComment.Text = "Comment…";
+            btnComment.DisplayStyle = ToolStripItemDisplayStyle.Text;
+
+            // btnWizard
+            btnWizard.Name = "btnWizard";
+            btnWizard.Text = "Wizard…";
+            btnWizard.DisplayStyle = ToolStripItemDisplayStyle.Text;
 
             // NEW: btnEncryptAdd dropdown and items
             btnEncryptAdd.Text = "Encrypt";
