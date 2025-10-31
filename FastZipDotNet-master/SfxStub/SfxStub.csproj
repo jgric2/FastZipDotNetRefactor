@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWindowsForms>true</UseWindowsForms>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FastZipDotNet\FastZipDotNet.csproj" />
+    <EmbeddedResource Include="native\win-x64\libdeflate.dll" LogicalName="native/win-x64/libdeflate.dll" />
+    <EmbeddedResource Include="native\win-x64\libzstd.dll" LogicalName="native/win-x64/libzstd.dll" />
+    <EmbeddedResource Include="native\win-x86\libdeflate.dll" LogicalName="native/win-x86/libdeflate.dll" />
+    <EmbeddedResource Include="native\win-x86\libzstd.dll" LogicalName="native/win-x86/libzstd.dll" />
+  </ItemGroup>
+
+</Project>

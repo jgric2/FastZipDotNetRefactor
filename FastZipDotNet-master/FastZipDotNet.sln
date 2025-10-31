@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestWinForms", "TestWinForm
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Brutal Zip", "Brutal Zip\Brutal Zip.csproj", "{7EB7EEB3-B3E8-420A-A4B0-FAF886BA8E69}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SfxStub", "SfxStub\SfxStub.csproj", "{3D30E2C3-9CC0-4320-96C6-9CB2660C2B9F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{7EB7EEB3-B3E8-420A-A4B0-FAF886BA8E69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7EB7EEB3-B3E8-420A-A4B0-FAF886BA8E69}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7EB7EEB3-B3E8-420A-A4B0-FAF886BA8E69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D30E2C3-9CC0-4320-96C6-9CB2660C2B9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D30E2C3-9CC0-4320-96C6-9CB2660C2B9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D30E2C3-9CC0-4320-96C6-9CB2660C2B9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D30E2C3-9CC0-4320-96C6-9CB2660C2B9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

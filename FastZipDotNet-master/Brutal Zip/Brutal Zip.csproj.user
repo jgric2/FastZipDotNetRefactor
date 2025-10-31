@@ -7,6 +7,9 @@
     <Compile Update="ArchiveCommentForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="BuilderPreviewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Controls\BrutalControls\BrutalBarChart\FinalBarBrutal.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -71,6 +74,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="SettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="SfxBuilderForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Views\HomeView.cs">
