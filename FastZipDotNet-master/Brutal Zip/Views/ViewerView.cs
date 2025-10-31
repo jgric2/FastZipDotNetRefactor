@@ -13,6 +13,15 @@ namespace Brutal_Zip.Views
 {
     public partial class ViewerView : UserControl
     {
+        internal ToolStripMenuItem mnuRename;           // NEW
+        internal ToolStripMenuItem mnuMoveToFolder;     // NEW
+        internal ToolStripMenuItem mnuDelete;           // NEW
+
+        public event Action RenameSelectedRequested;    // NEW
+        public event Action MoveToFolderRequested;      // NEW
+        public event Action DeleteSelectedRequested;    // NEW
+
+
         public ViewerView()
         {
             InitializeComponent();
@@ -22,7 +31,22 @@ namespace Brutal_Zip.Views
             //this.btnExtractSplit.DropDownItems.Add("Extract to “ArchiveName”/");
             //this.btnExtractSplit.DropDownItems.Add("Choose folder…");
 
+            mnuRename = new ToolStripMenuItem("Rename…");
+            mnuMoveToFolder = new ToolStripMenuItem("Move to folder…");
+            mnuDelete = new ToolStripMenuItem("Delete");
 
+            // Insert after existing items
+            if (cmsViewer != null)
+            {
+                cmsViewer.Items.Add(new ToolStripSeparator());
+                cmsViewer.Items.Add(mnuRename);
+                cmsViewer.Items.Add(mnuMoveToFolder);
+                cmsViewer.Items.Add(mnuDelete);
+
+                mnuRename.Click += (s, e) => RenameSelectedRequested?.Invoke();
+                mnuMoveToFolder.Click += (s, e) => MoveToFolderRequested?.Invoke();
+                mnuDelete.Click += (s, e) => DeleteSelectedRequested?.Invoke();
+            }
 
 
             btnBackHome.Click += (s, e) => BackHomeClicked?.Invoke();

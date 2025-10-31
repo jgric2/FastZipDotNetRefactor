@@ -18,7 +18,6 @@ namespace FastZipDotNet.Zip.Writers
 
                 bool zip64Needed = _zfe.FileSize >= uint.MaxValue || _zfe.CompressedSize >= uint.MaxValue;
 
-                // Version needed: keep 20 by default; 63 for Zstd; AES works with 20
                 ushort versionNeeded = (ushort)(zip64Needed ? 45 : 20);
                 if (_zfe.Method == Compression.Zstd) versionNeeded = 63;
 
@@ -31,16 +30,16 @@ namespace FastZipDotNet.Zip.Writers
                 if (_zfe.IsEncrypted) gpFlag |= 0x0001;
                 ms.Write(BitConverter.GetBytes(gpFlag), 0, 2);
 
-                // Method (99 for AES)
+                // Compression method (99 for AES)
                 ushort methodToWrite = _zfe.IsAes ? (ushort)99 : (ushort)_zfe.Method;
                 ms.Write(BitConverter.GetBytes(methodToWrite), 0, 2);
 
-                // Time/Date
+                // DOS date/time (always present)
                 ms.Write(BitConverter.GetBytes(DosHelpers.DateTimeToDosTime(_zfe.ModifyTime)), 0, 4);
 
-                // CRC32 (for AES spec, often 0; real CRC may be unknown and not used)
-                uint crcToWrite = _zfe.IsAes ? 0u : _zfe.Crc32;
-                ms.Write(BitConverter.GetBytes(crcToWrite), 0, 4);
+                // CRC32 (0 for AES in local header)
+                uint crcToWriteLocal = _zfe.IsAes ? 0u : _zfe.Crc32;
+                ms.Write(BitConverter.GetBytes(crcToWriteLocal), 0, 4);
 
                 // Sizes
                 ms.Write(BitConverter.GetBytes(zip64Needed ? 0xFFFFFFFFu : (uint)_zfe.CompressedSize), 0, 4);
@@ -51,13 +50,13 @@ namespace FastZipDotNet.Zip.Writers
                 byte[] encodedFilename = encoder.GetBytes(_zfe.FilenameInZip);
                 ms.Write(BitConverter.GetBytes((ushort)encodedFilename.Length), 0, 2);
 
-                // Extra
+                // Extra field
                 using var msExtra = new MemoryStream();
                 using var bwExtra = new BinaryWriter(msExtra);
 
                 if (zip64Needed)
                 {
-                    bwExtra.Write((ushort)0x0001); // Zip64
+                    bwExtra.Write((ushort)0x0001);
                     bwExtra.Write((ushort)16);
                     bwExtra.Write((ulong)_zfe.FileSize);
                     bwExtra.Write((ulong)_zfe.CompressedSize);
@@ -65,13 +64,40 @@ namespace FastZipDotNet.Zip.Writers
 
                 if (_zfe.IsAes)
                 {
-                    // AES extra field (0x9901)
                     bwExtra.Write((ushort)0x9901);
                     bwExtra.Write((ushort)7);
-                    bwExtra.Write((ushort)0x0002);     // Version AE-2
-                    bwExtra.Write((ushort)0x4541);     // Vendor 'AE'
-                    bwExtra.Write((byte)_zfe.AesStrength); // 1/2/3
-                    bwExtra.Write((ushort)((ushort)_zfe.Method)); // actual compression method
+                    bwExtra.Write((ushort)0x0002);                 // AE-2
+                    bwExtra.Write((ushort)0x4541);                 // 'AE'
+                    bwExtra.Write((byte)_zfe.AesStrength);         // 1/2/3
+                    bwExtra.Write((ushort)((ushort)_zfe.Method));  // actual method
+                }
+
+                // Extended Timestamp (0x5455) – write mtime
+                {
+                    byte flags = 0x01; // mtime only
+                    uint unixMTime = (uint)new DateTimeOffset(_zfe.ModifyTime).ToUnixTimeSeconds();
+                    using var tms = new MemoryStream();
+                    using var wt = new BinaryWriter(tms);
+                    wt.Write(flags);
+                    wt.Write(unixMTime);
+                    var tbytes = tms.ToArray();
+                    bwExtra.Write((ushort)0x5455);
+                    bwExtra.Write((ushort)tbytes.Length);
+                    bwExtra.Write(tbytes);
+                }
+
+                // NTFS timestamps (0x000A) – mtime/atime/ctime (write ModifyTime for all if unknown)
+                {
+                    bwExtra.Write((ushort)0x000A);
+                    bwExtra.Write((ushort)32); // 4 reserved + (2+2+24)
+                    bwExtra.Write(0u); // reserved
+                    bwExtra.Write((ushort)0x0001); // attr tag
+                    bwExtra.Write((ushort)24);     // attr size
+
+                    long filetime = _zfe.ModifyTime.ToFileTimeUtc();
+                    bwExtra.Write((ulong)filetime); // mtime
+                    bwExtra.Write((ulong)filetime); // atime
+                    bwExtra.Write((ulong)filetime); // ctime
                 }
 
                 if (_zfe.Method == Compression.Zstd)
@@ -93,21 +119,20 @@ namespace FastZipDotNet.Zip.Writers
             }
         }
 
-
         public static void WriteCentralDirRecord(ZipFileEntry _zfe, Stream zipFileStream)
         {
             try
             {
                 Encoding encoder = _zfe.EncodeUTF8 ? Encoding.UTF8 : EncodingHelper.DefaultEncoding;
                 byte[] encodedFilename = encoder.GetBytes(_zfe.FilenameInZip);
-                byte[] encodedComment = encoder.GetBytes(_zfe.Comment);
+                byte[] encodedComment = encoder.GetBytes(_zfe.Comment ?? "");
 
                 bool zip64Needed = _zfe.FileSize >= uint.MaxValue ||
                                    _zfe.CompressedSize >= uint.MaxValue ||
                                    _zfe.HeaderOffset >= uint.MaxValue ||
                                    _zfe.DiskNumberStart >= ushort.MaxValue;
 
-                // Central file header signature
+                // Signature
                 zipFileStream.Write(new byte[] { 0x50, 0x4b, 0x01, 0x02 }, 0, 4);
 
                 // Version made by
@@ -115,7 +140,7 @@ namespace FastZipDotNet.Zip.Writers
                 if (_zfe.Method == Compression.Zstd) versionMadeBy = 63;
                 zipFileStream.Write(BitConverter.GetBytes(versionMadeBy), 0, 2);
 
-                // Version needed
+                // Version needed to extract
                 ushort versionNeeded = (ushort)(zip64Needed ? 45 : 20);
                 if (_zfe.Method == Compression.Zstd) versionNeeded = 63;
                 zipFileStream.Write(BitConverter.GetBytes(versionNeeded), 0, 2);
@@ -126,31 +151,30 @@ namespace FastZipDotNet.Zip.Writers
                 if (_zfe.IsEncrypted) gpFlag |= 0x0001;
                 zipFileStream.Write(BitConverter.GetBytes(gpFlag), 0, 2);
 
-                // Method: 99 if AES, else actual
+                // Method (99 for AES)
                 ushort methodToWrite = _zfe.IsAes ? (ushort)99 : (ushort)_zfe.Method;
                 zipFileStream.Write(BitConverter.GetBytes(methodToWrite), 0, 2);
 
-                // DOS time/date
+                // DOS date/time
                 zipFileStream.Write(BitConverter.GetBytes(DosHelpers.DateTimeToDosTime(_zfe.ModifyTime)), 0, 4);
 
-                // CRC32: WRITE REAL CRC EVEN FOR AES (fixes WinRAR test)
-                uint crcToWrite = _zfe.Crc32;
-                zipFileStream.Write(BitConverter.GetBytes(crcToWrite), 0, 4);
+                // CRC32 — write REAL CRC in central directory, even for AES
+                zipFileStream.Write(BitConverter.GetBytes(_zfe.Crc32), 0, 4);
 
-                // Sizes
+                // Compressed/Uncompressed sizes
                 zipFileStream.Write(BitConverter.GetBytes(zip64Needed ? 0xFFFFFFFFu : (uint)_zfe.CompressedSize), 0, 4);
                 zipFileStream.Write(BitConverter.GetBytes(zip64Needed ? 0xFFFFFFFFu : (uint)_zfe.FileSize), 0, 4);
 
-                // Name length
+                // Filename length
                 zipFileStream.Write(BitConverter.GetBytes((ushort)encodedFilename.Length), 0, 2);
 
-                // Build extra
+                // Extra fields
                 using var msExtra = new MemoryStream();
                 using var bwExtra = new BinaryWriter(msExtra);
 
                 if (zip64Needed)
                 {
-                    bwExtra.Write((ushort)0x0001); // Zip64 ID
+                    bwExtra.Write((ushort)0x0001);
                     ushort dataSize = 0;
                     if (_zfe.FileSize >= uint.MaxValue) dataSize += 8;
                     if (_zfe.CompressedSize >= uint.MaxValue) dataSize += 8;
@@ -166,13 +190,39 @@ namespace FastZipDotNet.Zip.Writers
 
                 if (_zfe.IsAes)
                 {
-                    // AES extra field 0x9901
                     bwExtra.Write((ushort)0x9901);
                     bwExtra.Write((ushort)7);
-                    bwExtra.Write((ushort)0x0002);           // AE-2
-                    bwExtra.Write((ushort)0x4541);           // 'AE'
-                    bwExtra.Write((byte)_zfe.AesStrength);   // 1/2/3
-                    bwExtra.Write((ushort)((ushort)_zfe.Method)); // actual compression method
+                    bwExtra.Write((ushort)0x0002);
+                    bwExtra.Write((ushort)0x4541);               // 'AE'
+                    bwExtra.Write((byte)_zfe.AesStrength);       // 1/2/3
+                    bwExtra.Write((ushort)((ushort)_zfe.Method));// actual method
+                }
+
+                // Extended Timestamp (mtime)
+                {
+                    byte flags = 0x01;
+                    uint unixMTime = (uint)new DateTimeOffset(_zfe.ModifyTime).ToUnixTimeSeconds();
+                    using var tms = new MemoryStream();
+                    using var wt = new BinaryWriter(tms);
+                    wt.Write(flags);
+                    wt.Write(unixMTime);
+                    var tbytes = tms.ToArray();
+                    bwExtra.Write((ushort)0x5455);
+                    bwExtra.Write((ushort)tbytes.Length);
+                    bwExtra.Write(tbytes);
+                }
+
+                // NTFS timestamps
+                {
+                    bwExtra.Write((ushort)0x000A);
+                    bwExtra.Write((ushort)32);
+                    bwExtra.Write(0u); // reserved
+                    bwExtra.Write((ushort)0x0001);
+                    bwExtra.Write((ushort)24);
+                    long ft = _zfe.ModifyTime.ToFileTimeUtc();
+                    bwExtra.Write((ulong)ft); // mtime
+                    bwExtra.Write((ulong)ft); // atime
+                    bwExtra.Write((ulong)ft); // ctime
                 }
 
                 if (_zfe.Method == Compression.Zstd)
@@ -183,33 +233,35 @@ namespace FastZipDotNet.Zip.Writers
                 }
 
                 byte[] extraBytes = msExtra.ToArray();
+
+                // Extra length
                 zipFileStream.Write(BitConverter.GetBytes((ushort)extraBytes.Length), 0, 2);
 
                 // File comment length
                 zipFileStream.Write(BitConverter.GetBytes((ushort)encodedComment.Length), 0, 2);
 
-                // Disk number start
+                // Disk start
                 zipFileStream.Write(BitConverter.GetBytes(zip64Needed ? (ushort)0xFFFF : _zfe.DiskNumberStart), 0, 2);
 
-                // Internal attrs
+                // Internal attributes
                 ushort internalAttrs = 0;
                 if (_zfe.ExternalFileAttr != 0) internalAttrs |= 0x01;
                 zipFileStream.Write(BitConverter.GetBytes(internalAttrs), 0, 2);
 
-                // External attrs
+                // External attributes (preserve Windows file attributes)
                 zipFileStream.Write(BitConverter.GetBytes(_zfe.ExternalFileAttr), 0, 4);
 
-                // Relative local header offset
+                // Rel offset of local header
                 zipFileStream.Write(BitConverter.GetBytes(zip64Needed ? 0xFFFFFFFFu : (uint)_zfe.HeaderOffset), 0, 4);
 
-                // Write filename, extra, comment
+                // Filename / extra / comment
                 if (encodedFilename.Length > 0) zipFileStream.Write(encodedFilename, 0, encodedFilename.Length);
                 if (extraBytes.Length > 0) zipFileStream.Write(extraBytes, 0, extraBytes.Length);
                 if (encodedComment.Length > 0) zipFileStream.Write(encodedComment, 0, encodedComment.Length);
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message + "\r\nIn ZipWritersHeaders.WriteCentralDirRecord (AES-fixed CRC)");
+                throw new Exception(ex.Message + "\r\nIn ZipWritersHeaders.WriteCentralDirRecord (timestamps)");
             }
         }
 

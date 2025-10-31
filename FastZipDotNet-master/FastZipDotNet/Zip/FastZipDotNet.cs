@@ -63,6 +63,8 @@ namespace FastZipDotNet.Zip
         public long FilesWritten = 0;
         public long FilesPerSecond = 0;
 
+        // Mark the archive to rewrite central directory on Close()
+        public void MarkDirty() => _dirty = true;
 
         public long PartSize { get; set; } = 0; // Maximum size of each part in bytes
         public int CurrentPartNumber { get; set; } = 0; // Current part number
@@ -190,6 +192,51 @@ namespace FastZipDotNet.Zip
 
             // Adjust for the last known part from multi-parts
             return partNumber > 0 ? partNumber - 1 : 0;
+        }
+
+
+        // Rename a single entry (central directory only). Does not rewrite local headers.
+        // After calling, call Close() to rewrite central directory.
+        public bool RenameEntry(string oldInsidePath, string newInsidePath)
+        {
+            if (string.IsNullOrWhiteSpace(oldInsidePath) || string.IsNullOrWhiteSpace(newInsidePath))
+                return false;
+
+            oldInsidePath = Helpers.IOHelpers.NormalizedFilename(oldInsidePath);
+            newInsidePath = Helpers.IOHelpers.NormalizedFilename(newInsidePath);
+
+            int idx = ZipFileEntries.FindIndex(e =>
+                string.Equals(e.FilenameInZip, oldInsidePath, StringComparison.OrdinalIgnoreCase));
+            if (idx < 0) return false;
+
+            var e = ZipFileEntries[idx];
+            e.FilenameInZip = newInsidePath;
+            ZipFileEntries[idx] = e;
+
+            _dirty = true;
+            return true;
+        }
+
+        // Rename folder prefix (move or rename folder). Central directory only.
+        public int RenameFolderPrefix(string oldFolderPrefix, string newFolderPrefix)
+        {
+            oldFolderPrefix = Helpers.IOHelpers.NormalizedFilename(oldFolderPrefix).TrimEnd('/') + "/";
+            newFolderPrefix = Helpers.IOHelpers.NormalizedFilename(newFolderPrefix).TrimEnd('/') + "/";
+
+            int changed = 0;
+            for (int i = 0; i < ZipFileEntries.Count; i++)
+            {
+                var e = ZipFileEntries[i];
+                if (e.FilenameInZip.StartsWith(oldFolderPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    string tail = e.FilenameInZip.Substring(oldFolderPrefix.Length);
+                    e.FilenameInZip = newFolderPrefix + tail;
+                    ZipFileEntries[i] = e;
+                    changed++;
+                }
+            }
+            if (changed > 0) _dirty = true;
+            return changed;
         }
 
 

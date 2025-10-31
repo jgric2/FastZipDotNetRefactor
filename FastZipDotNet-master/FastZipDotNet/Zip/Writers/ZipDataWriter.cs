@@ -1342,13 +1342,13 @@ private const long DefaultBufferThreshold = 16L * 1024 * 1024; // 16 MB
 
 
         public long AddFileWithProgress(
-string pathFilename,
-string filenameInZip,
-int compressionLevel,
-string fileComment,
-Action<long> onUncompressedRead,
-Action<long> onCompressedWrite,
-long bufferThresholdBytes = DefaultBufferThreshold)
+       string pathFilename,
+       string filenameInZip,
+       int compressionLevel,
+       string fileComment,
+       Action<long> onUncompressedRead,
+       Action<long> onCompressedWrite,
+       long bufferThresholdBytes = DefaultBufferThreshold)
         {
             var fi = new FileInfo(pathFilename);
 
@@ -1366,13 +1366,15 @@ long bufferThresholdBytes = DefaultBufferThreshold)
             // Zero-length file
             if (fi.Length == 0)
             {
+                // preserve attributes
                 return AddBuffer(Array.Empty<byte>(),
                                  filenameInZip,
                                  modifyTime,
                                  compressionLevel,
                                  fileComment,
                                  onUncompressedRead,
-                                 onCompressedWrite);
+                                 onCompressedWrite,
+                                 externalAttr: (uint)fi.Attributes);
             }
 
             // Large files or RAM-constrained => streaming path
@@ -1391,12 +1393,12 @@ long bufferThresholdBytes = DefaultBufferThreshold)
                                  compressionLevel,
                                  fileComment,
                                  onUncompressedRead,
-                                 onCompressedWrite);
+                                 onCompressedWrite,
+                                 externalAttr: (uint)fi.Attributes);
             }
             else
             {
-                //TODO: Optimize
-                // Small/medium file => WinAPI fast path to memory, then AddBuffer
+                // Small/medium file => read to memory
                 byte[] inBuffer = new byte[fi.Length];
                 using var fs = new FileStream(pathFilename,
                                               FileMode.Open,
@@ -1405,17 +1407,14 @@ long bufferThresholdBytes = DefaultBufferThreshold)
                                               1 << 20,
                                               FileOptions.SequentialScan);
 
-
-                fs.Read(inBuffer, 0, inBuffer.Length);
-                //int readTotal = 0;
-                //while (readTotal < inBuffer.Length)
-                //{
-                //    int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
-                //    if (r <= 0)
-                //        throw new EndOfStreamException($"Unexpected end of file while reading '{pathFilename}'.");
-                //    readTotal += r;
-                //}
-
+                int readTotal = 0;
+                while (readTotal < inBuffer.Length)
+                {
+                    int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
+                    if (r <= 0)
+                        throw new EndOfStreamException($"Unexpected end of file while reading '{pathFilename}'.");
+                    readTotal += r;
+                }
 
                 return AddBuffer(inBuffer,
                                  filenameInZip,
@@ -1423,9 +1422,564 @@ long bufferThresholdBytes = DefaultBufferThreshold)
                                  compressionLevel,
                                  fileComment,
                                  onUncompressedRead,
-                                 onCompressedWrite);
+                                 onCompressedWrite,
+                                 externalAttr: (uint)fi.Attributes);
             }
         }
+
+
+
+        public long AddBuffer(
+    byte[] inBuffer,
+    string filenameInZip,
+    DateTime modifyTime,
+    int compressionLevel,
+    string fileComment,
+    Action<long> onUncompressedProgress,
+    Action<long> onCompressedWrite,
+    uint? externalAttr = null)
+        {
+            if (FastZipDotNet.PartSize != 0)
+                throw new InvalidOperationException("Single-part only (PartSize must be 0).");
+
+            byte[] outBuffer = null;
+
+            var zfe = new ZipFileEntry
+            {
+                FileSize = (ulong)(inBuffer?.Length ?? 0),
+                EncodeUTF8 = FastZipDotNet.EncodeUTF8,
+                FilenameInZip = IOHelpers.NormalizedFilename(filenameInZip),
+                Comment = fileComment,
+                ModifyTime = modifyTime,
+                Method = (compressionLevel == 0 || (inBuffer?.Length ?? 0) == 0) ? Compression.Store : FastZipDotNet.MethodCompress,
+                Crc32 = Helpers.Crc32Helpers.ComputeCrc32(inBuffer ?? Array.Empty<byte>())
+            };
+
+            if (externalAttr.HasValue) zfe.ExternalFileAttr = externalAttr.Value;
+
+            if (zfe.Method == Compression.Deflate)
+            {
+                LibDeflate.LibDeflateWrapper.Libdeflate(inBuffer ?? Array.Empty<byte>(), compressionLevel, false, out outBuffer, out zfe.CompressedSize, out zfe.Crc32);
+                if (outBuffer != null && (ulong)outBuffer.Length != zfe.CompressedSize)
+                    Array.Resize(ref outBuffer, (int)zfe.CompressedSize);
+                if (zfe.CompressedSize == 0 || zfe.CompressedSize >= zfe.FileSize)
+                {
+                    zfe.Method = Compression.Store;
+                    zfe.CompressedSize = zfe.FileSize;
+                    outBuffer = null;
+                }
+            }
+            else if (zfe.Method == Compression.Zstd)
+            {
+                using var compressor = new ZStd.Compressor(FastZipDotNet.CompressionOptionsZstd);
+                outBuffer = compressor.Wrap(inBuffer ?? Array.Empty<byte>());
+                zfe.CompressedSize = (ulong)outBuffer.Length;
+                if (zfe.CompressedSize >= zfe.FileSize)
+                {
+                    zfe.Method = Compression.Store;
+                    zfe.CompressedSize = zfe.FileSize;
+                    outBuffer = null;
+                }
+            }
+            else
+            {
+                zfe.CompressedSize = zfe.FileSize;
+            }
+
+            bool doZipCrypto = FastZipDotNet.Encryption == EncryptionAlgorithm.ZipCrypto &&
+                               !string.IsNullOrEmpty(FastZipDotNet.Password);
+            bool doAes = (FastZipDotNet.Encryption == EncryptionAlgorithm.Aes128 ||
+                          FastZipDotNet.Encryption == EncryptionAlgorithm.Aes192 ||
+                          FastZipDotNet.Encryption == EncryptionAlgorithm.Aes256) &&
+                          !string.IsNullOrEmpty(FastZipDotNet.Password);
+
+            byte[] payload = (zfe.Method == Compression.Store) ? (inBuffer ?? Array.Empty<byte>()) : (outBuffer ?? Array.Empty<byte>());
+
+            if (doAes)
+            {
+                zfe.IsEncrypted = true;
+                zfe.IsAes = true;
+                zfe.AesVersion = 2;
+                zfe.AesStrength = FastZipDotNet.Encryption switch
+                {
+                    EncryptionAlgorithm.Aes128 => (byte)1,
+                    EncryptionAlgorithm.Aes192 => (byte)2,
+                    _ => (byte)3
+                };
+
+                int saltLen = Encryption.WinZipAes.GetSaltLength(zfe.AesStrength);
+                int tagLen = 10;
+
+                zfe.CompressedSize = (ulong)(saltLen + 2 + payload.Length + tagLen);
+
+                var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
+
+                long totalLen = localHeader.Length + (long)zfe.CompressedSize;
+                long start = FastZipDotNet.Reserve(totalLen);
+
+                zfe.HeaderOffset = (ulong)start;
+                zfe.DiskNumberStart = 0;
+
+                WriteAt(localHeader, start, onCompressedWrite);
+
+                var salt = new byte[saltLen];
+                RandomNumberGenerator.Fill(salt);
+                var (encKey, macKey, pwv) = Encryption.WinZipAes.DeriveKeys(FastZipDotNet.Password, salt, zfe.AesStrength);
+
+                WriteAt(salt, start + localHeader.Length, onCompressedWrite);
+                WriteAt(pwv, start + localHeader.Length + salt.Length, onCompressedWrite);
+
+                using var transform = new Encryption.AesEncryptTransform(encKey, macKey);
+
+                if (payload.Length > 0)
+                {
+                    transform.Transform(payload, 0, payload.Length);
+
+                    if (zfe.Method == Compression.Store)
+                    {
+                        Action<long> onCompWrapped = n => { onCompressedWrite?.Invoke(n); onUncompressedProgress?.Invoke(n); };
+                        WriteAt(payload, start + localHeader.Length + saltLen + 2, onCompWrapped);
+                    }
+                    else
+                    {
+                        double invRatio = payload.Length > 0 ? (double)zfe.FileSize / (double)payload.Length : 0.0;
+                        long uncSent = 0;
+                        Action<long> onCompWrapped = n =>
+                        {
+                            onCompressedWrite?.Invoke(n);
+                            if (invRatio <= 0) return;
+                            long add = (long)Math.Round(n * invRatio);
+                            long remaining = (long)zfe.FileSize - uncSent;
+                            if (add > remaining) add = remaining;
+                            if (add > 0) { onUncompressedProgress?.Invoke(add); uncSent += add; }
+                        };
+
+                        WriteAt(payload, start + localHeader.Length + saltLen + 2, onCompWrapped);
+
+                        long finalRem = (long)zfe.FileSize - uncSent;
+                        if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
+                    }
+                }
+
+                byte[] tag10 = transform.FinalizeMac();
+                WriteAt(tag10, start + localHeader.Length + saltLen + 2 + payload.Length, onCompressedWrite);
+
+                lock (FastZipDotNet.ZipFileEntries)
+                    FastZipDotNet.ZipFileEntries.Add(zfe);
+
+                Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+                Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                return (long)zfe.CompressedSize;
+            }
+            else if (doZipCrypto)
+            {
+                zfe.IsEncrypted = true;
+                zfe.IsAes = false;
+                zfe.CompressedSize += 12;
+
+                var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
+
+                long totalLen = localHeader.Length + (long)zfe.CompressedSize;
+                long start = FastZipDotNet.Reserve(totalLen);
+
+                zfe.HeaderOffset = (ulong)start;
+                zfe.DiskNumberStart = 0;
+
+                WriteAt(localHeader, start, onCompressedWrite);
+
+                var crypto = new Encryption.TraditionalZipCrypto(FastZipDotNet.Password);
+                byte[] encHeader = crypto.GenerateEncryptedHeaderFromCrc(zfe.Crc32);
+                WriteAt(encHeader, start + localHeader.Length, onCompressedWrite);
+
+                if (payload.Length > 0)
+                {
+                    crypto.Encrypt(payload, 0, payload.Length);
+
+                    if (zfe.Method == Compression.Store)
+                    {
+                        Action<long> onCompWrapped = n => { onCompressedWrite?.Invoke(n); onUncompressedProgress?.Invoke(n); };
+                        WriteAt(payload, start + localHeader.Length + encHeader.Length, onCompWrapped);
+                    }
+                    else
+                    {
+                        double invRatio = (zfe.CompressedSize - 12) > 0 ? (double)zfe.FileSize / (double)(zfe.CompressedSize - 12) : 0.0;
+                        long uncSent = 0;
+                        Action<long> onCompWrapped = n =>
+                        {
+                            onCompressedWrite?.Invoke(n);
+                            if (invRatio <= 0) return;
+                            long add = (long)Math.Round(n * invRatio);
+                            long remaining = (long)zfe.FileSize - uncSent;
+                            if (add > remaining) add = remaining;
+                            if (add > 0) { onUncompressedProgress?.Invoke(add); uncSent += add; }
+                        };
+
+                        WriteAt(payload, start + localHeader.Length + encHeader.Length, onCompWrapped);
+
+                        long finalRem = (long)zfe.FileSize - uncSent;
+                        if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
+                    }
+                }
+
+                lock (FastZipDotNet.ZipFileEntries)
+                    FastZipDotNet.ZipFileEntries.Add(zfe);
+
+                Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+                Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                return (long)zfe.CompressedSize;
+            }
+            else
+            {
+                var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
+
+                long totalLen = localHeader.Length + (long)zfe.CompressedSize;
+                long start = FastZipDotNet.Reserve(totalLen);
+
+                zfe.HeaderOffset = (ulong)start;
+                zfe.DiskNumberStart = 0;
+
+                WriteAt(localHeader, start, onCompressedWrite);
+
+                if (zfe.Method == Compression.Store)
+                {
+                    Action<long> onCompWrapped = n => { onCompressedWrite?.Invoke(n); onUncompressedProgress?.Invoke(n); };
+                    WriteAt(payload, start + localHeader.Length, onCompWrapped);
+                }
+                else
+                {
+                    double invRatio = zfe.CompressedSize > 0 ? (double)zfe.FileSize / (double)zfe.CompressedSize : 0.0;
+                    long uncSent = 0;
+                    Action<long> onCompWrapped = n =>
+                    {
+                        onCompressedWrite?.Invoke(n);
+                        if (invRatio <= 0) return;
+                        long add = (long)Math.Round(n * invRatio);
+                        long remaining = (long)zfe.FileSize - uncSent;
+                        if (add > remaining) add = remaining;
+                        if (add > 0) { onUncompressedProgress?.Invoke(add); uncSent += add; }
+                    };
+
+                    WriteAt(payload, start + localHeader.Length, onCompWrapped);
+
+                    long finalRem = (long)zfe.FileSize - uncSent;
+                    if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
+                }
+
+                lock (FastZipDotNet.ZipFileEntries)
+                    FastZipDotNet.ZipFileEntries.Add(zfe);
+
+                Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+                Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                return (long)zfe.CompressedSize;
+            }
+        }
+
+
+        public long AddStream(Stream inStream, string filenameInZip, DateTime modifyTime, int compressionLevel, string fileComment,
+    Action<long> onUncompressedProgress, Action<long> onCompressedWrite, uint? externalAttr = null)
+        {
+            if (FastZipDotNet.PartSize != 0)
+                throw new InvalidOperationException("Single-part only (PartSize must be 0).");
+
+            long compressedSize = 0;
+            string tempFilePath = null;
+
+            try
+            {
+                inStream.Position = 0;
+
+                var zfe = new ZipFileEntry
+                {
+                    FileSize = (ulong)inStream.Length,
+                    EncodeUTF8 = FastZipDotNet.EncodeUTF8,
+                    FilenameInZip = IOHelpers.NormalizedFilename(filenameInZip),
+                    Comment = fileComment,
+                    ModifyTime = modifyTime,
+                    Method = (compressionLevel == 0 || inStream.Length == 0) ? Compression.Store : FastZipDotNet.MethodCompress
+                };
+
+                if (externalAttr.HasValue) zfe.ExternalFileAttr = externalAttr.Value;
+
+                // CRC on plaintext (AES writes 0 to local header but we still compute)
+                zfe.Crc32 = Helpers.Crc32Helpers.ComputeCrc32(inStream);
+                inStream.Position = 0;
+
+                Stream dataSource;
+                if (zfe.Method == Compression.Store)
+                {
+                    zfe.CompressedSize = zfe.FileSize;
+                    dataSource = inStream;
+                }
+                else
+                {
+                    tempFilePath = Path.GetTempFileName();
+                    using (var temp = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read, Consts.ChunkSize, FileOptions.SequentialScan))
+                    {
+                        if (zfe.Method == Compression.Deflate)
+                        {
+                            using var defl = new DeflateStream(temp, FastZipDotNet.CurrentCompression, true);
+                            byte[] buf = new byte[Consts.ChunkSize];
+                            int r;
+                            while ((r = inStream.Read(buf, 0, buf.Length)) > 0)
+                            {
+                                WaitWhilePaused();
+                                defl.Write(buf, 0, r);
+                            }
+                        }
+                        else if (zfe.Method == Compression.Zstd)
+                        {
+                            using var zstd = new CompressionStream(temp, FastZipDotNet.CompressionOptionsZstd);
+                            byte[] buf = new byte[Consts.ChunkSize];
+                            int r;
+                            while ((r = inStream.Read(buf, 0, buf.Length)) > 0)
+                            {
+                                WaitWhilePaused();
+                                zstd.Write(buf, 0, r);
+                            }
+                        }
+                    }
+
+                    using (var tf = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan))
+                        zfe.CompressedSize = (ulong)tf.Length;
+
+                    if (zfe.CompressedSize >= zfe.FileSize)
+                    {
+                        // Fallback to store -> rewind
+                        zfe.Method = Compression.Store;
+                        zfe.CompressedSize = zfe.FileSize;
+                        dataSource = inStream;
+                    }
+                    else
+                    {
+                        dataSource = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Consts.ChunkSize, FileOptions.SequentialScan);
+                    }
+                }
+
+                bool doZipCrypto = FastZipDotNet.Encryption == EncryptionAlgorithm.ZipCrypto &&
+                                   !string.IsNullOrEmpty(FastZipDotNet.Password);
+                bool doAes = (FastZipDotNet.Encryption == EncryptionAlgorithm.Aes128 ||
+                              FastZipDotNet.Encryption == EncryptionAlgorithm.Aes192 ||
+                              FastZipDotNet.Encryption == EncryptionAlgorithm.Aes256) &&
+                              !string.IsNullOrEmpty(FastZipDotNet.Password);
+
+                if (ReferenceEquals(dataSource, inStream))
+                {
+                    if (inStream.CanSeek) inStream.Position = 0;
+                }
+                else if (dataSource.CanSeek)
+                {
+                    dataSource.Position = 0;
+                }
+
+                if (doAes)
+                {
+                    zfe.IsEncrypted = true;
+                    zfe.IsAes = true;
+                    zfe.AesVersion = 2;
+                    zfe.AesStrength = FastZipDotNet.Encryption switch
+                    {
+                        EncryptionAlgorithm.Aes128 => (byte)1,
+                        EncryptionAlgorithm.Aes192 => (byte)2,
+                        _ => (byte)3
+                    };
+
+                    int saltLen = Encryption.WinZipAes.GetSaltLength(zfe.AesStrength);
+                    int tagLen = 10;
+
+                    long payloadLen = (long)zfe.CompressedSize;
+                    zfe.CompressedSize = (ulong)(saltLen + 2 + payloadLen + tagLen);
+
+                    var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
+
+                    long totalLen = localHeader.Length + (long)zfe.CompressedSize;
+                    long start = FastZipDotNet.Reserve(totalLen);
+
+                    zfe.HeaderOffset = (ulong)start;
+                    zfe.DiskNumberStart = 0;
+
+                    // header
+                    WriteAt(localHeader, start, onCompressedWrite);
+
+                    // salt + pwv
+                    var salt = new byte[saltLen];
+                    RandomNumberGenerator.Fill(salt);
+                    var (encKey, macKey, pwv) = Encryption.WinZipAes.DeriveKeys(FastZipDotNet.Password, salt, zfe.AesStrength);
+
+                    WriteAt(salt, start + localHeader.Length, onCompressedWrite);
+                    WriteAt(pwv, start + localHeader.Length + salt.Length, onCompressedWrite);
+
+                    using var transform = new Encryption.AesEncryptTransform(encKey, macKey);
+
+                    if (zfe.Method == Compression.Store)
+                    {
+                        WriteStreamAt(
+                            dataSource,
+                            start + localHeader.Length + saltLen + 2,
+                            onUncompressedProgress,
+                            onCompressedWrite,
+                            transform);
+                    }
+                    else
+                    {
+                        double invRatio = payloadLen > 0 ? (double)zfe.FileSize / (double)payloadLen : 0.0;
+                        long uncSent = 0;
+                        void OnUncEq(long n)
+                        {
+                            if (invRatio <= 0) return;
+                            long add = (long)Math.Round(n * invRatio);
+                            long remaining = (long)zfe.FileSize - uncSent;
+                            if (add > remaining) add = remaining;
+                            if (add > 0) { onUncompressedProgress?.Invoke(add); uncSent += add; }
+                        }
+
+                        WriteStreamAt(
+                            dataSource,
+                            start + localHeader.Length + saltLen + 2,
+                            OnUncEq,
+                            onCompressedWrite,
+                            transform);
+
+                        long finalRem = (long)zfe.FileSize - uncSent;
+                        if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
+                    }
+
+                    // Write MAC tag (10 bytes) at the end of payload region
+                    byte[] tag10 = transform.FinalizeMac();
+                    WriteAt(tag10, start + localHeader.Length + saltLen + 2 + payloadLen, onCompressedWrite);
+
+                    lock (FastZipDotNet.ZipFileEntries)
+                        FastZipDotNet.ZipFileEntries.Add(zfe);
+                    Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+                    Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                    compressedSize = (long)zfe.CompressedSize;
+                }
+                else if (doZipCrypto)
+                {
+                    zfe.IsEncrypted = true;
+                    zfe.IsAes = false;
+
+                    zfe.CompressedSize += 12;
+                    var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
+
+                    long totalLen = localHeader.Length + (long)zfe.CompressedSize;
+                    long start = FastZipDotNet.Reserve(totalLen);
+
+                    zfe.HeaderOffset = (ulong)start;
+                    zfe.DiskNumberStart = 0;
+
+                    WriteAt(localHeader, start, onCompressedWrite);
+
+                    var crypto = new Encryption.TraditionalZipCrypto(FastZipDotNet.Password);
+                    byte[] encHeader = crypto.GenerateEncryptedHeaderFromCrc(zfe.Crc32);
+                    WriteAt(encHeader, start + localHeader.Length, onCompressedWrite);
+
+                    Encryption.IBufferTransform transform = new Encryption.ZipCryptoEncryptTransform(crypto);
+
+                    if (zfe.Method == Compression.Store)
+                    {
+                        WriteStreamAt(
+                            dataSource,
+                            start + localHeader.Length + encHeader.Length,
+                            onUncompressedProgress,
+                            onCompressedWrite,
+                            transform);
+                    }
+                    else
+                    {
+                        double invRatio = (zfe.CompressedSize - 12) > 0 ? (double)zfe.FileSize / (double)(zfe.CompressedSize - 12) : 0.0;
+                        long uncSent = 0;
+                        void OnUncEq(long n)
+                        {
+                            if (invRatio <= 0) return;
+                            long add = (long)Math.Round(n * invRatio);
+                            long remaining = (long)zfe.FileSize - uncSent;
+                            if (add > remaining) add = remaining;
+                            if (add > 0) { onUncompressedProgress?.Invoke(add); uncSent += add; }
+                        }
+
+                        WriteStreamAt(
+                            dataSource,
+                            start + localHeader.Length + encHeader.Length,
+                            OnUncEq,
+                            onCompressedWrite,
+                            transform);
+
+                        long finalRem = (long)zfe.FileSize - uncSent;
+                        if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
+                    }
+
+                    lock (FastZipDotNet.ZipFileEntries)
+                        FastZipDotNet.ZipFileEntries.Add(zfe);
+                    Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+                    Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                    compressedSize = (long)zfe.CompressedSize;
+                }
+                else
+                {
+                    var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
+
+                    long totalLen = localHeader.Length + (long)zfe.CompressedSize;
+                    long start = FastZipDotNet.Reserve(totalLen);
+
+                    zfe.HeaderOffset = (ulong)start;
+                    zfe.DiskNumberStart = 0;
+
+                    WriteAt(localHeader, start, onCompressedWrite);
+
+                    if (zfe.Method == Compression.Store)
+                    {
+                        WriteStreamAt(
+                            dataSource,
+                            start + localHeader.Length,
+                            onUncompressedProgress,
+                            onCompressedWrite,
+                            transform: null);
+                    }
+                    else
+                    {
+                        double invRatio = zfe.CompressedSize > 0 ? (double)zfe.FileSize / (double)zfe.CompressedSize : 0.0;
+                        long uncSent = 0;
+                        void OnUncEq(long n)
+                        {
+                            if (invRatio <= 0) return;
+                            long add = (long)Math.Round(n * invRatio);
+                            long remaining = (long)zfe.FileSize - uncSent;
+                            if (add > remaining) add = remaining;
+                            if (add > 0) { onUncompressedProgress?.Invoke(add); uncSent += add; }
+                        }
+
+                        WriteStreamAt(
+                            dataSource,
+                            start + localHeader.Length,
+                            OnUncEq,
+                            onCompressedWrite,
+                            transform: null);
+
+                        long finalRem = (long)zfe.FileSize - uncSent;
+                        if (finalRem > 0) onUncompressedProgress?.Invoke(finalRem);
+                    }
+
+                    lock (FastZipDotNet.ZipFileEntries)
+                        FastZipDotNet.ZipFileEntries.Add(zfe);
+                    Interlocked.Increment(ref FastZipDotNet.FilesWritten);
+                    Interlocked.Increment(ref FastZipDotNet.FilesPerSecond);
+                    compressedSize = (long)zfe.CompressedSize;
+                }
+
+                if (!ReferenceEquals(dataSource, inStream))
+                    dataSource.Dispose();
+            }
+            finally
+            {
+                if (tempFilePath != null && File.Exists(tempFilePath))
+                {
+                    try { File.Delete(tempFilePath); } catch { }
+                }
+            }
+
+            return compressedSize;
+        }
+
 
 
         ////    public long AddFileWithProgress(
@@ -1534,22 +2088,20 @@ long bufferThresholdBytes = DefaultBufferThreshold)
         // Rebuild the zip archive to remove deleted entries
         public void RebuildZip()
         {
-            // Create a temporary file
             string tempZipPath = Path.GetTempFileName();
             using (FileStream tempZipStream = new FileStream(tempZipPath, FileMode.Create, FileAccess.ReadWrite))
             {
-                // Create a new instance of BrutalZipEngine
-                using (FastZipDotNet tempZip = new FastZipDotNet(tempZipStream, FastZipDotNet.MethodCompress))
+                using (FastZipDotNet tempZip = new FastZipDotNet(tempZipStream, FastZipDotNet.MethodCompress, FastZipDotNet.CompressionLevelValue))
                 {
                     foreach (var entry in FastZipDotNet.ZipFileEntries)
                     {
-                        // Extract the file data
                         using (MemoryStream ms = new MemoryStream())
                         {
                             if (FastZipDotNet.ZipDataReader.ExtractFile(entry, ms))
                             {
                                 ms.Position = 0;
-                                tempZip.ZipDataWriter.AddStream(ms, entry.FilenameInZip, entry.ModifyTime, FastZipDotNet.CompressionLevelValue, entry.Comment);
+                                // Preserve modify time, comment, and attributes
+                                tempZip.ZipDataWriter.AddStream(ms, entry.FilenameInZip, entry.ModifyTime, FastZipDotNet.CompressionLevelValue, entry.Comment, null, null, entry.ExternalFileAttr);
                             }
                             else
                             {
@@ -1561,19 +2113,17 @@ long bufferThresholdBytes = DefaultBufferThreshold)
                 }
             }
 
-            // Replace the original zip file with the new zip file
             FastZipDotNet.ZipFileStream.Dispose();
             File.Delete(FastZipDotNet.ZipFileName);
             File.Move(tempZipPath, FastZipDotNet.ZipFileName);
-            // Reopen the zip file
-            FastZipDotNet.ZipFileStream = new FileStream(FastZipDotNet.ZipFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.None, 8388608);
 
-            // Reload entries
+            FastZipDotNet.ZipFileStream = new FileStream(FastZipDotNet.ZipFileName, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite, 8388608);
             FastZipDotNet.ZipFileEntries.Clear();
+
             if (!ZipReadersInfo.ReadZipInfo(FastZipDotNet.ZipFileStream, ref FastZipDotNet.ZipInfoStruct))
-            {
                 throw new InvalidDataException("Invalid ZIP file after rebuild.");
-            }
+
+            FastZipDotNet.ZipFileEntries = FastZipDotNet.ZipInfoStruct.ZipFileEntries;
         }
 
     }

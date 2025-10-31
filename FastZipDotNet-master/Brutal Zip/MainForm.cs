@@ -22,7 +22,7 @@ namespace Brutal_Zip
         private readonly string _sessionTemp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "BrutalZipSession_" + Environment.ProcessId);
         private CancellationTokenSource _previewCts;
         private string _lastPreviewTempFile;
-
+        private string _archivePassword; // last known password for the currently opened archive
 
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>> _tempExtractTasks
      = new System.Collections.Concurrent.ConcurrentDictionary<string, Task<string>>(StringComparer.OrdinalIgnoreCase);
@@ -91,6 +91,11 @@ namespace Brutal_Zip
         public MainForm()
         {
             InitializeComponent();
+
+
+            viewerView.RenameSelectedRequested += () => DoRenameSelected();
+            viewerView.MoveToFolderRequested += () => DoMoveSelectedToFolder();
+            viewerView.DeleteSelectedRequested += async () => await DoDeleteSelectedAsync();
 
 
             viewerView.mnuEncryptNew.Checked = SettingsService.Current.EncryptNewArchivesByDefault;
@@ -343,6 +348,209 @@ namespace Brutal_Zip
             };
         }
 
+
+        private void DoRenameSelected()
+        {
+            if (_zip == null) return;
+            if (viewerView.lvArchive.SelectedIndices.Count != 1)
+            {
+                MessageBox.Show(this, "Select exactly one item to rename.", "Rename");
+                return;
+            }
+
+            var r = _rows[viewerView.lvArchive.SelectedIndices[0]];
+            if (r.Kind == RowKind.Up) return;
+
+            string oldInsidePath;
+            bool isFolder = (r.Kind == RowKind.Dir);
+            if (isFolder)
+            {
+                var parts = GetCurrentPathParts().ToList();
+                oldInsidePath = (parts.Count == 0 ? r.Name : string.Join("/", parts.Append(r.Name))).Trim('/') + "/";
+            }
+            else
+            {
+                oldInsidePath = r.Entry.FilenameInZip;
+            }
+
+            using var dlg = new InputDialog();
+            dlg.Prompt = isFolder ? "Enter new folder name:" : "Enter new file name:";
+            dlg.ValueText = isFolder ? r.Name : System.IO.Path.GetFileName(r.Entry.FilenameInZip.Replace('\\', '/'));
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            string newName = dlg.ValueText.Trim();
+            if (string.IsNullOrEmpty(newName)) return;
+
+            bool ok = false;
+
+            if (isFolder)
+            {
+                var parent = GetCurrentPathParts().ToList();
+                string parentPrefix = (parent.Count == 0) ? "" : string.Join("/", parent) + "/";
+                string oldPrefix = parentPrefix + r.Name.Trim('/') + "/";
+                string newPrefix = parentPrefix + newName.Trim('/') + "/";
+                int changed = _zip.RenameFolderPrefix(oldPrefix, newPrefix);
+                ok = changed > 0;
+            }
+            else
+            {
+                string dir = System.IO.Path.GetDirectoryName(oldInsidePath.Replace('\\', '/'))?.Replace('\\', '/') ?? "";
+                string newInside = string.IsNullOrEmpty(dir) ? newName : (dir.Trim('/') + "/" + newName);
+                ok = _zip.RenameEntry(oldInsidePath, newInside);
+            }
+
+            if (!ok)
+            {
+                MessageBox.Show(this, "Rename failed.", "Rename");
+                return;
+            }
+
+            try
+            {
+                // preserve password across Close/Open (avoid reprompt)
+                _archivePassword = _zip.Password;
+                _zip.Close();
+                OpenArchive(_zipPath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Rename");
+            }
+        }
+
+        private void DoMoveSelectedToFolder()
+        {
+            if (_zip == null) return;
+            if (viewerView.lvArchive.SelectedIndices.Count == 0)
+            {
+                MessageBox.Show(this, "Select items to move.", "Move");
+                return;
+            }
+
+            using var dlg = new InputDialog();
+            dlg.Prompt = "Enter destination folder inside archive (e.g., 'NewFolder/Sub'):";
+            dlg.ValueText = "";
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            string destFolder = dlg.ValueText.Trim().Replace('\\', '/').Trim('/');
+            if (string.IsNullOrEmpty(destFolder)) destFolder = "";
+
+            int changed = 0;
+
+            foreach (int idx in viewerView.lvArchive.SelectedIndices)
+            {
+                var r = _rows[idx];
+                if (r.Kind == RowKind.Up) continue;
+
+                if (r.Kind == RowKind.Dir)
+                {
+                    var parent = GetCurrentPathParts().ToList();
+                    string parentPrefix = (parent.Count == 0) ? "" : string.Join("/", parent) + "/";
+                    string oldPrefix = parentPrefix + r.Name.Trim('/') + "/";
+
+                    string newPrefix = string.IsNullOrEmpty(destFolder)
+                        ? r.Name.Trim('/') + "/"
+                        : destFolder + "/" + r.Name.Trim('/') + "/";
+
+                    int c = _zip.RenameFolderPrefix(oldPrefix, newPrefix);
+                    changed += c;
+                }
+                else
+                {
+                    string fileName = System.IO.Path.GetFileName(r.Entry.FilenameInZip.Replace('\\', '/'));
+                    string newInside = string.IsNullOrEmpty(destFolder) ? fileName : (destFolder + "/" + fileName);
+                    if (_zip.RenameEntry(r.Entry.FilenameInZip, newInside))
+                        changed++;
+                }
+            }
+
+            if (changed == 0)
+            {
+                MessageBox.Show(this, "Nothing moved.", "Move");
+                return;
+            }
+
+            try
+            {
+                _archivePassword = _zip.Password;
+                _zip.Close();
+                OpenArchive(_zipPath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Move");
+            }
+        }
+
+        private async Task DoDeleteSelectedAsync()
+        {
+            if (_zip == null) return;
+            if (viewerView.lvArchive.SelectedIndices.Count == 0)
+            {
+                MessageBox.Show(this, "Select items to delete.", "Delete");
+                return;
+            }
+
+            var confirm = MessageBox.Show(this, "Delete selected item(s) from the archive?\nThis rewrites the archive.",
+                "Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (confirm != DialogResult.Yes) return;
+
+            var toDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (int idx in viewerView.lvArchive.SelectedIndices)
+            {
+                var r = _rows[idx];
+                if (r.Kind == RowKind.Up) continue;
+                if (r.Kind == RowKind.Dir)
+                {
+                    var parent = GetCurrentPathParts().ToList();
+                    string parentPrefix = (parent.Count == 0) ? "" : string.Join("/", parent) + "/";
+                    string folderPrefix = parentPrefix + r.Name.Trim('/') + "/";
+                    foreach (var e in _zip.ZipFileEntries)
+                    {
+                        if (e.FilenameInZip.StartsWith(folderPrefix, StringComparison.OrdinalIgnoreCase))
+                            toDelete.Add(e.FilenameInZip);
+                    }
+                }
+                else
+                {
+                    toDelete.Add(r.Entry.FilenameInZip);
+                }
+            }
+
+            if (toDelete.Count == 0) return;
+
+            // Remove from in-memory list
+            _zip.ZipFileEntries.RemoveAll(e => toDelete.Contains(e.FilenameInZip));
+
+            try
+            {
+                using var pf = new BrutalZip.ProgressForm("Rewriting archive…");
+                pf.Show(this);
+
+                // remember password for reopen
+                _archivePassword = _zip.Password;
+
+                await Task.Run(() => _zip.ZipDataWriter.RebuildZip());
+                OpenArchive(_zipPath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Delete");
+            }
+        }
+
+        private IEnumerable<string> GetCurrentPathParts()
+        {
+            var parts = new List<string>();
+            var n = _current;
+            while (n != null && n.Name != "")
+            {
+                parts.Add(n.Name);
+                n = n.Parent;
+            }
+            parts.Reverse();
+            return parts;
+        }
 
         private void CleanupOldSessionTemp(int olderThanMinutes = 60)
         {
@@ -1414,27 +1622,21 @@ return await sharedTask.ConfigureAwait(false);
         {
             try
             {
-                // Stop the list from asking for stale indices
+                // Clear stale virtual items first
                 viewerView.lvArchive.BeginUpdate();
                 viewerView.lvArchive.VirtualListSize = 0;
                 viewerView.lvArchive.EndUpdate();
                 _rows.Clear();
 
+                // If switching to a different archive path, clear cached pw (optional)
+                if (!string.Equals(_zipPath, path, StringComparison.OrdinalIgnoreCase))
+                    _archivePassword = null;
+
                 _zip?.Dispose();
                 _zipPath = path;
 
-                _zipId = ComputeArchiveId(_zipPath);
-
-                // Open in read/write to allow adding later (writer will use random access)
+                // Open in read/write; keep concurrency as before
                 _zip = new FastZipDotNet.Zip.FastZipDotNet(path, Compression.Deflate, 6, Threads);
-
-                // We do not support multi-part yet
-                if (_zip.ZipFileEntries.Any(e => e.DiskNumberStart != 0))
-                {
-                    MessageBox.Show(this, "Multi-part ZIP not supported.", "Not supported");
-                    _zip.Dispose(); _zip = null; _zipPath = null;
-                    return;
-                }
 
                 // Build tree & show viewer
                 BuildTree(_zip.ZipFileEntries);
@@ -1442,29 +1644,24 @@ return await sharedTask.ConfigureAwait(false);
                 ShowViewer();
                 Text = "Brutal Zip — " + Path.GetFileName(path);
 
-                // Recent list
-                RecentManager.Add(path);
-                RebuildRecentMenu();
-
-                // Encryption defaults for adding new files
+                // Encrypted?
                 bool anyEncrypted = _zip.ZipFileEntries.Any(e => e.IsEncrypted);
                 _encryptNewAdds = anyEncrypted;
                 if (viewerView.mnuEncryptNew != null)
                     viewerView.mnuEncryptNew.Checked = anyEncrypted;
 
-                // NEW: enable/disable Tools > Crack Password…
-                mnuToolsCrackPassword.Enabled = anyEncrypted;
+                // Tools > Crack Password enabled if any encrypted entries
+                if (mnuToolsCrackPassword != null) mnuToolsCrackPassword.Enabled = anyEncrypted;
 
-                // Decide default algorithm based on entries; AES not active yet, but detect it
+                // Choose default algorithm for new adds based on entries
                 if (_zip.ZipFileEntries.Any(e => e.IsAes))
                 {
-                    // Pick the most common strength among entries, default to 256
                     byte strength = _zip.ZipFileEntries
-                    .Where(e => e.IsAes && e.AesStrength != 0)
-                    .GroupBy(e => e.AesStrength)
-                    .OrderByDescending(g => g.Count())
-                    .Select(g => g.Key)
-                    .FirstOrDefault();
+                        .Where(e => e.IsAes && e.AesStrength != 0)
+                        .GroupBy(e => e.AesStrength)
+                        .OrderByDescending(g => g.Count())
+                        .Select(g => g.Key)
+                        .FirstOrDefault();
 
                     _addAlgorithm = strength switch
                     {
@@ -1474,7 +1671,6 @@ return await sharedTask.ConfigureAwait(false);
                         _ => EncryptionAlgorithm.Aes256
                     };
 
-                    // reflect in UI
                     viewerView.SetAddEncryptionSelection(_addAlgorithm);
                 }
                 else
@@ -1483,22 +1679,30 @@ return await sharedTask.ConfigureAwait(false);
                     viewerView.SetAddEncryptionSelection(_addAlgorithm);
                 }
 
-                // If the archive has encrypted entries and we plan to add to it,
-                // capture (or prompt for) the password now and reuse for additions.
+                // Reuse cached password if we have one (no prompt), else prompt once
                 if (anyEncrypted)
                 {
-                    if (!EnsurePasswordForEncryptedIfNeeded())
+                    if (!string.IsNullOrEmpty(_archivePassword))
                     {
-                        // User cancelled; we still opened the archive for browsing
+                        _zip.Password = _archivePassword;
                     }
-                    _addPassword = _zip.Password; // reuse for future additions
+                    else if (!string.IsNullOrEmpty(_addPassword))
+                    {
+                        _zip.Password = _addPassword;
+                    }
+                    // Only prompt if still unset
+                    if (string.IsNullOrEmpty(_zip.Password))
+                        EnsurePasswordForEncryptedIfNeeded();
+
+                    _addPassword = _zip.Password; // keep in sync for additions
                 }
 
+                // Recent list and Comment menu enable
+                RecentManager.Add(path);
+                RebuildRecentMenu();
 
-                // enable comment editing when an archive is open
-                mnuToolsSetComment.Enabled = true;
-                viewerView.btnComment.Enabled = true;
-
+                if (mnuToolsSetComment != null) mnuToolsSetComment.Enabled = true;
+                if (viewerView.btnComment != null) viewerView.btnComment.Enabled = true;
             }
             catch (Exception ex)
             {
@@ -1592,18 +1796,18 @@ return await sharedTask.ConfigureAwait(false);
             }
         }
 
-        private IEnumerable<string> GetCurrentPathParts()
-        {
-            var parts = new List<string>();
-            var n = _current;
-            while (n != null && n.Name != "")
-            {
-                parts.Add(n.Name);
-                n = n.Parent;
-            }
-            parts.Reverse();
-            return parts;
-        }
+        //private IEnumerable<string> GetCurrentPathParts()
+        //{
+        //    var parts = new List<string>();
+        //    var n = _current;
+        //    while (n != null && n.Name != "")
+        //    {
+        //        parts.Add(n.Name);
+        //        n = n.Parent;
+        //    }
+        //    parts.Reverse();
+        //    return parts;
+        //}
 
         private void CrackPasswordFromTools()
         {
@@ -1621,7 +1825,6 @@ return await sharedTask.ConfigureAwait(false);
                     return;
                 }
 
-                // Prefer an encrypted file currently selected in the viewer; otherwise pick any encrypted entry
                 if (!TryGetEncryptedEntryForCrack(out var target))
                 {
                     MessageBox.Show(this, "No encrypted file is selected. Select an encrypted file and try again.", "Crack Password");
@@ -1633,7 +1836,8 @@ return await sharedTask.ConfigureAwait(false);
                 if (r == DialogResult.OK && !string.IsNullOrEmpty(frm.FoundPassword))
                 {
                     _zip.Password = frm.FoundPassword;
-                    _addPassword = frm.FoundPassword; // reuse for adding files
+                    _archivePassword = frm.FoundPassword; // cache so reopen won’t prompt
+                    _addPassword = frm.FoundPassword;     // reuse for additions
                     MessageBox.Show(this, "Password set for this archive.", "Crack Password");
                 }
             }
@@ -1824,17 +2028,29 @@ return await sharedTask.ConfigureAwait(false);
             string ext = System.IO.Path.GetExtension(name);
             int imageIndex = _icons.GetIndexForExtension(ext);
 
-            double ratio = f.FileSize > 0 ? (double)f.CompressedSize / f.FileSize : 1.0;
+            // Ratio: 1 - (compressed/uncompressed)
+            // For encrypted "Store", compressed may be larger due to overhead; clamp negatives to 0%
+            string ratioDisplay;
+            if (f.FileSize == 0)
+            {
+                ratioDisplay = "0%";
+            }
+            else
+            {
+                double ratioval = 1.0 - ((double)f.CompressedSize / (double)f.FileSize);
+                if (ratioval < 0) ratioval = 0.0; // clamp negative (overhead) to 0%
+                ratioDisplay = ratioval.ToString("P0");
+            }
 
             return new ListViewItem(new[]
             {
-    name,
-    FormatBytes((long)f.FileSize),
-    FormatBytes((long)f.CompressedSize),
-    (1.0 - ratio).ToString("P0"),
-    f.Method.ToString(),
-    f.ModifyTime.ToString("yyyy-MM-dd HH:mm:ss")
-})
+                name,
+                FormatBytes((long)f.FileSize),
+                FormatBytes((long)f.CompressedSize),
+                ratioDisplay,
+                f.Method.ToString(),
+                f.ModifyTime.ToString("yyyy-MM-dd HH:mm:ss")
+            })
             {
                 ImageIndex = imageIndex,
                 Tag = r
@@ -2584,18 +2800,32 @@ return await sharedTask.ConfigureAwait(false);
         private bool EnsurePasswordForEncryptedIfNeeded()
         {
             if (_zip == null) return true;
+
             bool anyEncrypted = _zip.ZipFileEntries.Any(e => e.IsEncrypted);
             if (!anyEncrypted) return true;
 
+            // If engine already has it, nothing to do
             if (!string.IsNullOrEmpty(_zip.Password)) return true;
 
+            // If we cached a password for this archive, reuse without prompting
+            if (!string.IsNullOrEmpty(_archivePassword))
+            {
+                _zip.Password = _archivePassword;
+                return true;
+            }
+
+            // Prompt once, cache for this opened archive
             var firstEncrypted = _zip.ZipFileEntries.FirstOrDefault(e => e.IsEncrypted);
             using var dlg = new PasswordDialog();
             if (firstEncrypted.FilenameInZip != null)
                 dlg.SetCrackContext(new PasswordCrackContext(_zip.ZipFileName, firstEncrypted));
 
             if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+
             _zip.Password = dlg.Password;
+            _archivePassword = dlg.Password;   // cache for reopen cycles
+            _addPassword = dlg.Password;       // reuse for additions by default
+
             return true;
         }
 
