@@ -170,6 +170,7 @@ namespace Brutal_Zip
                     ? ResolveCurrentZipOrThrow()
                     : ResolveZipFromFileOrThrow();
 
+                // Build config used by stub at runtime for branding/options
                 var cfg = new SfxBuildConfig
                 {
                     Title = txtTitle.Text?.Trim(),
@@ -184,7 +185,7 @@ namespace Brutal_Zip
                     LicenseText = string.IsNullOrWhiteSpace(txtLicense.Text) ? null : txtLicense.Text,
                     RequireLicenseAccept = chkRequireAccept.Checked,
                     ShowFileList = chkShowFileList.Checked,
-                    IconBase64 = ToBase64File(txtIconPath.Text),      // for window branding
+                    IconBase64 = ToBase64File(txtIconPath.Text),
                     BannerImageBase64 = ToBase64File(txtBannerPath.Text),
                     ThemeColor = ToHexColor(pnlThemeColor.BackColor)
                 };
@@ -193,14 +194,13 @@ namespace Brutal_Zip
                 if (sfd.ShowDialog(this) != DialogResult.OK) return;
                 string outExe = sfd.FileName;
 
-                // 1) Ensure fresh
+                // 1) Ensure fresh target
                 try { if (File.Exists(outExe)) File.Delete(outExe); } catch { }
 
-                // 2) Copy stub first (DO NOT modify resources on single-file stub)
+                // 2) Copy stub first (do not UpdateResource icon on single-file stubs)
                 File.Copy(stubPath, outExe, overwrite: false);
 
-                // 3) Preserve the .NET single-file bundle footer (last 8 bytes)
-                //    We will re-append this after our data so the host can still find the bundle header.
+                // 3) Preserve the .NET single-file bundle trailer 8 bytes
                 byte[] bundleTail8 = TryReadLast8Bytes(outExe);
                 if (bundleTail8 == null || bundleTail8.Length != 8)
                 {
@@ -209,7 +209,7 @@ namespace Brutal_Zip
                         "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
-                // 4) Append our config + zip + our footer, then (if available) re-append the .NET bundle tail 8 bytes
+                // 4) Append config + zip + SFX footer, then re-append the .NET trailer 8 bytes
                 byte[] cfgBytes = JsonSerializer.SerializeToUtf8Bytes(cfg, new JsonSerializerOptions { WriteIndented = false });
                 uint cfgLen = (uint)cfgBytes.Length;
                 ulong zipLen = (ulong)new FileInfo(sourceZip).Length;
@@ -217,19 +217,36 @@ namespace Brutal_Zip
                 using (var fout = OpenForAppendWithRetry(outExe))
                 using (var bw = new BinaryWriter(fout, Encoding.UTF8, leaveOpen: true))
                 {
-                    // config
+                    // write config
                     bw.Write(cfgBytes);
 
-                    // zip
-                    using (var fsZip = new FileStream(sourceZip, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    // write zip (open with permissive share to avoid sharing violation)
+                    // IMPORTANT: Share must allow READ and WRITE, because the viewer's existing handle desires WRITE.
+
+                    for (int i = 0; i < 5; i++)
                     {
-                        fsZip.CopyTo(fout);
+                        try
+                        {
+                            using var fsZip = new FileStream(sourceZip, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                            fsZip.CopyTo(fout);
+                            break;
+                        }
+                        catch (IOException) { System.Threading.Thread.Sleep(100); if (i == 4) throw; }
                     }
 
-                    // our SFX footer (magic + cfgLen + zipLen)
+                    ////using (var fsZip = new FileStream(
+                    ////    sourceZip,
+                    ////    FileMode.Open,
+                    ////    FileAccess.Read,
+                    ////    FileShare.ReadWrite | FileShare.Delete))
+                    ////{
+                    ////    fsZip.CopyTo(fout);
+                    ////}
+
+                    // write our custom footer (magic + lengths)
                     WriteFooter(bw, cfgLen, zipLen);
 
-                    // Re-append the single-file trailer 8 bytes to remain the last bytes of the file
+                    // restore the .NET single-file tail 8 bytes at EOF
                     if (bundleTail8 != null && bundleTail8.Length == 8)
                         bw.Write(bundleTail8);
 
@@ -260,7 +277,7 @@ namespace Brutal_Zip
                 throw new InvalidOperationException("Select a valid source ZIP.");
             return txtZipPath.Text;
         }
-    
+
 
         private static FileStream OpenForAppendWithRetry(string path, int attempts = 8, int delayMs = 100)
         {
@@ -269,6 +286,7 @@ namespace Brutal_Zip
             {
                 try
                 {
+                    // Keep last-writer wins; ensure we have exclusive write here
                     return new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.None);
                 }
                 catch (IOException ex) { last = ex; System.Threading.Thread.Sleep(delayMs); }
@@ -277,12 +295,11 @@ namespace Brutal_Zip
             throw last ?? new IOException("Failed to open target EXE for appending.");
         }
 
-
         private static byte[] TryReadLast8Bytes(string path)
         {
             try
             {
-                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 if (fs.Length < 8) return null;
                 fs.Seek(-8, SeekOrigin.End);
                 byte[] tail = new byte[8];
@@ -291,7 +308,6 @@ namespace Brutal_Zip
             }
             catch { return null; }
         }
-
 
 
 
@@ -317,6 +333,7 @@ namespace Brutal_Zip
             catch { return null; }
         }
 
+
         private static string ToHexColor(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
 
         private Icon TryLoadIconFromPath(string p)
@@ -339,7 +356,6 @@ namespace Brutal_Zip
             }
             catch { return null; }
         }
-
 
 
 
