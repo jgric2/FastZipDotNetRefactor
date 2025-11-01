@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -16,39 +17,74 @@ namespace SfxStub
     internal static class Program
     {
         private const string Magic = "BXZSFX10";
-        private const int FooterSize = 8 + 4 + 8;
+        private const int FooterSize = 8 + 4 + 8;     // magic(8) + configLen(4) + zipLen(8)
+        private const int DotnetBundleFooterSize = 8; // single-file bundle footer that MUST remain last
 
         [STAThread]
         private static void Main(string[] args)
         {
             NativeResolver.Register();
 
-            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+            try
+            {
+                Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+            }
+            catch { /* ignore if not available */ }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
             try
             {
-                var exePath = Assembly.GetEntryAssembly()?.Location ?? Process.GetCurrentProcess().MainModule?.FileName;
-                if (string.IsNullOrEmpty(exePath)) throw new InvalidOperationException("Cannot locate executable path.");
+                string exePath = GetExecutablePath();
+                if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+                    throw new InvalidOperationException("Cannot locate executable path.");
 
                 using var fs = new FileStream(exePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                if (fs.Length < FooterSize + 8) throw new InvalidOperationException("SFX footer not found.");
+                if (fs.Length < FooterSize + 8)
+                {
+                    ShowNoPayloadMessage();
+                    return;
+                }
 
-                fs.Seek(-FooterSize, SeekOrigin.End);
-                var footer = new byte[FooterSize];
-                ReadExact(fs, footer, 0, footer.Length);
-                string magic = Encoding.ASCII.GetString(footer, 0, 8);
-                if (!string.Equals(magic, Magic, StringComparison.Ordinal))
-                    throw new InvalidOperationException("Invalid SFX footer.");
+                // First try legacy location (EOF - FooterSize)
+                long fileLen = fs.Length;
+                long footerPosLegacy = fileLen - FooterSize;
+                bool found = TryReadFooterAt(fs, footerPosLegacy, out uint configLen, out ulong zipLen);
 
-                uint configLen = BitConverter.ToUInt32(footer, 8);
-                ulong zipLen = BitConverter.ToUInt64(footer, 12);
+                bool usedDotnetTailAware = false;
+                if (!found)
+                {
+                    // Try our new safe layout (EOF - 8 - FooterSize), where we preserved the .NET bundle 8-byte tail
+                    long footerPosWithDotnetTail = fileLen - DotnetBundleFooterSize - FooterSize;
+                    if (footerPosWithDotnetTail >= 0)
+                    {
+                        found = TryReadFooterAt(fs, footerPosWithDotnetTail, out configLen, out zipLen);
+                        if (found) usedDotnetTailAware = true;
+                    }
+                }
 
-                long configStart = (long)(fs.Length - FooterSize - (long)zipLen - configLen);
-                long zipStart = (long)(fs.Length - FooterSize - (long)zipLen);
+                if (!found)
+                {
+                    // No SFX payload attached; just exit gracefully (and inform)
+                    ShowNoPayloadMessage();
+                    return;
+                }
 
-                if (configStart < 0 || zipStart < 0) throw new InvalidOperationException("Invalid SFX layout.");
+                long zipStart, configStart;
+                if (usedDotnetTailAware)
+                {
+                    zipStart = fileLen - DotnetBundleFooterSize - FooterSize - (long)zipLen;
+                    configStart = zipStart - configLen;
+                }
+                else
+                {
+                    zipStart = fileLen - FooterSize - (long)zipLen;
+                    configStart = zipStart - configLen;
+                }
+
+                if (configStart < 0 || zipStart < 0)
+                    throw new InvalidOperationException("Invalid SFX layout (negative offsets).");
 
                 // Read config JSON
                 fs.Seek(configStart, SeekOrigin.Begin);
@@ -56,7 +92,7 @@ namespace SfxStub
                 ReadExact(fs, cfgBytes, 0, cfgBytes.Length);
                 var cfg = JsonSerializer.Deserialize<SfxConfig>(cfgBytes) ?? new SfxConfig();
 
-                // Branding resources
+                // Branding resources for UI
                 var icon = TryLoadIcon(cfg.IconBase64);
                 var banner = TryLoadImage(cfg.BannerImageBase64);
                 var theme = TryParseColor(cfg.ThemeColor);
@@ -206,6 +242,92 @@ namespace SfxStub
             }
         }
 
+        // Robust exe path resolver for single-file and regular apps
+        private static string GetExecutablePath()
+        {
+            // .NET 6+
+            try
+            {
+                var p = Environment.ProcessPath;
+                if (!string.IsNullOrWhiteSpace(p) && File.Exists(p)) return p;
+            }
+            catch { }
+
+            // Fallback: Win32
+            try
+            {
+                var sb = new StringBuilder(32767);
+                uint len = GetModuleFileNameW(IntPtr.Zero, sb, sb.Capacity);
+                if (len > 0)
+                {
+                    var p = sb.ToString();
+                    if (File.Exists(p)) return p;
+                }
+            }
+            catch { }
+
+            // Fallback: MainModule
+            try
+            {
+                string p = Process.GetCurrentProcess().MainModule?.FileName;
+                if (!string.IsNullOrWhiteSpace(p) && File.Exists(p)) return p;
+            }
+            catch { }
+
+            // Fallback: Windows Forms helper
+            try
+            {
+                string p = Application.ExecutablePath;
+                if (!string.IsNullOrWhiteSpace(p) && File.Exists(p)) return p;
+            }
+            catch { }
+
+            // Fallback: BaseDirectory + friendly name
+            try
+            {
+                string baseDir = AppContext.BaseDirectory?.TrimEnd('\\', '/');
+                string name = AppDomain.CurrentDomain.FriendlyName;
+                if (!string.IsNullOrWhiteSpace(baseDir) && !string.IsNullOrWhiteSpace(name))
+                {
+                    string p = Path.Combine(baseDir, name);
+                    if (File.Exists(p)) return p;
+                }
+            }
+            catch { }
+
+            // Last resort: entry assembly (usually empty location for single-file)
+            try
+            {
+                string p = Assembly.GetEntryAssembly()?.Location;
+                if (!string.IsNullOrWhiteSpace(p) && File.Exists(p)) return p;
+            }
+            catch { }
+
+            return null;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern uint GetModuleFileNameW(IntPtr hModule, StringBuilder lpFilename, int nSize);
+
+        private static bool TryReadFooterAt(FileStream fs, long pos, out uint configLen, out ulong zipLen)
+        {
+            configLen = 0;
+            zipLen = 0;
+            if (pos < 0 || pos + FooterSize > fs.Length) return false;
+
+            fs.Seek(pos, SeekOrigin.Begin);
+            byte[] footer = new byte[FooterSize];
+            ReadExact(fs, footer, 0, footer.Length);
+
+            string magic = Encoding.ASCII.GetString(footer, 0, 8);
+            if (!string.Equals(magic, Magic, StringComparison.Ordinal))
+                return false;
+
+            configLen = BitConverter.ToUInt32(footer, 8);
+            zipLen = BitConverter.ToUInt64(footer, 12);
+            return true;
+        }
+
         private static string ExpandMacros(string pattern, string exePath, string title)
         {
             string exedir = Path.GetDirectoryName(exePath) ?? ".";
@@ -315,6 +437,15 @@ namespace SfxStub
             }
             catch { }
             return null;
+        }
+
+        private static void ShowNoPayloadMessage()
+        {
+            try
+            {
+                MessageBox.Show("No SFX payload is embedded in this stub.", "SFX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch { }
         }
     }
 }

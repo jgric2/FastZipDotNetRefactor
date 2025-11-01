@@ -12,7 +12,8 @@ namespace Brutal_Zip
     public partial class SfxBuilderForm : Form
     {
         private const string Magic = "BXZSFX10";
-        private const int FooterSize = 8 + 4 + 8;
+        private const int FooterSize = 8 + 4 + 8; // magic(8) + cfgLen(4) + zipLen(8)
+        private const int DotnetBundleFooterSize = 8;
 
         private readonly MainForm _main;
 
@@ -133,6 +134,178 @@ namespace Brutal_Zip
             }
         }
 
+     
+        private void ShowPreview()
+        {
+            try
+            {
+                string title = txtTitle.Text?.Trim();
+                string company = txtCompany.Text?.Trim();
+                Icon icon = TryLoadIconFromPath(txtIconPath.Text);
+                Image banner = TryLoadImageFromPath(txtBannerPath.Text);
+                Color theme = pnlThemeColor.BackColor;
+                bool showList = chkShowFileList.Checked;
+
+                using var prev = new BuilderPreviewForm(title, company, banner, icon, theme, showList);
+                prev.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Preview");
+            }
+        }
+
+        private void BuildSfx()
+        {
+            try
+            {
+                string stubPath = txtStubPath.Text;
+                if (string.IsNullOrWhiteSpace(stubPath) || !File.Exists(stubPath))
+                {
+                    MessageBox.Show(this, "Select the SFX stub executable.", "Build SFX");
+                    return;
+                }
+
+                string sourceZip = rdoUseCurrent.Checked
+                    ? ResolveCurrentZipOrThrow()
+                    : ResolveZipFromFileOrThrow();
+
+                var cfg = new SfxBuildConfig
+                {
+                    Title = txtTitle.Text?.Trim(),
+                    CompanyName = txtCompany.Text?.Trim(),
+                    DefaultExtractDir = txtDefaultDir.Text?.Trim(),
+                    Silent = chkSilent.Checked,
+                    Overwrite = chkOverwrite.Checked,
+                    RequireElevation = chkRequireElevation.Checked,
+                    ShowCompletedDialog = chkShowDone.Checked,
+                    RunAfter = string.IsNullOrWhiteSpace(txtRunAfter.Text) ? null : txtRunAfter.Text.Trim(),
+                    Password = string.IsNullOrWhiteSpace(txtPassword.Text) ? null : txtPassword.Text,
+                    LicenseText = string.IsNullOrWhiteSpace(txtLicense.Text) ? null : txtLicense.Text,
+                    RequireLicenseAccept = chkRequireAccept.Checked,
+                    ShowFileList = chkShowFileList.Checked,
+                    IconBase64 = ToBase64File(txtIconPath.Text),      // for window branding
+                    BannerImageBase64 = ToBase64File(txtBannerPath.Text),
+                    ThemeColor = ToHexColor(pnlThemeColor.BackColor)
+                };
+
+                using var sfd = new SaveFileDialog { Filter = "Self-extracting exe|*.exe", FileName = "Setup.exe" };
+                if (sfd.ShowDialog(this) != DialogResult.OK) return;
+                string outExe = sfd.FileName;
+
+                // 1) Ensure fresh
+                try { if (File.Exists(outExe)) File.Delete(outExe); } catch { }
+
+                // 2) Copy stub first (DO NOT modify resources on single-file stub)
+                File.Copy(stubPath, outExe, overwrite: false);
+
+                // 3) Preserve the .NET single-file bundle footer (last 8 bytes)
+                //    We will re-append this after our data so the host can still find the bundle header.
+                byte[] bundleTail8 = TryReadLast8Bytes(outExe);
+                if (bundleTail8 == null || bundleTail8.Length != 8)
+                {
+                    MessageBox.Show(this,
+                        "Warning: Could not read the .NET single-file footer. Proceeding without preserving it may break the runtime.",
+                        "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+
+                // 4) Append our config + zip + our footer, then (if available) re-append the .NET bundle tail 8 bytes
+                byte[] cfgBytes = JsonSerializer.SerializeToUtf8Bytes(cfg, new JsonSerializerOptions { WriteIndented = false });
+                uint cfgLen = (uint)cfgBytes.Length;
+                ulong zipLen = (ulong)new FileInfo(sourceZip).Length;
+
+                using (var fout = OpenForAppendWithRetry(outExe))
+                using (var bw = new BinaryWriter(fout, Encoding.UTF8, leaveOpen: true))
+                {
+                    // config
+                    bw.Write(cfgBytes);
+
+                    // zip
+                    using (var fsZip = new FileStream(sourceZip, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        fsZip.CopyTo(fout);
+                    }
+
+                    // our SFX footer (magic + cfgLen + zipLen)
+                    WriteFooter(bw, cfgLen, zipLen);
+
+                    // Re-append the single-file trailer 8 bytes to remain the last bytes of the file
+                    if (bundleTail8 != null && bundleTail8.Length == 8)
+                        bw.Write(bundleTail8);
+
+                    bw.Flush();
+                    fout.Flush(true);
+                }
+
+                MessageBox.Show(this, "SFX built successfully.", "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string ResolveCurrentZipOrThrow()
+        {
+            var field = _main.GetType().GetField("_zipPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            string p = field?.GetValue(_main) as string;
+            if (string.IsNullOrEmpty(p) || !File.Exists(p))
+                throw new InvalidOperationException("No archive is currently open.");
+            return p;
+        }
+
+        private string ResolveZipFromFileOrThrow()
+        {
+            if (string.IsNullOrWhiteSpace(txtZipPath.Text) || !File.Exists(txtZipPath.Text))
+                throw new InvalidOperationException("Select a valid source ZIP.");
+            return txtZipPath.Text;
+        }
+    
+
+        private static FileStream OpenForAppendWithRetry(string path, int attempts = 8, int delayMs = 100)
+        {
+            Exception last = null;
+            for (int i = 0; i < attempts; i++)
+            {
+                try
+                {
+                    return new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.None);
+                }
+                catch (IOException ex) { last = ex; System.Threading.Thread.Sleep(delayMs); }
+                catch (System.ComponentModel.Win32Exception ex2) { last = ex2; System.Threading.Thread.Sleep(delayMs); }
+            }
+            throw last ?? new IOException("Failed to open target EXE for appending.");
+        }
+
+
+        private static byte[] TryReadLast8Bytes(string path)
+        {
+            try
+            {
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                if (fs.Length < 8) return null;
+                fs.Seek(-8, SeekOrigin.End);
+                byte[] tail = new byte[8];
+                int r = fs.Read(tail, 0, 8);
+                return (r == 8) ? tail : null;
+            }
+            catch { return null; }
+        }
+
+
+
+
+
+
+
+
+        private static void WriteFooter(BinaryWriter bw, uint cfgLen, ulong zipLen)
+        {
+            bw.Write(Encoding.ASCII.GetBytes(Magic)); // 8
+            bw.Write(cfgLen);                          // 4
+            bw.Write(zipLen);                          // 8
+        }
+
         private static string ToBase64File(string path)
         {
             try
@@ -167,150 +340,18 @@ namespace Brutal_Zip
             catch { return null; }
         }
 
-        private void ShowPreview()
-        {
-            try
-            {
-                string title = txtTitle.Text?.Trim();
-                string company = txtCompany.Text?.Trim();
-                Icon icon = TryLoadIconFromPath(txtIconPath.Text);
-                Image banner = TryLoadImageFromPath(txtBannerPath.Text);
-                Color theme = pnlThemeColor.BackColor;
-                bool showList = chkShowFileList.Checked;
 
-                using var prev = new BuilderPreviewForm(title, company, banner, icon, theme, showList);
-                prev.ShowDialog(this);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, ex.Message, "Preview");
-            }
-        }
 
-        private void BuildSfx()
-        {
-            try
-            {
-                string stubPath = txtStubPath.Text;
-                if (string.IsNullOrWhiteSpace(stubPath) || !File.Exists(stubPath))
-                {
-                    MessageBox.Show(this, "Select the SFX stub executable.", "Build SFX");
-                    return;
-                }
 
-                // Validate the selected stub is self-contained (no .runtimeconfig.json next to it)
-                if (!IsSelfContainedStub(stubPath))
-                {
-                    MessageBox.Show(this,
-                        "The selected SFX stub is framework-dependent.\n\n" +
-                        "Please publish the stub as Self-contained + PublishSingleFile.\n" +
-                        "Then select that published EXE here.\n\n" +
-                        "See recommended .csproj settings in the helper message.",
-                        "Stub is not self-contained",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    ShowStubCsprojGuidance();
-                    return;
-                }
 
-                string sourceZip = ResolveSourceZip();
 
-                var cfg = new SfxBuildConfig
-                {
-                    Title = txtTitle.Text?.Trim(),
-                    CompanyName = txtCompany.Text?.Trim(),
-                    DefaultExtractDir = txtDefaultDir.Text?.Trim(),
-                    Silent = chkSilent.Checked,
-                    Overwrite = chkOverwrite.Checked,
-                    RequireElevation = chkRequireElevation.Checked,
-                    ShowCompletedDialog = chkShowDone.Checked,
-                    RunAfter = string.IsNullOrWhiteSpace(txtRunAfter.Text) ? null : txtRunAfter.Text.Trim(),
-                    Password = string.IsNullOrWhiteSpace(txtPassword.Text) ? null : txtPassword.Text,
-                    LicenseText = string.IsNullOrWhiteSpace(txtLicense.Text) ? null : txtLicense.Text,
-                    RequireLicenseAccept = chkRequireAccept.Checked,
-                    ShowFileList = chkShowFileList.Checked,
-                    IconBase64 = ToBase64File(txtIconPath.Text),
-                    BannerImageBase64 = ToBase64File(txtBannerPath.Text),
-                    ThemeColor = ToHexColor(pnlThemeColor.BackColor)
-                };
 
-                using var sfd = new SaveFileDialog { Filter = "Self-extracting exe|*.exe", FileName = "Setup.exe" };
-                if (sfd.ShowDialog(this) != DialogResult.OK) return;
-                string outExe = sfd.FileName;
 
-                // 1) Delete any existing target
-                try { if (File.Exists(outExe)) File.Delete(outExe); } catch { }
 
-                // 2) Copy stub first
-                File.Copy(stubPath, outExe, overwrite: false);
 
-                // 3) Embed icon BEFORE appending (UpdateResource strips overlay)
-                try
-                {
-                    if (File.Exists(txtIconPath.Text))
-                        TryEmbedIconWithRetry(outExe, txtIconPath.Text);
-                }
-                catch (Exception exIcon)
-                {
-                    MessageBox.Show(this,
-                        "Built stub but failed to embed icon:\n" + exIcon.Message,
-                        "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
 
-                // 4) Append config + zip + footer
-                byte[] cfgBytes = JsonSerializer.SerializeToUtf8Bytes(cfg, new JsonSerializerOptions { WriteIndented = false });
-                uint cfgLen = (uint)cfgBytes.Length;
-                long zipLen = new FileInfo(sourceZip).Length;
 
-                using (var fout = OpenForAppendWithRetry(outExe))
-                {
-                    // Config
-                    fout.Write(cfgBytes, 0, cfgBytes.Length);
 
-                    // Zip
-                    using (var fsZip = new FileStream(sourceZip, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        fsZip.CopyTo(fout);
-
-                    // Footer
-                    var magic = Encoding.ASCII.GetBytes(Magic);
-                    fout.Write(magic, 0, magic.Length);
-                    fout.Write(BitConverter.GetBytes(cfgLen), 0, 4);
-                    fout.Write(BitConverter.GetBytes((ulong)zipLen), 0, 8);
-
-                    fout.Flush(true);
-                }
-
-                MessageBox.Show(this, "SFX built successfully.", "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, ex.Message, "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private static FileStream OpenForAppendWithRetry(string path, int attempts = 8, int delayMs = 100)
-        {
-            Exception last = null;
-            for (int i = 0; i < attempts; i++)
-            {
-                try
-                {
-                    // Important: FileShare.None to keep UpdateResource or other writers out while we append
-                    return new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.None);
-                }
-                catch (IOException ex)
-                {
-                    last = ex;
-                    System.Threading.Thread.Sleep(delayMs);
-                }
-                catch (System.ComponentModel.Win32Exception ex2)
-                {
-                    last = ex2;
-                    System.Threading.Thread.Sleep(delayMs);
-                }
-            }
-            throw last ?? new IOException("Failed to open target EXE for appending.");
-        }
 
         private static bool IsSelfContainedStub(string stubPath)
         {

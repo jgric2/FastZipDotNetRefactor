@@ -98,9 +98,9 @@ namespace Brutal_Zip
             viewerView.DeleteSelectedRequested += async () => await DoDeleteSelectedAsync();
 
 
-            //var mnuToolsBuildSfx = new ToolStripMenuItem("Build SFX…");
-            //mnuToolsBuildSfx.Click += (s, e) => { using var frm = new SfxBuilderForm(this); frm.ShowDialog(this); };
-            //mnuTools.DropDownItems.Add(mnuToolsBuildSfx);
+            var mnuToolsBuildSfx = new ToolStripMenuItem("Build SFX…");
+            mnuToolsBuildSfx.Click += (s, e) => { using var frm = new SfxBuilderForm(this); frm.ShowDialog(this); };
+            mnuTools.DropDownItems.Add(mnuToolsBuildSfx);
 
             viewerView.mnuEncryptNew.Checked = SettingsService.Current.EncryptNewArchivesByDefault;
             var addAlgo = EncryptAlgoIndexFromString(SettingsService.Current.DefaultEncryptAlgorithm) switch
