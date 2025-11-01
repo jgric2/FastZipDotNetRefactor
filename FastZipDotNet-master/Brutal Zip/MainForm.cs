@@ -1096,56 +1096,150 @@ return await sharedTask.ConfigureAwait(false);
         private async void StageCreateFromDrop(IEnumerable<string> paths)
         {
             await AddToStagingAsync(paths);
+            // Call prefill only here if you prefer; otherwise call after StageCreateFromDrop returns as shown above
+            // PrefillCreateDestinationFromStaging();
         }
 
         private async Task AddToStagingAsync(IEnumerable<string> paths)
         {
             if (paths == null) return;
 
-            foreach (var p in paths)
+            // Build a dedupe set primed with already staged items
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in _staging)
+                seen.Add(s.Path);
+
+            var incoming = new List<StagedItem>(512);
+
+            foreach (var raw in paths)
             {
-                try
+                string full;
+                try { full = Path.GetFullPath(raw); }
+                catch { continue; }
+
+                if (!seen.Add(full))    // skip duplicates within this batch or already staged
+                    continue;
+
+                bool isDir;
+                if (!TryGetIsDirectory(full, out isDir))
+                    continue;
+
+                var item = new StagedItem
                 {
-                    var full = Path.GetFullPath(p);
-                    if (!File.Exists(full) && !Directory.Exists(full)) continue;
+                    Path = full,
+                    IsFolder = isDir,
+                    SizeBytes = 0,
+                    ItemsCount = isDir ? 0 : 1
+                };
 
-                    if (_staging.Any(s => string.Equals(s.Path, full, StringComparison.OrdinalIgnoreCase)))
-                        continue; // skip duplicates
-
-                    var item = new StagedItem
-                    {
-                        Path = full,
-                        IsFolder = Directory.Exists(full),
-                        SizeBytes = 0,
-                        ItemsCount = File.Exists(full) ? 1 : 0
-                    };
-
-                    if (!item.IsFolder && File.Exists(full))
-                    {
-                        try { item.SizeBytes = new FileInfo(full).Length; } catch { item.SizeBytes = 0; }
-                    }
-
-                    _staging.Add(item);
-                    AddStagingRow(item); // add a row immediately
-
-                    // For folders, compute stats asynchronously and update row
-                    if (item.IsFolder)
-                    {
-                        _ = Task.Run(() =>
-                        {
-                            ComputeFolderStats(item.Path, out long bytes, out int count);
-                            item.SizeBytes = bytes;
-                            item.ItemsCount = count;
-
-                            // update UI row
-                            BeginInvoke(new Action(() => UpdateStagingRow(item)));
-                        });
-                    }
+                if (!isDir)
+                {
+                    try { item.SizeBytes = new FileInfo(full).Length; } catch { }
                 }
-                catch { /* ignore bad path */ }
+
+                incoming.Add(item);
+            }
+
+            if (incoming.Count == 0)
+            {
+                UpdateStagingTotals();
+                return;
+            }
+
+            // Commit to model
+            _staging.AddRange(incoming);
+
+            // Batch UI add
+            var lv = homeView.StagingListView;
+            lv.BeginUpdate();
+            try
+            {
+                foreach (var item in incoming)
+                {
+                    var it = CreateStagingListViewItem(item);
+                    lv.Items.Add(it);
+                }
+            }
+            finally
+            {
+                lv.EndUpdate();
             }
 
             UpdateStagingTotals();
+
+            // Compute folder stats with bounded parallelism
+            var folders = incoming.FindAll(i => i.IsFolder);
+            if (folders.Count > 0)
+            {
+                await Task.Run(() =>
+                {
+                    var po = new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1)
+                    };
+
+                    Parallel.ForEach(folders, po, folder =>
+                    {
+                        ComputeFolderStats(folder.Path, out long bytes, out int count);
+                        folder.SizeBytes = bytes;
+                        folder.ItemsCount = count;
+
+                        // Update just this row (UI thread)
+                        try
+                        {
+                            homeView.BeginInvoke(new Action(() => UpdateStagingRow(folder)));
+                        }
+                        catch { }
+                    });
+                }).ConfigureAwait(false);
+
+                // Update totals once again after all folder stats are known
+                try
+                {
+                    homeView.BeginInvoke(new Action(UpdateStagingTotals));
+                }
+                catch { }
+            }
+        }
+
+
+        private static bool TryGetIsDirectory(string path, out bool isDir)
+        {
+            try
+            {
+                var attr = File.GetAttributes(path);
+                isDir = (attr & FileAttributes.Directory) != 0;
+                return true;
+            }
+            catch
+            {
+                isDir = false;
+                return false;
+            }
+        }
+
+        private ListViewItem CreateStagingListViewItem(StagedItem item)
+        {
+            string ext = item.IsFolder ? "" : Path.GetExtension(item.Path);
+            int imageIndex = item.IsFolder ? _icons.FolderIndex : _icons.GetIndexForExtension(ext);
+
+            var it = new ListViewItem(new[]
+            {
+    item.Name,
+    item.Type,
+    item.IsFolder ? "Calculating…" : FormatBytes(item.SizeBytes),
+    item.IsFolder ? "…" : "1",
+    item.Path
+})
+            {
+                ImageIndex = imageIndex,
+                Tag = item
+            };
+
+            bool exists = item.IsFolder ? Directory.Exists(item.Path) : File.Exists(item.Path);
+            if (!exists) it.ForeColor = Color.Gray;
+
+            return it;
         }
 
 
@@ -2059,23 +2153,115 @@ return await sharedTask.ConfigureAwait(false);
         }
 
 
+        private void PrefillCreateDestinationFromStaging()
+        {
+            if (_staging == null || _staging.Count == 0) return;
+            // Don't overwrite if user already typed a path
+            if (!string.IsNullOrWhiteSpace(homeView.CreateDestination)) return;
+
+            // Determine a parent directory for output
+            string parentDir = null;
+            string baseName;
+
+            if (_staging.Count == 1)
+            {
+                var s = _staging[0];
+                try
+                {
+                    if (s.IsFolder)
+                    {
+                        var di = new DirectoryInfo(s.Path);
+                        parentDir = di.Parent?.FullName ?? di.FullName;
+                        baseName = di.Name;
+                    }
+                    else
+                    {
+                        var fi = new FileInfo(s.Path);
+                        parentDir = fi.DirectoryName ?? ".";
+                        baseName = Path.GetFileNameWithoutExtension(fi.Name);
+                    }
+                }
+                catch
+                {
+                    parentDir = Path.GetDirectoryName(s.Path) ?? ".";
+                    baseName = s.IsFolder ? new DirectoryInfo(s.Path).Name
+                                          : Path.GetFileNameWithoutExtension(s.Path);
+                }
+            }
+            else
+            {
+                // Multiple items: try common parent
+                string firstParent = null;
+                bool allSame = true;
+                foreach (var s in _staging)
+                {
+                    string p;
+                    try
+                    {
+                        p = s.IsFolder
+                            ? (new DirectoryInfo(s.Path).Parent?.FullName ?? new DirectoryInfo(s.Path).FullName)
+                            : (new FileInfo(s.Path).DirectoryName ?? ".");
+                    }
+                    catch
+                    {
+                        p = Path.GetDirectoryName(s.Path) ?? ".";
+                    }
+
+                    if (firstParent == null) firstParent = p;
+                    else if (!string.Equals(firstParent, p, StringComparison.OrdinalIgnoreCase))
+                        allSame = false;
+                }
+
+                parentDir = firstParent ?? ".";
+                // Base name: common parent folder name if all from same place, else "Archive"
+                if (allSame && !string.IsNullOrEmpty(parentDir))
+                    baseName = new DirectoryInfo(parentDir).Name;
+                else
+                    baseName = "Archive";
+            }
+
+            // Build a unique path: ...\name.zip -> add (1), (2) if needed
+            string proposed = Path.Combine(parentDir ?? ".", baseName + ".zip");
+            string unique = MakeUniquePath(proposed);
+
+            homeView.CreateDestination = unique;
+        }
+
+
         public async Task HandleCommandAsync(string[] args)
         {
             var cmd = Cli.Parse(args);
             switch (cmd.Type)
             {
                 case Cli.CommandType.Open:
-                    // Mixed: may include .zip or stage-only
-                    if (cmd.Inputs != null && cmd.Inputs.Count > 0)
                     {
-                        ShowHome();
-                        StageCreateFromDrop(cmd.Inputs);
-                        this.Activate();
-                        return;
-                    }
-                    if (System.IO.File.Exists(cmd.Archive)) OpenArchive(cmd.Archive);
-                    break;
+                        if (cmd.Inputs != null && cmd.Inputs.Count > 0)
+                        {
+                            // Expand to full Explorer selection
+                            var expanded = Brutal_Zip.Classes.Helpers.ExplorerSelection.TryGetSelectedFileSystemPaths(
+                            seedArgs: cmd.Inputs, settleMs: 120);
 
+                            if (expanded != null && expanded.Count > 0)
+                            {
+                                var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                                var merged = new List<string>();
+                                foreach (var s in cmd.Inputs) if (set.Add(s)) merged.Add(s);
+                                foreach (var s in expanded) if (set.Add(s)) merged.Add(s);
+                                cmd.Inputs = merged;
+                            }
+
+                            ShowHome();
+                            StageCreateFromDrop(cmd.Inputs);
+                            // Prefill a destination .zip path (without overwriting user's edits)
+                            PrefillCreateDestinationFromStaging();
+                            this.Activate();
+                            return;
+                        }
+
+                        if (!string.IsNullOrEmpty(cmd.Archive) && System.IO.File.Exists(cmd.Archive))
+                            OpenArchive(cmd.Archive);
+                        break;
+                    }
                 case Cli.CommandType.ExtractSmart:
                 case Cli.CommandType.ExtractHere:
                 case Cli.CommandType.ExtractTo:

@@ -38,6 +38,7 @@
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             homeView = new Brutal_Zip.Views.HomeView();
             viewerView = new Brutal_Zip.Views.ViewerView();
             menuMain = new MenuStrip();
@@ -54,13 +55,13 @@
             mnuToolsOpenAfterExtract = new ToolStripMenuItem();
             sepTools2 = new ToolStripSeparator();
             mnuToolsFind = new ToolStripMenuItem();
-            mnuHelp = new ToolStripMenuItem();
-            mnuHelpAbout = new ToolStripMenuItem();
-
+            sepTools3 = new ToolStripSeparator();
+            mnuToolsCrackPassword = new ToolStripMenuItem();
+            sepTools4 = new ToolStripSeparator();
             mnuToolsSetComment = new ToolStripMenuItem();
             mnuToolsWizard = new ToolStripMenuItem();
-            sepTools4 = new ToolStripSeparator();
-
+            mnuHelp = new ToolStripMenuItem();
+            mnuHelpAbout = new ToolStripMenuItem();
             menuMain.SuspendLayout();
             SuspendLayout();
             // 
@@ -132,7 +133,7 @@
             // 
             // mnuTools
             // 
-            mnuTools.DropDownItems.AddRange(new ToolStripItem[] { mnuToolsSettings, sepTools1, mnuToolsOpenAfterCreate, mnuToolsOpenAfterExtract, sepTools2, mnuToolsFind });
+            mnuTools.DropDownItems.AddRange(new ToolStripItem[] { mnuToolsSettings, sepTools1, mnuToolsOpenAfterCreate, mnuToolsOpenAfterExtract, sepTools2, mnuToolsFind, sepTools3, mnuToolsCrackPassword, sepTools4, mnuToolsSetComment, mnuToolsWizard });
             mnuTools.Name = "mnuTools";
             mnuTools.Size = new Size(47, 20);
             mnuTools.Text = "&Tools";
@@ -173,6 +174,35 @@
             mnuToolsFind.Size = new Size(213, 22);
             mnuToolsFind.Text = "Find in archive…";
             // 
+            // sepTools3
+            // 
+            sepTools3.Name = "sepTools3";
+            sepTools3.Size = new Size(210, 6);
+            // 
+            // mnuToolsCrackPassword
+            // 
+            mnuToolsCrackPassword.Enabled = false;
+            mnuToolsCrackPassword.Name = "mnuToolsCrackPassword";
+            mnuToolsCrackPassword.Size = new Size(213, 22);
+            mnuToolsCrackPassword.Text = "Crack Password…";
+            // 
+            // sepTools4
+            // 
+            sepTools4.Name = "sepTools4";
+            sepTools4.Size = new Size(210, 6);
+            // 
+            // mnuToolsSetComment
+            // 
+            mnuToolsSetComment.Name = "mnuToolsSetComment";
+            mnuToolsSetComment.Size = new Size(213, 22);
+            mnuToolsSetComment.Text = "Set Comment…";
+            // 
+            // mnuToolsWizard
+            // 
+            mnuToolsWizard.Name = "mnuToolsWizard";
+            mnuToolsWizard.Size = new Size(213, 22);
+            mnuToolsWizard.Text = "Wizard…";
+            // 
             // mnuHelp
             // 
             mnuHelp.DropDownItems.AddRange(new ToolStripItem[] { mnuHelpAbout });
@@ -188,46 +218,13 @@
             // 
             // MainForm
             // 
-
-            mnuToolsSetComment.Name = "mnuToolsSetComment";
-            mnuToolsSetComment.Size = new Size(213, 22);
-            mnuToolsSetComment.Text = "Set Comment…";
-
-            mnuToolsWizard.Name = "mnuToolsWizard";
-            mnuToolsWizard.Size = new Size(213, 22);
-            mnuToolsWizard.Text = "Wizard…";
-
-
-            sepTools3 = new ToolStripSeparator();
-            mnuToolsCrackPassword = new ToolStripMenuItem();
-
-            // mnuTools
-            mnuTools.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                mnuToolsSettings,
-                sepTools1,
-                mnuToolsOpenAfterCreate,
-                mnuToolsOpenAfterExtract,
-                sepTools2,
-                mnuToolsFind,
-                sepTools3,                 // NEW
-                mnuToolsCrackPassword,
-                  sepTools4, mnuToolsSetComment, mnuToolsWizard
-            });
-
-            // mnuToolsCrackPassword
-            mnuToolsCrackPassword.Name = "mnuToolsCrackPassword";
-            mnuToolsCrackPassword.Size = new Size(213, 22);
-            mnuToolsCrackPassword.Text = "Crack Password…";
-            mnuToolsCrackPassword.Enabled = false; // enabled when an encrypted entry exists
-
-
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(1000, 700);
             Controls.Add(menuMain);
             Controls.Add(homeView);
             Controls.Add(viewerView);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             KeyPreview = true;
             MainMenuStrip = menuMain;
             Name = "MainForm";

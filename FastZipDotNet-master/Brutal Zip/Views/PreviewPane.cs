@@ -455,15 +455,20 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             scintilla.Styles[Style.Default].ForeColor = Color.Black;
             scintilla.StyleClearAll();
 
-            // Line numbers margin
-            scintilla.Margins[0].Type = MarginType.Number;
-            scintilla.Margins[0].Width = 36;
 
-            // Folding margin
-            scintilla.Margins[2].Type = MarginType.Symbol;
-            scintilla.Margins[2].Mask = Marker.MaskFolders;
-            scintilla.Margins[2].Sensitive = true;
-            scintilla.Margins[2].Width = 16;
+            scintilla.Technology = Technology.DirectWrite;
+            const int SCI_SETBUFFEREDDRAW = 2034;
+            scintilla.DirectMessage(SCI_SETBUFFEREDDRAW, IntPtr.Zero, IntPtr.Zero); // 0 = off
+
+            //// Line numbers margin
+            //scintilla.Margins[0].Type = MarginType.Number;
+            //scintilla.Margins[0].Width = 36;
+
+            //// Folding margin
+            //scintilla.Margins[2].Type = MarginType.Symbol;
+            //scintilla.Margins[2].Mask = Marker.MaskFolders;
+            //scintilla.Margins[2].Sensitive = true;
+            //scintilla.Margins[2].Width = 16;
 
             // Configure folding markers
             scintilla.Markers[Marker.Folder].Symbol = MarkerSymbol.BoxPlus;
@@ -473,6 +478,9 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             scintilla.Markers[Marker.FolderOpenMid].Symbol = MarkerSymbol.BoxMinusConnected;
             scintilla.Markers[Marker.FolderSub].Symbol = MarkerSymbol.VLine;
             scintilla.Markers[Marker.FolderTail].Symbol = MarkerSymbol.LCorner;
+
+            scintilla.BufferedDraw = false;
+
 
             var folderColor = Color.Gray;
             for (int i = Marker.Folder; i <= Marker.FolderTail; i++)

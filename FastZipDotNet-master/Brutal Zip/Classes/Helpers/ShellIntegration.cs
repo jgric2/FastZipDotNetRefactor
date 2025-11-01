@@ -1,79 +1,72 @@
 ﻿using Microsoft.Win32;
+using System.Runtime.InteropServices;
 
 namespace Brutal_Zip.Classes.Helpers
 {
     internal static class ShellIntegration
     {
-        // Keys (per-user)
-        private const string KeyFilesZip = @"Software\Classes\*\shell\BrutalZip.Zip";
-        private const string KeyFilesZipCmd = @"Software\Classes\*\shell\BrutalZip.Zip\command";
+        // COMPRESS for both files and folders (one place; visible even for large selections)
+        private const string CompressAllFSKey = @"Software\Classes\AllFileSystemObjects\shell\BrutalZip.Compress";
 
-        private const string KeyDirZip = @"Software\Classes\Directory\shell\BrutalZip.Zip";
-        private const string KeyDirZipCmd = @"Software\Classes\Directory\shell\BrutalZip.Zip\command";
+        // EXTRACT for .zip (two places to cover built-in handler and SFA)
+        private const string ExtractZipSFAKey = @"Software\Classes\SystemFileAssociations\.zip\shell\BrutalZip.Extract";
+        private const string ExtractZipCFKey = @"Software\Classes\CompressedFolder\shell\BrutalZip.Extract";
 
-        private const string KeyZipAssocSmart = @"Software\Classes\SystemFileAssociations\.zip\shell\BrutalZip.UnzipSmart";
-        private const string KeyZipAssocSmartCmd = @"Software\Classes\SystemFileAssociations\.zip\shell\BrutalZip.UnzipSmart\command";
-
-        private const string KeyZipAssocHere = @"Software\Classes\SystemFileAssociations\.zip\shell\BrutalZip.UnzipHere";
-        private const string KeyZipAssocHereCmd = @"Software\Classes\SystemFileAssociations\.zip\shell\BrutalZip.UnzipHere\command";
+        // Clean-up keys from earlier experiments (optional)
+        private static readonly string[] OldKeys =
+        {
+        @"Software\Classes\*\shell\BrutalZip.Compress",
+        @"Software\Classes\Directory\shell\BrutalZip.Compress",
+        @"Software\Classes\*\shell\BrutalZip",
+        @"Software\Classes\Directory\shell\BrutalZip",
+        @"Software\Classes\SystemFileAssociations\.zip\shell\BrutalZip",
+        @"Software\Classes\CompressedFolder\shell\BrutalZip",
+        @"Software\Classes\*\shell\BrutalZip.Test",
+        @"Software\Classes\Directory\shell\BrutalZip.Test"
+    };
 
         public static void Install()
         {
             string exe = GetExePath();
 
-            // Files: Zip using Brutal Zip (opens app and stages selection)
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyFilesZip))
-            {
-                k.SetValue("MUIVerb", "Zip using Brutal Zip");
-                k.SetValue("Icon", exe);
-            }
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyFilesZipCmd))
-            {
-                // NOTE: For multiple selection, Windows may invoke the command once per item.
-                // App accepts "--stage" and any number of paths.
-                k.SetValue(null, $"\"{exe}\" --stage \"%1\"");
-            }
+            // Clean up older shapes
+            foreach (var k in OldKeys)
+                try { Registry.CurrentUser.DeleteSubKeyTree(k, false); } catch { }
 
-            // Directory: Zip using Brutal Zip
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyDirZip))
-            {
-                k.SetValue("MUIVerb", "Zip using Brutal Zip");
-                k.SetValue("Icon", exe);
-            }
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyDirZipCmd))
-            {
-                k.SetValue(null, $"\"{exe}\" --stage \"%1\"");
-            }
+            // 1) Compress verb for files + folders
+            // MultiSelectModel=Player keeps the verb visible for >15 items. We pass only %1; the app will fetch full selection.
+            // Compress (visible for large multi-selection; we pass only %1)
+            CreateVerb(
+                key: CompressAllFSKey,
+                title: "Compress using Brutal Zip...",
+                exe: exe,
+                command: $"\"{exe}\" --stage \"%1\"",
+                multiSelectModel: "Player");
 
-            // .zip: Unzip (Smart)
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyZipAssocSmart))
-            {
-                k.SetValue("MUIVerb", "Unzip (Smart) using Brutal Zip");
-                k.SetValue("Icon", exe);
-            }
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyZipAssocSmartCmd))
-            {
-                k.SetValue(null, $"\"{exe}\" -x \"%1\"");
-            }
+            // Extract -> open viewer (user will extract from UI)
+            CreateVerb(ExtractZipSFAKey, "Extract Zip using Brutal Zip...", exe, $"\"{exe}\" \"%1\"");
+            CreateVerb(ExtractZipCFKey, "Extract Zip using Brutal Zip...", exe, $"\"{exe}\" \"%1\"");
 
-            // .zip: Unzip Here
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyZipAssocHere))
-            {
-                k.SetValue("MUIVerb", "Unzip Here using Brutal Zip");
-                k.SetValue("Icon", exe);
-            }
-            using (var k = Registry.CurrentUser.CreateSubKey(KeyZipAssocHereCmd))
-            {
-                k.SetValue(null, $"\"{exe}\" -xh \"%1\"");
-            }
+            RefreshExplorer();
         }
 
         public static void Uninstall()
         {
-            try { Registry.CurrentUser.DeleteSubKeyTree(KeyFilesZip, throwOnMissingSubKey: false); } catch { }
-            try { Registry.CurrentUser.DeleteSubKeyTree(KeyDirZip, throwOnMissingSubKey: false); } catch { }
-            try { Registry.CurrentUser.DeleteSubKeyTree(KeyZipAssocSmart, throwOnMissingSubKey: false); } catch { }
-            try { Registry.CurrentUser.DeleteSubKeyTree(KeyZipAssocHere, throwOnMissingSubKey: false); } catch { }
+            try { Registry.CurrentUser.DeleteSubKeyTree(CompressAllFSKey, false); } catch { }
+            try { Registry.CurrentUser.DeleteSubKeyTree(ExtractZipSFAKey, false); } catch { }
+            try { Registry.CurrentUser.DeleteSubKeyTree(ExtractZipCFKey, false); } catch { }
+            RefreshExplorer();
+        }
+
+        private static void CreateVerb(string key, string title, string exe, string command, string multiSelectModel = null)
+        {
+            using var k = Registry.CurrentUser.CreateSubKey(key);
+            k.SetValue("MUIVerb", title, RegistryValueKind.String);
+            k.SetValue("Icon", exe, RegistryValueKind.String);
+            if (!string.IsNullOrEmpty(multiSelectModel))
+                k.SetValue("MultiSelectModel", multiSelectModel, RegistryValueKind.String);
+            using var cmd = k.CreateSubKey("command");
+            cmd.SetValue(null, command, RegistryValueKind.String);
         }
 
         private static string GetExePath()
@@ -82,5 +75,13 @@ namespace Brutal_Zip.Classes.Helpers
             if (!File.Exists(exe)) exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BrutalZip.exe");
             return exe;
         }
+
+        private static void RefreshExplorer()
+        {
+            try { SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero); } catch { }
+        }
+
+        [DllImport("shell32.dll")]
+        private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
     }
 }
