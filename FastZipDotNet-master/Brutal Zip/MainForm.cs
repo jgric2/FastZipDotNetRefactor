@@ -2,6 +2,7 @@
 using FastZipDotNet.Zip;
 using System.Data;
 using System.Diagnostics;
+using System.Text;
 using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 using static FastZipDotNet.Zip.Structure.ZipEntryStructs;
 
@@ -997,6 +998,13 @@ return await sharedTask.ConfigureAwait(false);
             var r = _rows[viewerView.lvArchive.SelectedIndices[0]];
             if (r.Kind != RowKind.File) { viewerView.previewPane.Clear(); viewerView.infoPane.Clear(); return; }
 
+            if (!EnsurePasswordForEncryptedIfNeeded(allowSkipToBrowse: false))
+            {
+                // User declined to re-enter; cancel preview gracefully
+                viewerView.previewPane.Clear();
+                return;
+            }
+
             _previewCts?.Cancel();
             _previewCts = new CancellationTokenSource();
             var ct = _previewCts.Token;
@@ -1686,19 +1694,8 @@ return await sharedTask.ConfigureAwait(false);
                 // Reuse cached password if we have one (no prompt), else prompt once
                 if (anyEncrypted)
                 {
-                    if (!string.IsNullOrEmpty(_archivePassword))
-                    {
-                        _zip.Password = _archivePassword;
-                    }
-                    else if (!string.IsNullOrEmpty(_addPassword))
-                    {
-                        _zip.Password = _addPassword;
-                    }
-                    // Only prompt if still unset
-                    if (string.IsNullOrEmpty(_zip.Password))
-                        EnsurePasswordForEncryptedIfNeeded();
-
-                    _addPassword = _zip.Password; // keep in sync for additions
+                    // Prompt and validate; allow skipping to browse (per your request)
+                    EnsurePasswordForEncryptedIfNeeded(allowSkipToBrowse: true);
                 }
 
                 // Recent list and Comment menu enable
@@ -2227,7 +2224,7 @@ return await sharedTask.ConfigureAwait(false);
                 return;
             }
 
-            if (!EnsurePasswordForEncryptedIfNeeded()) return;
+            if (!EnsurePasswordForEncryptedIfNeeded(allowSkipToBrowse: false)) return;
 
             int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
             int curThreads = Threads;
@@ -2342,7 +2339,7 @@ return await sharedTask.ConfigureAwait(false);
         {
             if (_zip == null) return;
             if (viewerView.lvArchive.SelectedIndices.Count == 0) return;
-            if (!EnsurePasswordForEncryptedIfNeeded()) return;
+            if (!EnsurePasswordForEncryptedIfNeeded(allowSkipToBrowse: false)) return;
 
             var files = new List<ZipFileEntry>();
             foreach (int idx in viewerView.lvArchive.SelectedIndices)
@@ -2535,6 +2532,79 @@ return await sharedTask.ConfigureAwait(false);
             using var fbd = new FolderBrowserDialog();
             if (fbd.ShowDialog(this) != DialogResult.OK) return;
             await AddIntoArchiveAsync(new[] { fbd.SelectedPath });
+        }
+
+        // Quick password probe on the first encrypted entry (no full extract).
+        // Returns true if current _zip.Password is correct, false otherwise.
+        private bool ValidateCurrentPasswordQuick()
+        {
+            if (_zip == null) return true;
+            var first = _zip.ZipFileEntries.FirstOrDefault(e => e.IsEncrypted);
+            if (first.FilenameInZip == null) return true; // nothing encrypted
+
+            try
+            {
+                using var fs = new FileStream(
+                    _zip.ZipFileName,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete,
+                    1 << 20,
+                    FileOptions.SequentialScan);
+
+                using var br = new BinaryReader(fs, Encoding.Default, leaveOpen: true);
+
+                fs.Seek((long)first.HeaderOffset, SeekOrigin.Begin);
+                uint sig = br.ReadUInt32();
+                if (sig != 0x04034b50) return false;
+
+                ushort versionNeeded = br.ReadUInt16();
+                ushort flags = br.ReadUInt16();
+                ushort methodLocal = br.ReadUInt16(); // may be 99 for AES
+                ushort lastModTime = br.ReadUInt16();
+                ushort lastModDate = br.ReadUInt16();
+                uint crc32Local = br.ReadUInt32();
+                uint compSz = br.ReadUInt32();
+                uint uncompSz = br.ReadUInt32();
+                ushort nameLen = br.ReadUInt16();
+                ushort extraLen = br.ReadUInt16();
+
+                if (nameLen > 0) br.ReadBytes(nameLen);
+                if (extraLen > 0) br.ReadBytes(extraLen);
+
+                bool hasDD = (flags & 0x0008) != 0;
+                string pwd = _zip.Password ?? string.Empty;
+
+                if (first.IsAes)
+                {
+                    // AES: read salt + 2-byte PWV then verify derived PWV
+                    byte strength = first.AesStrength != 0 ? first.AesStrength : (byte)3;
+                    int saltLen = FastZipDotNet.Zip.Encryption.WinZipAes.GetSaltLength(strength);
+                    byte[] salt = br.ReadBytes(saltLen);
+                    if (salt.Length != saltLen) return false;
+                    byte[] pwv = br.ReadBytes(2);
+                    if (pwv.Length != 2) return false;
+
+                    var (_, _, pwvDerived) = FastZipDotNet.Zip.Encryption.WinZipAes.DeriveKeys(pwd, salt, strength);
+                    return pwvDerived[0] == pwv[0] && pwvDerived[1] == pwv[1];
+                }
+                else
+                {
+                    // ZipCrypto: 12-byte header; last byte must match verifier
+                    byte[] hdr = br.ReadBytes(12);
+                    if (hdr.Length != 12) return false;
+
+                    var crypto = new FastZipDotNet.Zip.Encryption.TraditionalZipCrypto(pwd);
+                    crypto.Decrypt(hdr, 0, 12);
+
+                    byte expected = hasDD ? (byte)(lastModTime >> 8) : (byte)(first.Crc32 >> 24);
+                    return hdr[11] == expected;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private async Task AddIntoArchiveAsync(IEnumerable<string> paths)
@@ -2801,36 +2871,94 @@ return await sharedTask.ConfigureAwait(false);
 
         }
 
-        private bool EnsurePasswordForEncryptedIfNeeded()
+        private bool EnsurePasswordForEncryptedIfNeeded(bool allowSkipToBrowse = true)
         {
             if (_zip == null) return true;
+            if (!_zip.ZipFileEntries.Any(e => e.IsEncrypted)) return true;
 
-            bool anyEncrypted = _zip.ZipFileEntries.Any(e => e.IsEncrypted);
-            if (!anyEncrypted) return true;
-
-            // If engine already has it, nothing to do
-            if (!string.IsNullOrEmpty(_zip.Password)) return true;
-
-            // If we cached a password for this archive, reuse without prompting
-            if (!string.IsNullOrEmpty(_archivePassword))
+            // If we already have a password, validate it.
+            if (!string.IsNullOrEmpty(_zip.Password))
             {
-                _zip.Password = _archivePassword;
-                return true;
+                if (ValidateCurrentPasswordQuick()) return true;
+
+                var retry = MessageBox.Show(
+                    this,
+                    "The password is incorrect. Do you want to enter a different password?",
+                    "Password",
+                    allowSkipToBrowse ? MessageBoxButtons.YesNo : MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (retry == DialogResult.No)
+                {
+                    if (allowSkipToBrowse)
+                    {
+                        _zip.Password = null;
+                        _archivePassword = null;
+                        _addPassword = null;
+                        return true; // keep browsing
+                    }
+                    return false; // cancel operation
+                }
+                // else fall through to prompt loop
+            }
+            else
+            {
+                // Try cached session passwords
+                if (!string.IsNullOrEmpty(_archivePassword))
+                {
+                    _zip.Password = _archivePassword;
+                    if (ValidateCurrentPasswordQuick()) return true;
+                }
+                if (!string.IsNullOrEmpty(_addPassword))
+                {
+                    _zip.Password = _addPassword;
+                    if (ValidateCurrentPasswordQuick()) return true;
+                }
             }
 
-            // Prompt once, cache for this opened archive
-            var firstEncrypted = _zip.ZipFileEntries.FirstOrDefault(e => e.IsEncrypted);
-            using var dlg = new PasswordDialog();
-            if (firstEncrypted.FilenameInZip != null)
-                dlg.SetCrackContext(new PasswordCrackContext(_zip.ZipFileName, firstEncrypted));
+            // Prompt until valid or user chooses to browse (or cancels operation)
+            while (true)
+            {
+                var firstEnc = _zip.ZipFileEntries.First(e => e.IsEncrypted);
+                using var dlg = new PasswordDialog();
+                dlg.SetCrackContext(new PasswordCrackContext(_zip.ZipFileName, firstEnc));
 
-            if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+                var r = dlg.ShowDialog(this);
+                if (r != DialogResult.OK)
+                {
+                    // Cancel: treat as browse if allowed; otherwise abort op
+                    if (allowSkipToBrowse) { _zip.Password = null; return true; }
+                    return false;
+                }
 
-            _zip.Password = dlg.Password;
-            _archivePassword = dlg.Password;   // cache for reopen cycles
-            _addPassword = dlg.Password;       // reuse for additions by default
+                _zip.Password = dlg.Password;
+                if (ValidateCurrentPasswordQuick())
+                {
+                    _archivePassword = _zip.Password;
+                    _addPassword = _zip.Password;
+                    return true;
+                }
 
-            return true;
+                var again = MessageBox.Show(
+                    this,
+                    "Incorrect password. Try again?",
+                    "Password",
+                    allowSkipToBrowse ? MessageBoxButtons.YesNo : MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (again == DialogResult.No)
+                {
+                    if (allowSkipToBrowse)
+                    {
+                        _zip.Password = null;
+                        _archivePassword = null;
+                        _addPassword = null;
+                        return true; // browse anyway
+                    }
+                    return false; // cancel operation
+                }
+                // loop to re-enter
+            }
         }
 
         private void toolStripMenuItem1_Click(object sender, EventArgs e)

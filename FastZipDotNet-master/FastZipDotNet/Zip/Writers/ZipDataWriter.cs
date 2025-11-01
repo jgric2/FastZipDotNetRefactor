@@ -17,6 +17,9 @@ namespace FastZipDotNet.Zip.Writers
 {
     public class ZipDataWriter
     {
+        // in ZipDataWriter
+     //   private const int SmallIOThresholdBytes = 1 * 1024 * 1024; // 1 MB; tune to 4–16 MB as you wish
+
         public ZipDataWriter(FastZipDotNet fastZipDotNet)
         {
             FastZipDotNet = fastZipDotNet;
@@ -25,30 +28,36 @@ namespace FastZipDotNet.Zip.Writers
 
         FastZipDotNet FastZipDotNet;
         // Write a byte[] at an absolute file offset; report compressed progress by chunk
+        // in ZipDataWriter
         private void WriteAt(byte[] data, long fileOffset, Action<long> onCompressedWrite)
         {
+            if (data.Length <= DefaultBufferThreshold)
+            {
+                // Single WriteFile at offset
+                WriteAtNative(data, fileOffset, onCompressedWrite);
+                return;
+            }
+
+            // Fallback to existing RandomAccess FileStream path for bigger payloads
             using (var fs = new FileStream(
                 FastZipDotNet.ZipFileName,
                 FileMode.OpenOrCreate,
                 FileAccess.Write,
                 FileShare.ReadWrite,
                 Consts.ChunkSize,
-                FileOptions.RandomAccess)) // changed to RandomAccess
+                FileOptions.RandomAccess))
             {
                 fs.Position = fileOffset;
-
                 int offset = 0;
                 while (offset < data.Length)
                 {
-                    WaitWhilePaused();
-
+                    while (FastZipDotNet.Pause) Thread.Sleep(50);
                     int toWrite = Math.Min(Consts.ChunkSize, data.Length - offset);
                     fs.Write(data, offset, toWrite);
                     offset += toWrite;
 
                     Interlocked.Add(ref FastZipDotNet.BytesWritten, toWrite);
                     Interlocked.Add(ref FastZipDotNet.BytesPerSecond, toWrite);
-
                     onCompressedWrite?.Invoke(toWrite);
                 }
                 fs.Flush();
@@ -175,6 +184,51 @@ namespace FastZipDotNet.Zip.Writers
 
             return resultList;
         }
+
+        // in ZipDataWriter
+        private void WriteAtNative(byte[] data, long destOffset, Action<long> onCompressedWrite)
+        {
+            nint h = nint.Zero;
+            try
+            {
+                // Open archive for write; allow others to read/write concurrently like your FileStream path
+                h = WinAPI.CreateFileW(
+                    FastZipDotNet.ZipFileName,
+                    FileAccess.Write,
+                    FileShare.ReadWrite,
+                    IntPtr.Zero,
+                    FileMode.OpenOrCreate,
+                    (FileAttributes)WinAPI.EFileAttributes.RandomAccess,
+                    IntPtr.Zero);
+
+                if (h == nint.Zero || h == (nint)(-1))
+                    throw new IOException("Failed to open archive handle (CreateFileW)");
+
+                // Seek to absolute offset
+                if (!WinAPI.SetFilePointerEx(h, destOffset, out _, (uint)WinAPI.EMoveMethod.Begin))
+                    throw new IOException("SetFilePointerEx failed, hr=" + Marshal.GetLastWin32Error());
+
+                // Single write
+                if (!WinAPI.WriteFile(h, data, (uint)data.Length, out uint written, IntPtr.Zero))
+                    throw new IOException("WriteFile failed, hr=" + Marshal.GetLastWin32Error());
+
+                if (written != data.Length)
+                    throw new IOException($"WriteFile wrote {written} of {data.Length} bytes.");
+
+                onCompressedWrite?.Invoke(data.Length);
+
+                Interlocked.Add(ref FastZipDotNet.BytesWritten, data.Length);
+                Interlocked.Add(ref FastZipDotNet.BytesPerSecond, data.Length);
+            }
+            finally
+            {
+                if (h != nint.Zero && h != (nint)(-1))
+                {
+                    try { WinAPI.CloseHandle(h); } catch { }
+                }
+            }
+        }
+
 
 
         public long AddFileInner(string pathFilename, string filenameInZip, int compressionLevel, long fSize, DateTime modifyTime, string fileComment = "")
@@ -1212,12 +1266,11 @@ namespace FastZipDotNet.Zip.Writers
         }
 
 
+        // in ZipDataWriter
         private static byte[] ReadAllBytesWinApi(string path, long length)
         {
-            if (length <= 0 || length > int.MaxValue)
-                throw new ArgumentOutOfRangeException(nameof(length), "Length must be > 0 and <= int.MaxValue for WinAPI fast path.");
+            if (length <= 0 || length > int.MaxValue) return null;
 
-            // Open for read; allow other readers/writers; sequential scan hint
             nint handle = WinAPI.CreateFileW(
                 path,
                 FileAccess.Read,
@@ -1227,54 +1280,33 @@ namespace FastZipDotNet.Zip.Writers
                 (FileAttributes)WinAPI.EFileAttributes.SequentialScan,
                 IntPtr.Zero);
 
-            // INVALID_HANDLE_VALUE is -1
             if (handle == nint.Zero || handle == (nint)(-1))
                 return null;
 
             try
             {
                 var buffer = new byte[(int)length];
-                var gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-                try
-                {
-                    IntPtr basePtr = gch.AddrOfPinnedObject();
-                    int total = 0;
 
-                    // Read in 1 MB chunks (tune if needed)
-                    const int chunk = 1 << 20;
+                // Try single ReadFile
+                if (WinAPI.ReadFile(handle, buffer, (uint)buffer.Length, out uint readOnce, IntPtr.Zero))
+                {
+                    if (readOnce == buffer.Length) return buffer;
+                    // Rare: OS returned partial; top-off with one more loop.
+                    int total = (int)readOnce;
                     while (total < buffer.Length)
                     {
-                        int toRead = Math.Min(buffer.Length - total, chunk);
-                        IntPtr dest = IntPtr.Add(basePtr, total);
-
-                        if (!WinAPI.ReadFile(handle, dest, (uint)toRead, out uint read, IntPtr.Zero))
-                        {
-                            // Optional: int err = Marshal.GetLastWin32Error();
-                            return null; // fall back to FileStream path in caller
-                        }
-
-                        if (read == 0)
-                        {
-                            // EOF reached unexpectedly; shrink buffer to what we got
-                            break;
-                        }
-
-                        total += (int)read;
+                        if (!WinAPI.ReadFile(handle, buffer, (uint)(buffer.Length - total), out uint r, IntPtr.Zero)) break;
+                        if (r == 0) break;
+                        total += (int)r;
                     }
-
-                    if (total != buffer.Length)
-                        Array.Resize(ref buffer, total);
-
+                    if (total != buffer.Length) Array.Resize(ref buffer, total);
                     return buffer;
                 }
-                finally
-                {
-                    gch.Free();
-                }
+                return null;
             }
             finally
             {
-                try { WinAPI.CloseHandle(handle); } catch { /* ignore */ }
+                try { WinAPI.CloseHandle(handle); } catch { }
             }
         }
 
@@ -1398,22 +1430,20 @@ private const long DefaultBufferThreshold = 16L * 1024 * 1024; // 16 MB
             }
             else
             {
-                // Small/medium file => read to memory
-                byte[] inBuffer = new byte[fi.Length];
-                using var fs = new FileStream(pathFilename,
-                                              FileMode.Open,
-                                              FileAccess.Read,
-                                              FileShare.Read,
-                                              1 << 20,
-                                              FileOptions.SequentialScan);
-
-                int readTotal = 0;
-                while (readTotal < inBuffer.Length)
+                byte[] inBuffer = ReadAllBytesWinApi(pathFilename, fi.Length);
+                if (inBuffer == null)
                 {
-                    int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
-                    if (r <= 0)
-                        throw new EndOfStreamException($"Unexpected end of file while reading '{pathFilename}'.");
-                    readTotal += r;
+                    // Fallback to FileStream if the native path fails (rare)
+                    inBuffer = new byte[fi.Length];
+                    using var fs = new FileStream(pathFilename, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, FileOptions.SequentialScan);
+                    int readTotal = 0;
+                    while (readTotal < inBuffer.Length)
+                    {
+                        int r = fs.Read(inBuffer, readTotal, inBuffer.Length - readTotal);
+                        if (r <= 0)
+                            throw new EndOfStreamException($"Unexpected end of file while reading '{pathFilename}'.");
+                        readTotal += r;
+                    }
                 }
 
                 return AddBuffer(inBuffer,

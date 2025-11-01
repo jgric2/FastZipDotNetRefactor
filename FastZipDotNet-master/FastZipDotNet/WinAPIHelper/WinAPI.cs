@@ -15,6 +15,19 @@ namespace FastZipDotNet.WinAPIHelper
             End = 2
         }
 
+
+        // in FastZipDotNet.WinAPIHelper.WinAPI
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetFilePointerEx(
+            nint hFile,
+            long liDistanceToMove,
+            out long lpNewFilePointer,
+            uint dwMoveMethod);
+
+
+
+
         [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern int SetFilePointer(nint handle, int lDistanceToMove, out int lpDistanceToMoveHigh, uint dwMoveMethod);
 
