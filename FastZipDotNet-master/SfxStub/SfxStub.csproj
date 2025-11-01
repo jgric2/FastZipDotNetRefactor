@@ -22,4 +22,56 @@
     <EmbeddedResource Include="native\win-x86\libzstd.dll" LogicalName="native/win-x86/libzstd.dll" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="BrutalControls\TreeMap\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="BrutalControls\BrutalBarChart\FinalBarBrutal.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalCheckbox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalComboBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalGradientPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalRadioButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalTextBox.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalToolTip.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\BrutalTrackBar.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\GradientMenuStrip.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\MatchMinimap.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\ModernForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\ResizeGrip.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="BrutalControls\TransparentToolTipControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+  </ItemGroup>
+
 </Project>
