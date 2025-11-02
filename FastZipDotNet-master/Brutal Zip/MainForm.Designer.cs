@@ -68,13 +68,15 @@
             // homeView
             // 
             homeView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            homeView.BackColor = Color.FromArgb(32, 32, 32);
             homeView.CreateDestination = "";
             homeView.CreateEncryptAlgorithmIndex = 0;
             homeView.CreateEncryptEnabled = false;
             homeView.CreateLevel = 6;
             homeView.CreateMethodIndex = -1;
             homeView.ExtractDestination = "";
-            homeView.Location = new Point(0, 27);
+            homeView.ForeColor = Color.White;
+            homeView.Location = new Point(0, 24);
             homeView.Name = "homeView";
             homeView.Size = new Size(1000, 673);
             homeView.TabIndex = 1;
@@ -82,13 +84,16 @@
             // viewerView
             // 
             viewerView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            viewerView.Location = new Point(0, 27);
+            viewerView.BackColor = Color.FromArgb(32, 32, 32);
+            viewerView.ForeColor = Color.White;
+            viewerView.Location = new Point(0, 23);
             viewerView.Name = "viewerView";
-            viewerView.Size = new Size(1000, 673);
+            viewerView.Size = new Size(1000, 677);
             viewerView.TabIndex = 0;
             // 
             // menuMain
             // 
+            menuMain.BackColor = Color.FromArgb(32, 32, 32);
             menuMain.Items.AddRange(new ToolStripItem[] { mnuFile, mnuTools, mnuHelp });
             menuMain.Location = new Point(0, 0);
             menuMain.Name = "menuMain";
@@ -98,6 +103,7 @@
             // mnuFile
             // 
             mnuFile.DropDownItems.AddRange(new ToolStripItem[] { mnuFileOpen, toolStripMenuItem1, sepFile1, mnuFileRecent, mnuFileExit });
+            mnuFile.ForeColor = Color.White;
             mnuFile.Name = "mnuFile";
             mnuFile.Size = new Size(37, 20);
             mnuFile.Text = "&File";
@@ -134,6 +140,7 @@
             // mnuTools
             // 
             mnuTools.DropDownItems.AddRange(new ToolStripItem[] { mnuToolsSettings, sepTools1, mnuToolsOpenAfterCreate, mnuToolsOpenAfterExtract, sepTools2, mnuToolsFind, sepTools3, mnuToolsCrackPassword, sepTools4, mnuToolsSetComment, mnuToolsWizard });
+            mnuTools.ForeColor = Color.White;
             mnuTools.Name = "mnuTools";
             mnuTools.Size = new Size(47, 20);
             mnuTools.Text = "&Tools";
@@ -206,6 +213,7 @@
             // mnuHelp
             // 
             mnuHelp.DropDownItems.AddRange(new ToolStripItem[] { mnuHelpAbout });
+            mnuHelp.ForeColor = Color.White;
             mnuHelp.Name = "mnuHelp";
             mnuHelp.Size = new Size(44, 20);
             mnuHelp.Text = "&Help";
@@ -228,7 +236,6 @@
             KeyPreview = true;
             MainMenuStrip = menuMain;
             Name = "MainForm";
-            StartPosition = FormStartPosition.CenterScreen;
             Text = "Brutal Zip";
             Load += MainForm_Load;
             menuMain.ResumeLayout(false);

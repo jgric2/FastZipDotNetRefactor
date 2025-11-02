@@ -40,6 +40,9 @@
     <Compile Update="Controls\BrutalControls\BrutalTrackBar.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Update="Controls\BrutalControls\FileOrFolderDialog\TreeViewMS.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Update="Controls\BrutalControls\GradientMenuStrip.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -55,6 +58,9 @@
     <Compile Update="Controls\BrutalControls\TransparentToolTipControl.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Update="Controls\DropDownButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Update="CrackPasswordForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -65,6 +71,12 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MainForm2.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MainForm3.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="PasswordDialog.cs">

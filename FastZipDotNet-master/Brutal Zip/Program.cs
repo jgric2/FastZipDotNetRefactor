@@ -10,6 +10,12 @@ namespace Brutal_Zip
         [STAThread]
         static void Main(string[] args)
         {
+
+
+            //var form11 = new MainForm3();
+            //Application.Run(form11);
+            //return;
+
 #if NET6_0_OR_GREATER
             ApplicationConfiguration.Initialize();
 #else

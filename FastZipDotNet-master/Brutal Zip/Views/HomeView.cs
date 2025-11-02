@@ -35,6 +35,10 @@ namespace Brutal_Zip.Views
                 FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
             };
 
+
+
+
+
             // CREATE: staging list drop
             lvStaging.AllowDrop = true;
             lvStaging.DragEnter += (s, e) =>
@@ -87,7 +91,7 @@ namespace Brutal_Zip.Views
             btnCreateAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
             btnCreateAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();
             btnCreateBrowse.Click += (s, e) => BrowseCreateDestinationClicked?.Invoke();
-           // btnCreate.Click += (s, e) => CreateClicked?.Invoke();
+            // btnCreate.Click += (s, e) => CreateClicked?.Invoke();
             btnCreateQuick.Click += (s, e) => QuickCreateClicked?.Invoke();
 
             btnOpenArchive.Click += (s, e) => OpenArchiveClicked?.Invoke();
@@ -190,6 +194,41 @@ namespace Brutal_Zip.Views
         private void btnCreate_Click(object sender, EventArgs e)
         {
             CreateClicked?.Invoke();
+        }
+
+        private void buttonSearch_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void HomeView_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void buttonAddFolder_Click(object sender, EventArgs e)
+        {
+            AddFolderClicked?.Invoke();
+        }
+
+        private void buttonAddFiles_Click(object sender, EventArgs e)
+        {
+            AddFilesClicked?.Invoke();
+        }
+
+        private void buttonWizardCreate_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void grpCreate_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void chkThreadsAutoMain_CheckedChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

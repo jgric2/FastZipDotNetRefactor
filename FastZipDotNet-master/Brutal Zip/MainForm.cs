@@ -1,4 +1,5 @@
 ﻿using BrutalZip;
+using BrutalZip2025.BrutalControls;
 using FastZipDotNet.Zip;
 using System.Data;
 using System.Diagnostics;
@@ -8,7 +9,7 @@ using static FastZipDotNet.Zip.Structure.ZipEntryStructs;
 
 namespace Brutal_Zip
 {
-    public partial class MainForm : Form
+    public partial class MainForm : ModernForm
     {
         private FastZipDotNet.Zip.FastZipDotNet _zip;
         private string _zipPath;
@@ -323,7 +324,8 @@ namespace Brutal_Zip
 
             // Toolbar extras
             viewerView.btnOpenFolder.Click += (s, e) => OpenArchiveFolderInExplorer();
-          // viewerView.btnTogglePreview.Click += (s, e) => TogglePreviewPane();
+            viewerView.buttonOpenFolder.Click += (s, e) => OpenArchiveFolderInExplorer();
+            // viewerView.btnTogglePreview.Click += (s, e) => TogglePreviewPane();
 
             // Assign ImageList for icons
             RebuildRecentMenu();
@@ -2050,15 +2052,15 @@ return await sharedTask.ConfigureAwait(false);
             }
             nodes.Reverse();
 
-            var rootLink = new LinkLabel { Text = "Root", AutoSize = true, Margin = new Padding(0, 6, 8, 0) };
+            var rootLink = new LinkLabel { Text = "Root", AutoSize = true, Margin = new Padding(0, 6, 8, 0) , LinkColor = Color.Green};
             rootLink.Click += (s, e) => NavigateTo(_root);
             viewerView.breadcrumb.Controls.Add(rootLink);
 
             foreach (var dn in nodes)
             {
-                var sep = new Label { Text = ">", AutoSize = true, Margin = new Padding(0, 6, 8, 0) };
+                var sep = new Label { Text = ">", AutoSize = true, Margin = new Padding(0, 6, 8, 0), ForeColor = Color.Green };
                 viewerView.breadcrumb.Controls.Add(sep);
-                var lnk = new LinkLabel { Text = dn.Name, AutoSize = true, Margin = new Padding(0, 6, 8, 0) };
+                var lnk = new LinkLabel { Text = dn.Name, AutoSize = true, Margin = new Padding(0, 6, 8, 0), LinkColor = Color.Green };
                 var capture = dn;
                 lnk.Click += (s, e) => NavigateTo(capture);
                 viewerView.breadcrumb.Controls.Add(lnk);

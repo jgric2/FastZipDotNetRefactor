@@ -55,12 +55,12 @@ namespace Brutal_Zip.Views
             btnStop = new Button();
             btnPlayPause = new Button();
             panelContent = new Panel();
+            lblUnsupported = new Label();
             hexBox = new RichTextBox();
             webView = new WebView2();
             picture = new PictureBox();
             txtPreview = new RichTextBox();
             scintilla = new Scintilla();
-            lblUnsupported = new Label();
             panelTop = new Panel();
             txtFind = new TextBox();
             btnFindNext = new Button();
@@ -87,7 +87,7 @@ namespace Brutal_Zip.Views
             lblInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             lblInfo.Location = new Point(12, 37);
             lblInfo.Name = "lblInfo";
-            lblInfo.Size = new Size(560, 18);
+            lblInfo.Size = new Size(749, 18);
             lblInfo.TabIndex = 1;
             lblInfo.Click += lblInfo_Click;
             // 
@@ -124,23 +124,36 @@ namespace Brutal_Zip.Views
             // 
             panelContent.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             panelContent.BackColor = Color.Black;
+            panelContent.Controls.Add(lblUnsupported);
             panelContent.Controls.Add(hexBox);
             panelContent.Controls.Add(webView);
             panelContent.Controls.Add(picture);
             panelContent.Controls.Add(txtPreview);
             panelContent.Controls.Add(scintilla);
-            panelContent.Controls.Add(lblUnsupported);
             panelContent.Location = new Point(12, 59);
             panelContent.Name = "panelContent";
             panelContent.Size = new Size(776, 163);
             panelContent.TabIndex = 5;
             // 
+            // lblUnsupported
+            // 
+            lblUnsupported.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lblUnsupported.BackColor = Color.Black;
+            lblUnsupported.ForeColor = Color.White;
+            lblUnsupported.Location = new Point(0, 0);
+            lblUnsupported.Name = "lblUnsupported";
+            lblUnsupported.Size = new Size(776, 163);
+            lblUnsupported.TabIndex = 4;
+            lblUnsupported.Text = "No preview available. Use Open to view.";
+            lblUnsupported.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // hexBox
             // 
             hexBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            hexBox.BackColor = Color.White;
+            hexBox.BackColor = Color.FromArgb(32, 32, 32);
             hexBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
             hexBox.Font = new Font("Consolas", 9F);
+            hexBox.ForeColor = Color.White;
             hexBox.Location = new Point(0, 0);
             hexBox.Name = "hexBox";
             hexBox.ReadOnly = true;
@@ -177,9 +190,10 @@ namespace Brutal_Zip.Views
             // txtPreview
             // 
             txtPreview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            txtPreview.BackColor = Color.White;
+            txtPreview.BackColor = Color.FromArgb(32, 32, 32);
             txtPreview.BorderStyle = System.Windows.Forms.BorderStyle.None;
             txtPreview.Font = new Font("Consolas", 10F);
+            txtPreview.ForeColor = Color.White;
             txtPreview.Location = new Point(0, 0);
             txtPreview.Name = "txtPreview";
             txtPreview.ReadOnly = true;
@@ -206,18 +220,6 @@ namespace Brutal_Zip.Views
             scintilla.Visible = false;
             scintilla.WrapMode = WrapMode.None;
             // 
-            // lblUnsupported
-            // 
-            lblUnsupported.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lblUnsupported.BackColor = Color.Black;
-            lblUnsupported.ForeColor = Color.White;
-            lblUnsupported.Location = new Point(0, 0);
-            lblUnsupported.Name = "lblUnsupported";
-            lblUnsupported.Size = new Size(776, 163);
-            lblUnsupported.TabIndex = 4;
-            lblUnsupported.Text = "No preview available. Use Open to view.";
-            lblUnsupported.TextAlign = ContentAlignment.MiddleCenter;
-            // 
             // panelTop
             // 
             panelTop.Controls.Add(txtFind);
@@ -234,6 +236,8 @@ namespace Brutal_Zip.Views
             // 
             // txtFind
             // 
+            txtFind.BackColor = Color.FromArgb(32, 32, 32);
+            txtFind.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             txtFind.Location = new Point(8, 6);
             txtFind.Name = "txtFind";
             txtFind.Size = new Size(180, 23);
@@ -241,6 +245,9 @@ namespace Brutal_Zip.Views
             // 
             // btnFindNext
             // 
+            btnFindNext.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnFindNext.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnFindNext.FlatStyle = FlatStyle.Flat;
             btnFindNext.Location = new Point(194, 4);
             btnFindNext.Name = "btnFindNext";
             btnFindNext.Size = new Size(50, 26);
@@ -249,6 +256,9 @@ namespace Brutal_Zip.Views
             // 
             // btnCopyPreview
             // 
+            btnCopyPreview.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnCopyPreview.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnCopyPreview.FlatStyle = FlatStyle.Flat;
             btnCopyPreview.Location = new Point(250, 4);
             btnCopyPreview.Name = "btnCopyPreview";
             btnCopyPreview.Size = new Size(60, 26);
@@ -257,6 +267,9 @@ namespace Brutal_Zip.Views
             // 
             // btnSaveAs
             // 
+            btnSaveAs.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnSaveAs.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnSaveAs.FlatStyle = FlatStyle.Flat;
             btnSaveAs.Location = new Point(316, 4);
             btnSaveAs.Name = "btnSaveAs";
             btnSaveAs.Size = new Size(80, 26);
@@ -276,6 +289,7 @@ namespace Brutal_Zip.Views
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
+            BackColor = Color.FromArgb(25, 25, 25);
             Controls.Add(panelTop);
             Controls.Add(lblFileName);
             Controls.Add(lblInfo);
@@ -283,6 +297,7 @@ namespace Brutal_Zip.Views
             Controls.Add(btnStop);
             Controls.Add(btnOpenExternal);
             Controls.Add(panelContent);
+            ForeColor = Color.White;
             Name = "PreviewPane";
             Size = new Size(800, 240);
             panelContent.ResumeLayout(false);

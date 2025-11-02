@@ -35,6 +35,8 @@ namespace Brutal_Zip.Views
             btnStop.Click += (s, e) => Stop();
 
             ConfigureScintillaDefaults();
+            
+            //scintilla.Dispose();
         }
 
         private string _currentFilePath;
@@ -456,9 +458,9 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             scintilla.StyleClearAll();
 
 
-            scintilla.Technology = Technology.DirectWrite;
-            const int SCI_SETBUFFEREDDRAW = 2034;
-            scintilla.DirectMessage(SCI_SETBUFFEREDDRAW, IntPtr.Zero, IntPtr.Zero); // 0 = off
+            //scintilla.Technology = Technology.DirectWrite;
+            //const int SCI_SETBUFFEREDDRAW = 2034;
+            //scintilla.DirectMessage(SCI_SETBUFFEREDDRAW, IntPtr.Zero, IntPtr.Zero); // 0 = off
 
             //// Line numbers margin
             //scintilla.Margins[0].Type = MarginType.Number;

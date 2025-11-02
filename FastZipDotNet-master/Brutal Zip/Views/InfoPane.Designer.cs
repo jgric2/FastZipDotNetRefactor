@@ -79,20 +79,22 @@ namespace Brutal_Zip.Views
             lblTextVal = new Label();
             spacer2 = new Label();
             lblHdrHashes = new Label();
-            pnlHashes = new FlowLayoutPanel();
-            btnComputeCrc = new Button();
-            btnComputeMd5 = new Button();
-            btnComputeSha256 = new Button();
             lblCrcFile = new Label();
             lblMd5File = new Label();
             lblSha256File = new Label();
+            pnlHashes = new FlowLayoutPanel();
+            panel1 = new Panel();
+            btnComputeSha256 = new Button();
+            btnComputeMd5 = new Button();
+            btnComputeCrc = new Button();
             table.SuspendLayout();
-            pnlHashes.SuspendLayout();
+            panel1.SuspendLayout();
             SuspendLayout();
             // 
             // table
             // 
             table.AutoScroll = true;
+            table.BackColor = Color.FromArgb(25, 25, 25);
             table.ColumnCount = 2;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120F));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -128,11 +130,13 @@ namespace Brutal_Zip.Views
             table.Controls.Add(lblTextVal, 1, 16);
             table.Controls.Add(spacer2, 0, 17);
             table.Controls.Add(lblHdrHashes, 0, 18);
-            table.Controls.Add(pnlHashes, 1, 19);
             table.Controls.Add(lblCrcFile, 1, 20);
             table.Controls.Add(lblMd5File, 1, 21);
             table.Controls.Add(lblSha256File, 1, 22);
+            table.Controls.Add(pnlHashes, 1, 28);
+            table.Controls.Add(panel1, 1, 19);
             table.Dock = DockStyle.Fill;
+            table.ForeColor = Color.White;
             table.Location = new Point(0, 0);
             table.Name = "table";
             table.Padding = new Padding(8);
@@ -397,9 +401,15 @@ namespace Brutal_Zip.Views
             // btnCopyInsidePath
             // 
             btnCopyInsidePath.AutoSize = true;
+            btnCopyInsidePath.Dock = DockStyle.Left;
+            btnCopyInsidePath.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnCopyInsidePath.FlatAppearance.BorderSize = 0;
+            btnCopyInsidePath.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnCopyInsidePath.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnCopyInsidePath.FlatStyle = FlatStyle.Flat;
             btnCopyInsidePath.Location = new Point(131, 251);
             btnCopyInsidePath.Name = "btnCopyInsidePath";
-            btnCopyInsidePath.Size = new Size(106, 24);
+            btnCopyInsidePath.Size = new Size(108, 24);
             btnCopyInsidePath.TabIndex = 23;
             btnCopyInsidePath.Text = "Copy inside path";
             // 
@@ -483,44 +493,6 @@ namespace Brutal_Zip.Views
             lblHdrHashes.TabIndex = 31;
             lblHdrHashes.Text = "Hashes";
             // 
-            // pnlHashes
-            // 
-            pnlHashes.AutoSize = true;
-            pnlHashes.Controls.Add(btnComputeCrc);
-            pnlHashes.Controls.Add(btnComputeMd5);
-            pnlHashes.Controls.Add(btnComputeSha256);
-            pnlHashes.Location = new Point(131, 391);
-            pnlHashes.Name = "pnlHashes";
-            pnlHashes.Size = new Size(243, 30);
-            pnlHashes.TabIndex = 32;
-            // 
-            // btnComputeCrc
-            // 
-            btnComputeCrc.AutoSize = true;
-            btnComputeCrc.Location = new Point(3, 3);
-            btnComputeCrc.Name = "btnComputeCrc";
-            btnComputeCrc.Size = new Size(75, 25);
-            btnComputeCrc.TabIndex = 0;
-            btnComputeCrc.Text = "CRC32";
-            // 
-            // btnComputeMd5
-            // 
-            btnComputeMd5.AutoSize = true;
-            btnComputeMd5.Location = new Point(84, 3);
-            btnComputeMd5.Name = "btnComputeMd5";
-            btnComputeMd5.Size = new Size(75, 25);
-            btnComputeMd5.TabIndex = 1;
-            btnComputeMd5.Text = "MD5";
-            // 
-            // btnComputeSha256
-            // 
-            btnComputeSha256.AutoSize = true;
-            btnComputeSha256.Location = new Point(165, 3);
-            btnComputeSha256.Name = "btnComputeSha256";
-            btnComputeSha256.Size = new Size(75, 25);
-            btnComputeSha256.TabIndex = 2;
-            btnComputeSha256.Text = "SHA-256";
-            // 
             // lblCrcFile
             // 
             lblCrcFile.AutoEllipsis = true;
@@ -551,21 +523,87 @@ namespace Brutal_Zip.Views
             lblSha256File.TabIndex = 35;
             lblSha256File.Text = "SHA-256: -";
             // 
+            // pnlHashes
+            // 
+            pnlHashes.AutoSize = true;
+            pnlHashes.Location = new Point(131, 571);
+            pnlHashes.Name = "pnlHashes";
+            pnlHashes.Size = new Size(0, 0);
+            pnlHashes.TabIndex = 32;
+            // 
+            // panel1
+            // 
+            panel1.Controls.Add(btnComputeSha256);
+            panel1.Controls.Add(btnComputeMd5);
+            panel1.Controls.Add(btnComputeCrc);
+            panel1.Dock = DockStyle.Fill;
+            panel1.Location = new Point(131, 391);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(382, 30);
+            panel1.TabIndex = 36;
+            // 
+            // btnComputeSha256
+            // 
+            btnComputeSha256.AutoSize = true;
+            btnComputeSha256.Dock = DockStyle.Left;
+            btnComputeSha256.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnComputeSha256.FlatAppearance.BorderSize = 0;
+            btnComputeSha256.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnComputeSha256.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnComputeSha256.FlatStyle = FlatStyle.Flat;
+            btnComputeSha256.Location = new Point(150, 0);
+            btnComputeSha256.Name = "btnComputeSha256";
+            btnComputeSha256.Size = new Size(75, 30);
+            btnComputeSha256.TabIndex = 2;
+            btnComputeSha256.Text = "SHA-256";
+            // 
+            // btnComputeMd5
+            // 
+            btnComputeMd5.AutoSize = true;
+            btnComputeMd5.Dock = DockStyle.Left;
+            btnComputeMd5.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnComputeMd5.FlatAppearance.BorderSize = 0;
+            btnComputeMd5.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnComputeMd5.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnComputeMd5.FlatStyle = FlatStyle.Flat;
+            btnComputeMd5.Location = new Point(75, 0);
+            btnComputeMd5.Name = "btnComputeMd5";
+            btnComputeMd5.Size = new Size(75, 30);
+            btnComputeMd5.TabIndex = 1;
+            btnComputeMd5.Text = "MD5";
+            // 
+            // btnComputeCrc
+            // 
+            btnComputeCrc.AutoSize = true;
+            btnComputeCrc.Dock = DockStyle.Left;
+            btnComputeCrc.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnComputeCrc.FlatAppearance.BorderSize = 0;
+            btnComputeCrc.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnComputeCrc.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnComputeCrc.FlatStyle = FlatStyle.Flat;
+            btnComputeCrc.Location = new Point(0, 0);
+            btnComputeCrc.Name = "btnComputeCrc";
+            btnComputeCrc.Size = new Size(75, 30);
+            btnComputeCrc.TabIndex = 0;
+            btnComputeCrc.Text = "CRC32";
+            // 
             // InfoPane
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScroll = true;
             BackColor = SystemColors.Window;
             Controls.Add(table);
             Name = "InfoPane";
             Size = new Size(524, 684);
             table.ResumeLayout(false);
             table.PerformLayout();
-            pnlHashes.ResumeLayout(false);
-            pnlHashes.PerformLayout();
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
             ResumeLayout(false);
         }
         private Label spacer1;
         private Label spacer2;
+        private Panel panel1;
     }
 }
