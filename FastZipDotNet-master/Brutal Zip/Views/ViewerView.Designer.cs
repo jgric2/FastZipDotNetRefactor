@@ -118,6 +118,7 @@ namespace Brutal_Zip.Views
             buttonSearch = new Button();
             buttonTest = new Button();
             buttonWizard = new Button();
+            panel6 = new Panel();
             buttonComment = new Button();
             buttonOpenFolder = new Button();
             buttonExtract = new YourNamespace.DropDownButton();
@@ -135,6 +136,7 @@ namespace Brutal_Zip.Views
             pictureBox2 = new PictureBox();
             textBoxSearch = new TextBox();
             brutalGradientPanel2 = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            panel1 = new Panel();
             toolStrip.SuspendLayout();
             ((ISupportInitialize)splitMain).BeginInit();
             splitMain.Panel1.SuspendLayout();
@@ -163,7 +165,7 @@ namespace Brutal_Zip.Views
             toolStrip.GripStyle = ToolStripGripStyle.Hidden;
             toolStrip.Items.AddRange(new ToolStripItem[] { btnBackHome, btnAddFiles, btnAddFolder, btnExtractSplit, btnOpenFolder, btnTogglePreview, btnComment, btnWizard, btnToggleInfo, lblSearch, txtSearch, btnInfo, btnTest, btnSettings });
             toolStrip.LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow;
-            toolStrip.Location = new Point(811, 3);
+            toolStrip.Location = new Point(833, 17);
             toolStrip.Name = "toolStrip";
             toolStrip.Size = new Size(858, 84);
             toolStrip.TabIndex = 2;
@@ -489,9 +491,11 @@ namespace Brutal_Zip.Views
             // 
             brutalGradientPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             brutalGradientPanel1.BackColor = Color.FromArgb(32, 32, 32);
-            brutalGradientPanel1.Controls.Add(toolStrip);
+            brutalGradientPanel1.Controls.Add(panel1);
             brutalGradientPanel1.Controls.Add(tableLayoutPanel1);
             brutalGradientPanel1.Controls.Add(tableLayoutPanel2);
+            brutalGradientPanel1.Controls.Add(panel6);
+            brutalGradientPanel1.Controls.Add(toolStrip);
             brutalGradientPanel1.Controls.Add(buttonComment);
             brutalGradientPanel1.Controls.Add(buttonOpenFolder);
             brutalGradientPanel1.Controls.Add(buttonExtract);
@@ -524,7 +528,7 @@ namespace Brutal_Zip.Views
             tableLayoutPanel1.Controls.Add(buttonFilePreview, 0, 0);
             tableLayoutPanel1.Controls.Add(buttonArchiveInfo, 0, 2);
             tableLayoutPanel1.Dock = DockStyle.Left;
-            tableLayoutPanel1.Location = new Point(624, 0);
+            tableLayoutPanel1.Location = new Point(626, 0);
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 3;
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
@@ -593,7 +597,7 @@ namespace Brutal_Zip.Views
             tableLayoutPanel2.Controls.Add(buttonTest, 0, 1);
             tableLayoutPanel2.Controls.Add(buttonWizard, 0, 0);
             tableLayoutPanel2.Dock = DockStyle.Left;
-            tableLayoutPanel2.Location = new Point(510, 0);
+            tableLayoutPanel2.Location = new Point(512, 0);
             tableLayoutPanel2.Name = "tableLayoutPanel2";
             tableLayoutPanel2.RowCount = 3;
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
@@ -652,6 +656,16 @@ namespace Brutal_Zip.Views
             buttonWizard.TextAlign = ContentAlignment.BottomCenter;
             buttonWizard.UseVisualStyleBackColor = false;
             buttonWizard.Click += buttonWizard_Click;
+            // 
+            // panel6
+            // 
+            panel6.BackColor = Color.FromArgb(32, 32, 32);
+            panel6.Dock = DockStyle.Left;
+            panel6.Location = new Point(510, 0);
+            panel6.Name = "panel6";
+            panel6.Padding = new Padding(0, 0, 0, 2);
+            panel6.Size = new Size(2, 84);
+            panel6.TabIndex = 33;
             // 
             // buttonComment
             // 
@@ -852,7 +866,7 @@ namespace Brutal_Zip.Views
             // panelSearch
             // 
             panelSearch.Controls.Add(tableLayoutPanel3);
-            panelSearch.Location = new Point(510, 55);
+            panelSearch.Location = new Point(510, 54);
             panelSearch.Name = "panelSearch";
             panelSearch.Size = new Size(275, 29);
             panelSearch.TabIndex = 7;
@@ -933,6 +947,16 @@ namespace Brutal_Zip.Views
             brutalGradientPanel2.StartColor = Color.FromArgb(32, 32, 32);
             brutalGradientPanel2.TabIndex = 5;
             // 
+            // panel1
+            // 
+            panel1.BackColor = Color.FromArgb(32, 32, 32);
+            panel1.Dock = DockStyle.Left;
+            panel1.Location = new Point(740, 0);
+            panel1.Name = "panel1";
+            panel1.Padding = new Padding(0, 0, 0, 2);
+            panel1.Size = new Size(2, 84);
+            panel1.TabIndex = 34;
+            // 
             // ViewerView
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
@@ -1003,5 +1027,7 @@ namespace Brutal_Zip.Views
         public Button buttonOpenFolder;
         private Button buttonCloseSearch;
         private PictureBox pictureBox2;
+        private Panel panel6;
+        private Panel panel1;
     }
 }

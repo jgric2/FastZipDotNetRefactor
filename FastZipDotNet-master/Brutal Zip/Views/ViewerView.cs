@@ -266,7 +266,7 @@ namespace Brutal_Zip.Views
 
         private void textBoxSearch_TextChanged(object sender, EventArgs e)
         {
-            SearchTextChanged?.Invoke(txtSearch.Text);
+            SearchTextChanged?.Invoke(textBoxSearch.Text);
         }
 
         private void button9_Click(object sender, EventArgs e)

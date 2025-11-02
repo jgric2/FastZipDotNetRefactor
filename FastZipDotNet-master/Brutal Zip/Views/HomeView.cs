@@ -1,9 +1,14 @@
-﻿using System.Data;
+﻿using Brutal_Zip.Controls.BrutalControls.FileOrFolderDialog;
+using System.Data;
 
 namespace Brutal_Zip.Views
 {
     public partial class HomeView : UserControl
     {
+
+        FileExplorer fe = new FileExplorer();
+
+
         public HomeView()
         {
             InitializeComponent();
@@ -14,42 +19,10 @@ namespace Brutal_Zip.Views
             cmbEncrypt.Enabled = false;
             btnCreateSetPassword.Enabled = false;
 
-            chkEncrypt.CheckedChanged += (s, e) =>
-            {
-                cmbEncrypt.Enabled = chkEncrypt.Checked;
-                btnCreateSetPassword.Enabled = chkEncrypt.Checked;
-                CreateEncryptChanged?.Invoke(chkEncrypt.Checked);
-            };
-            cmbEncrypt.SelectedIndexChanged += (s, e) => CreateEncryptAlgorithmChanged?.Invoke(cmbEncrypt.SelectedIndex);
-            btnCreateSetPassword.Click += (s, e) => CreateSetPasswordClicked?.Invoke();
-
-            // CREATE: big drop zone (add files/folders to staging)
-            pnlCreateDrop.AllowDrop = true;
-            pnlCreateDrop.DragEnter += (s, e) =>
-            {
-                if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
-            };
-            pnlCreateDrop.DragDrop += (s, e) =>
-            {
-                var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-                FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
-            };
-
-
-
-
 
             // CREATE: staging list drop
             lvStaging.AllowDrop = true;
-            lvStaging.DragEnter += (s, e) =>
-            {
-                if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
-            };
-            lvStaging.DragDrop += (s, e) =>
-            {
-                var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-                FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
-            };
+
 
             // EXTRACT: .zip drop
             pnlExtractDrop.AllowDrop = true;
@@ -82,33 +55,6 @@ namespace Brutal_Zip.Views
                 }
             };
 
-            // Context menu
-            mnuStagingRemove.Click += (s, e) => StagingRemoveSelectedRequested?.Invoke();
-            mnuStagingRemoveMissing.Click += (s, e) => StagingRemoveMissingRequested?.Invoke();
-            mnuStagingClear.Click += (s, e) => StagingClearRequested?.Invoke();
-
-            // Buttons
-            btnCreateAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
-            btnCreateAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();
-            btnCreateBrowse.Click += (s, e) => BrowseCreateDestinationClicked?.Invoke();
-            // btnCreate.Click += (s, e) => CreateClicked?.Invoke();
-            btnCreateQuick.Click += (s, e) => QuickCreateClicked?.Invoke();
-
-            btnOpenArchive.Click += (s, e) => OpenArchiveClicked?.Invoke();
-            btnExtractBrowse.Click += (s, e) => BrowseExtractDestinationClicked?.Invoke();
-            btnExtract.Click += (s, e) => ExtractClicked?.Invoke();
-
-            // Threads slider + Auto
-            tbThreads.ValueChanged += (s, e) =>
-            {
-                lblThreadsValue.Text = tbThreads.Value.ToString();
-                ThreadsSliderChanged?.Invoke(tbThreads.Value);
-            };
-            chkThreadsAutoMain.CheckedChanged += (s, e) =>
-            {
-                tbThreads.Enabled = !chkThreadsAutoMain.Checked;
-                ThreadsAutoChanged?.Invoke(chkThreadsAutoMain.Checked);
-            };
         }
 
 
@@ -124,6 +70,10 @@ namespace Brutal_Zip.Views
         }
         public void SetCreatePasswordStatus(bool set)
             => lblPwdStatus.Text = set ? "Password: (set)" : "Password: (not set)";
+
+
+        public event Action WizardClicked;
+        public event Action CommentClicked;
 
 
 
@@ -203,7 +153,7 @@ namespace Brutal_Zip.Views
 
         private void HomeView_Load(object sender, EventArgs e)
         {
-
+            fe.CreateTree(this.treeViewExplorer);
         }
 
         private void buttonAddFolder_Click(object sender, EventArgs e)
@@ -218,7 +168,7 @@ namespace Brutal_Zip.Views
 
         private void buttonWizardCreate_Click(object sender, EventArgs e)
         {
-
+            WizardClicked?.Invoke();
         }
 
         private void grpCreate_Enter(object sender, EventArgs e)
@@ -228,7 +178,153 @@ namespace Brutal_Zip.Views
 
         private void chkThreadsAutoMain_CheckedChanged(object sender, EventArgs e)
         {
+            tbThreads.Enabled = !chkThreadsAutoMain.Checked;
+            ThreadsAutoChanged?.Invoke(chkThreadsAutoMain.Checked);
+        }
 
+        private void cmbEncrypt_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            CreateEncryptAlgorithmChanged?.Invoke(cmbEncrypt.SelectedIndex);
+        }
+
+        private void chkEncrypt_CheckedChanged(object sender, EventArgs e)
+        {
+            cmbEncrypt.Enabled = chkEncrypt.Checked;
+            btnCreateSetPassword.Enabled = chkEncrypt.Checked;
+            CreateEncryptChanged?.Invoke(chkEncrypt.Checked);
+        }
+
+        private void btnCreateSetPassword_Click(object sender, EventArgs e)
+        {
+            CreateSetPasswordClicked?.Invoke();
+        }
+
+        private void lvStaging_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+        }
+
+        private void lvStaging_DragDrop(object sender, DragEventArgs e)
+        {
+            var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+            FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
+        }
+
+        private void btnCreateQuick_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void buttonOpenZip_Click(object sender, EventArgs e)
+        {
+            OpenArchiveClicked?.Invoke();
+        }
+
+        private void btnExtract_Click(object sender, EventArgs e)
+        {
+            ExtractClicked?.Invoke();
+        }
+
+        private void btnExtractBrowse_Click(object sender, EventArgs e)
+        {
+            BrowseExtractDestinationClicked?.Invoke();
+        }
+
+        private void btnCreateQuick_Click_1(object sender, EventArgs e)
+        {
+            QuickCreateClicked?.Invoke();
+        }
+
+        private void btnCreateBrowse_Click(object sender, EventArgs e)
+        {
+            BrowseCreateDestinationClicked?.Invoke();
+        }
+
+        private void mnuStagingRemove_Click(object sender, EventArgs e)
+        {
+            StagingRemoveSelectedRequested?.Invoke();
+        }
+
+        private void mnuStagingRemoveMissing_Click(object sender, EventArgs e)
+        {
+            StagingRemoveMissingRequested?.Invoke();
+        }
+
+        private void mnuStagingClear_Click(object sender, EventArgs e)
+        {
+            StagingClearRequested?.Invoke();
+        }
+
+        private void tbThreads_ValueChanged(object sender, EventArgs e)
+        {
+            lblThreadsValue.Text = tbThreads.Value.ToString();
+            ThreadsSliderChanged?.Invoke(tbThreads.Value);
+        }
+
+        private void grpExtract_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tbThreads_Scroll(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tabButtonCreate_CheckedChanged(object sender, EventArgs e)
+        {
+            if (tabButtonCreate.Checked)
+            {
+                TabButtonExtract.Checked = false;
+
+                panelCreateZipTab.Visible = true;
+                panelCreateZipTab.BringToFront();
+
+                panelExtractZipTab.Visible = false;
+            }
+            else
+            {
+                if (TabButtonExtract.Checked == false)
+                    tabButtonCreate.Checked = true;
+                else
+                    tabButtonCreate.Checked = false;
+            }
+        }
+
+        private void TabButtonExtract_CheckedChanged(object sender, EventArgs e)
+        {
+
+            if (TabButtonExtract.Checked)
+            {
+                tabButtonCreate.Checked = false;
+
+                panelExtractZipTab.Visible = true;
+                panelExtractZipTab.BringToFront();
+
+                panelCreateZipTab.Visible = false;
+            }
+            else
+            {
+                if (tabButtonCreate.Checked == false)
+                    TabButtonExtract.Checked = true;
+                else
+                    TabButtonExtract.Checked = false;
+            }
+        }
+
+        private void tableLayoutPanel3_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void buttonComment_Click(object sender, EventArgs e)
+        {
+            CommentClicked?.Invoke();
+        }
+
+        private void buttonWizardExtract_Click(object sender, EventArgs e)
+        {
+            WizardClicked?.Invoke();
         }
     }
 }
