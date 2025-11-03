@@ -1,13 +1,15 @@
-﻿namespace Brutal_Zip
+﻿using BrutalZip2025.BrutalControls;
+
+namespace Brutal_Zip
 {
-    public partial class PasswordDialog : Form
+    public partial class PasswordDialog : ModernForm
     {
         public string Password => txtPassword.Text;
 
         private PasswordCrackContext _crackContext;
 
         public PasswordDialog()
-        { 
+        {
             InitializeComponent();
 
             checkBoxShowPassword.Checked = !txtPassword.UseSystemPasswordChar;
@@ -34,7 +36,17 @@
 
         private void checkBoxShowPassword_CheckedChanged(object sender, EventArgs e)
         {
-            txtPassword.UseSystemPasswordChar = !checkBoxShowPassword.Checked;
+        
+        }
+
+        private void PasswordDialog_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void chkEncrypt_CheckedChanged(object sender, EventArgs e)
+        {
+             txtPassword.UseSystemPasswordChar = !checkBoxShowPassword.Checked;
         }
     }
 }

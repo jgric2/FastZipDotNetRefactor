@@ -1098,6 +1098,9 @@ namespace Brutal_Zip.Views
             treeViewExplorer.SelectedNodes = (System.Collections.ArrayList)resources.GetObject("treeViewExplorer.SelectedNodes");
             treeViewExplorer.Size = new Size(275, 573);
             treeViewExplorer.TabIndex = 0;
+            treeViewExplorer.BeforeExpand += treeViewExplorer_BeforeExpand;
+            treeViewExplorer.ItemDrag += treeViewExplorer_ItemDrag;
+            treeViewExplorer.NodeMouseClick += treeViewExplorer_NodeMouseClick;
             // 
             // tableLayoutPanel5
             // 

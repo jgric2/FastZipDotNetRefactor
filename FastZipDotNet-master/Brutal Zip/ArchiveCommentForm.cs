@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
+﻿using BrutalZip2025.BrutalControls;
 using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace Brutal_Zip
 {
-    public partial class ArchiveCommentForm : Form
+    public partial class ArchiveCommentForm : ModernForm
     {
         public string Comment
         {
@@ -48,6 +41,11 @@ namespace Brutal_Zip
                 return false;
             }
             return true;
+        }
+
+        private void ArchiveCommentForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

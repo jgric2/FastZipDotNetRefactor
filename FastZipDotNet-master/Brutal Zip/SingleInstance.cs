@@ -93,7 +93,7 @@ namespace Brutal_Zip
                         // Idle watchdog
                         while (!wait.IsCompleted && !_cts.IsCancellationRequested)
                         {
-                            await Task.Delay(100, _cts.Token).ConfigureAwait(false);
+                            await Task.Delay(50, _cts.Token).ConfigureAwait(false);
                             if (DateTime.UtcNow - _lastActivityUtc > _idleTimeout)
                             {
                                 _cts.Cancel();

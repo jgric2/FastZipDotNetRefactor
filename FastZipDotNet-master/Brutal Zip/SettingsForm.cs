@@ -1,10 +1,11 @@
 ﻿using Brutal_Zip.Classes.Helpers;
+using BrutalZip2025.BrutalControls;
 using System;
 using System.Windows.Forms;
 
 namespace BrutalZip
 {
-    public partial class SettingsForm : Form
+    public partial class SettingsForm : ModernForm
     {
         public SettingsForm()
         {
@@ -141,6 +142,11 @@ namespace BrutalZip
                 3 => "AES256",
                 _ => "ZipCrypto"
             };
+        }
+
+        private void SettingsForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

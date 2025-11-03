@@ -1,6 +1,8 @@
-﻿namespace SfxStub
+﻿using BrutalZip2025.BrutalControls;
+
+namespace SfxStub
 {
-    public partial class PromptForm : Form
+    public partial class PromptForm : ModernForm
     {
         public PromptForm(Image banner = null, Icon icon = null, Color? theme = null, string title = null, string company = null)
         {
@@ -25,6 +27,11 @@
                 fbd.SelectedPath = txtFolder.Text;
             if (fbd.ShowDialog(this) == DialogResult.OK)
                 txtFolder.Text = fbd.SelectedPath;
+        }
+
+        private void PromptForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

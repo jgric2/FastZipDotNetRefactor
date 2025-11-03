@@ -18,45 +18,75 @@ namespace Brutal_Zip
 
         private void InitializeComponent()
         {
-            components = new Container();
             lblPrompt = new Label();
             txtValue = new TextBox();
             btnOK = new Button();
             btnCancel = new Button();
             SuspendLayout();
-
+            // 
+            // lblPrompt
+            // 
+            lblPrompt.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblPrompt.Location = new Point(12, 16);
+            lblPrompt.Name = "lblPrompt";
+            lblPrompt.Size = new Size(496, 20);
+            lblPrompt.TabIndex = 0;
+            lblPrompt.Text = "Enter value:";
+            // 
+            // txtValue
+            // 
+            txtValue.BackColor = Color.FromArgb(32, 32, 32);
+            txtValue.BorderStyle = BorderStyle.FixedSingle;
+            txtValue.ForeColor = Color.White;
+            txtValue.Location = new Point(12, 40);
+            txtValue.Name = "txtValue";
+            txtValue.Size = new Size(496, 23);
+            txtValue.TabIndex = 1;
+            // 
+            // btnOK
+            // 
+            btnOK.DialogResult = DialogResult.OK;
+            btnOK.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnOK.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnOK.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnOK.FlatStyle = FlatStyle.Flat;
+            btnOK.Location = new Point(340, 88);
+            btnOK.Name = "btnOK";
+            btnOK.Size = new Size(80, 28);
+            btnOK.TabIndex = 2;
+            btnOK.Text = "OK";
+            // 
+            // btnCancel
+            // 
+            btnCancel.DialogResult = DialogResult.Cancel;
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnCancel.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnCancel.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnCancel.FlatStyle = FlatStyle.Flat;
+            btnCancel.Location = new Point(428, 88);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(80, 28);
+            btnCancel.TabIndex = 3;
+            btnCancel.Text = "Cancel";
+            // 
+            // InputDialog
+            // 
+            AcceptButton = btnOK;
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(520, 140);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            StartPosition = FormStartPosition.CenterParent;
-            Text = "Input";
-            AcceptButton = btnOK;
             CancelButton = btnCancel;
-
-            lblPrompt.Text = "Enter value:";
-            lblPrompt.Location = new Point(12, 16);
-            lblPrompt.Size = new Size(496, 20);
-
-            txtValue.Location = new Point(12, 40);
-            txtValue.Size = new Size(496, 23);
-
-            btnOK.Text = "OK";
-            btnOK.Location = new Point(340, 88);
-            btnOK.Size = new Size(80, 28);
-            btnOK.DialogResult = DialogResult.OK;
-
-            btnCancel.Text = "Cancel";
-            btnCancel.Location = new Point(428, 88);
-            btnCancel.Size = new Size(80, 28);
-            btnCancel.DialogResult = DialogResult.Cancel;
-
+            ClientSize = new Size(520, 140);
             Controls.Add(lblPrompt);
             Controls.Add(txtValue);
             Controls.Add(btnOK);
             Controls.Add(btnCancel);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "InputDialog";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Input";
+            Load += InputDialog_Load;
             ResumeLayout(false);
             PerformLayout();
         }

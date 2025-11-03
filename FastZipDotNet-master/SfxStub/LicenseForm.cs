@@ -1,10 +1,8 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
+﻿using BrutalZip2025.BrutalControls;
 
 namespace SfxStub
 {
-    public partial class LicenseForm : Form
+    public partial class LicenseForm : ModernForm
     {
         public LicenseForm(Image banner = null, Icon icon = null, string title = null, string company = null, string licenseText = null)
         {
@@ -18,6 +16,11 @@ namespace SfxStub
                 lblTitle.Text = $"Please review the {company} license agreement:";
 
             License = licenseText ?? "";
+        }
+
+        private void LicenseForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

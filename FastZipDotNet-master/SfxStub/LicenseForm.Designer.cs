@@ -11,7 +11,6 @@ namespace SfxStub
         private PictureBox picBanner;
         private Label lblTitle;
         private TextBox txtLicense;
-        private CheckBox chkAccept;
         private Button btnOK;
         private Button btnCancel;
 
@@ -31,65 +30,127 @@ namespace SfxStub
 
         private void InitializeComponent()
         {
-            components = new Container();
-
             picBanner = new PictureBox();
             lblTitle = new Label();
             txtLicense = new TextBox();
-            chkAccept = new CheckBox();
             btnOK = new Button();
             btnCancel = new Button();
-
+            chkAccept = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label1 = new Label();
+            ((ISupportInitialize)picBanner).BeginInit();
             SuspendLayout();
-
-            AutoScaleDimensions = new SizeF(96F, 96F);
-            AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(720, 520);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            StartPosition = FormStartPosition.CenterParent;
-            Text = "License Agreement";
-            AcceptButton = btnOK;
-            CancelButton = btnCancel;
-
+            // 
+            // picBanner
+            // 
             picBanner.Location = new Point(0, 0);
+            picBanner.Name = "picBanner";
             picBanner.Size = new Size(720, 80);
             picBanner.SizeMode = PictureBoxSizeMode.StretchImage;
-
-            lblTitle.Text = "Please review the license agreement:";
+            picBanner.TabIndex = 0;
+            picBanner.TabStop = false;
+            // 
+            // lblTitle
+            // 
             lblTitle.Location = new Point(12, 88);
+            lblTitle.Name = "lblTitle";
             lblTitle.Size = new Size(696, 20);
-
+            lblTitle.TabIndex = 1;
+            lblTitle.Text = "Please review the license agreement:";
+            // 
+            // txtLicense
+            // 
+            txtLicense.BackColor = Color.FromArgb(32, 32, 32);
+            txtLicense.BorderStyle = BorderStyle.FixedSingle;
+            txtLicense.ForeColor = Color.White;
             txtLicense.Location = new Point(12, 112);
-            txtLicense.Size = new Size(696, 340);
             txtLicense.Multiline = true;
-            txtLicense.ScrollBars = ScrollBars.Vertical;
+            txtLicense.Name = "txtLicense";
             txtLicense.ReadOnly = true;
-
-            chkAccept.Text = "I accept the terms of the license";
-            chkAccept.Location = new Point(12, 460);
-            chkAccept.Size = new Size(300, 20);
-
-            btnOK.Text = "Continue";
-            btnOK.Location = new Point(528, 480);
-            btnOK.Size = new Size(84, 28);
+            txtLicense.ScrollBars = ScrollBars.Vertical;
+            txtLicense.Size = new Size(696, 340);
+            txtLicense.TabIndex = 2;
+            // 
+            // btnOK
+            // 
             btnOK.DialogResult = DialogResult.OK;
-
-            btnCancel.Text = "Cancel";
-            btnCancel.Location = new Point(624, 480);
-            btnCancel.Size = new Size(84, 28);
+            btnOK.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnOK.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnOK.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnOK.FlatStyle = FlatStyle.Flat;
+            btnOK.Location = new Point(528, 480);
+            btnOK.Name = "btnOK";
+            btnOK.Size = new Size(84, 28);
+            btnOK.TabIndex = 4;
+            btnOK.Text = "Continue";
+            // 
+            // btnCancel
+            // 
             btnCancel.DialogResult = DialogResult.Cancel;
-
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnCancel.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnCancel.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnCancel.FlatStyle = FlatStyle.Flat;
+            btnCancel.Location = new Point(624, 480);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(84, 28);
+            btnCancel.TabIndex = 5;
+            btnCancel.Text = "Cancel";
+            // 
+            // chkAccept
+            // 
+            chkAccept.BackColor = Color.Transparent;
+            chkAccept.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkAccept.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkAccept.BoxGradientEnabled = true;
+            chkAccept.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkAccept.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkAccept.BoxSize = 14;
+            chkAccept.CheckBorderColor = Color.Lime;
+            chkAccept.CheckColor = Color.LawnGreen;
+            chkAccept.CheckGradientEnabled = true;
+            chkAccept.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkAccept.CheckGradientStart = Color.Lime;
+            chkAccept.Location = new Point(12, 458);
+            chkAccept.Name = "chkAccept";
+            chkAccept.Size = new Size(26, 26);
+            chkAccept.TabIndex = 6;
+            chkAccept.UseVisualStyleBackColor = false;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(32, 464);
+            label1.Name = "label1";
+            label1.Size = new Size(174, 15);
+            label1.TabIndex = 7;
+            label1.Text = "I accept the terms of the license";
+            // 
+            // LicenseForm
+            // 
+            AcceptButton = btnOK;
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            CancelButton = btnCancel;
+            ClientSize = new Size(720, 520);
+            Controls.Add(label1);
+            Controls.Add(chkAccept);
             Controls.Add(picBanner);
             Controls.Add(lblTitle);
             Controls.Add(txtLicense);
-            Controls.Add(chkAccept);
             Controls.Add(btnOK);
             Controls.Add(btnCancel);
-
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "LicenseForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "License Agreement";
+            Load += LicenseForm_Load;
+            ((ISupportInitialize)picBanner).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkAccept;
+        private Label label1;
     }
 }

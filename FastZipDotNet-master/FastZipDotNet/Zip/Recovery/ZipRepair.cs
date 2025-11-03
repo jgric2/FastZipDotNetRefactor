@@ -42,7 +42,7 @@ namespace FastZipDotNet.Zip.Recovery
                             SpeedBytesPerSec = speed
                         });
 
-                        try { await Task.Delay(200, reportCts.Token).ConfigureAwait(false); }
+                        try { await Task.Delay(50, reportCts.Token).ConfigureAwait(false); }
                         catch (OperationCanceledException) { break; }
                     }
                 }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
@@ -199,7 +199,7 @@ namespace FastZipDotNet.Zip.Recovery
                             SpeedBytesPerSec = speed
                         });
 
-                        try { await Task.Delay(200, reportCts.Token).ConfigureAwait(false); }
+                        try { await Task.Delay(50, reportCts.Token).ConfigureAwait(false); }
                         catch (OperationCanceledException) { break; }
                     }
                 }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();

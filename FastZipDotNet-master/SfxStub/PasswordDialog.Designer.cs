@@ -25,62 +25,98 @@ namespace SfxStub
 
         private void InitializeComponent()
         {
-            components = new Container();
-
             lblPrompt = new Label();
             txtPassword = new TextBox();
             btnOK = new Button();
             btnCancel = new Button();
             lblInfo = new Label();
             picBanner = new PictureBox();
-
+            ((ISupportInitialize)picBanner).BeginInit();
             SuspendLayout();
-
-            AutoScaleDimensions = new SizeF(96F, 96F);
-            AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(540, 200);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            StartPosition = FormStartPosition.CenterParent;
-            Text = "Enter Password";
-            AcceptButton = btnOK;
-            CancelButton = btnCancel;
-
+            // 
+            // lblPrompt
+            // 
+            lblPrompt.Location = new Point(12, 70);
+            lblPrompt.Name = "lblPrompt";
+            lblPrompt.Size = new Size(516, 20);
+            lblPrompt.TabIndex = 1;
+            lblPrompt.Text = "This archive is encrypted. Enter password:";
+            // 
+            // txtPassword
+            // 
+            txtPassword.BackColor = Color.FromArgb(32, 32, 32);
+            txtPassword.BorderStyle = BorderStyle.FixedSingle;
+            txtPassword.ForeColor = Color.White;
+            txtPassword.Location = new Point(12, 94);
+            txtPassword.Name = "txtPassword";
+            txtPassword.Size = new Size(516, 23);
+            txtPassword.TabIndex = 2;
+            txtPassword.UseSystemPasswordChar = true;
+            // 
+            // btnOK
+            // 
+            btnOK.DialogResult = DialogResult.OK;
+            btnOK.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnOK.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnOK.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnOK.FlatStyle = FlatStyle.Flat;
+            btnOK.Location = new Point(360, 160);
+            btnOK.Name = "btnOK";
+            btnOK.Size = new Size(80, 28);
+            btnOK.TabIndex = 4;
+            btnOK.Text = "OK";
+            // 
+            // btnCancel
+            // 
+            btnCancel.DialogResult = DialogResult.Cancel;
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnCancel.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnCancel.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnCancel.FlatStyle = FlatStyle.Flat;
+            btnCancel.Location = new Point(448, 160);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(80, 28);
+            btnCancel.TabIndex = 5;
+            btnCancel.Text = "Cancel";
+            // 
+            // lblInfo
+            // 
+            lblInfo.ForeColor = Color.DimGray;
+            lblInfo.Location = new Point(12, 124);
+            lblInfo.Name = "lblInfo";
+            lblInfo.Size = new Size(516, 20);
+            lblInfo.TabIndex = 3;
+            // 
+            // picBanner
+            // 
             picBanner.Location = new Point(0, 0);
+            picBanner.Name = "picBanner";
             picBanner.Size = new Size(540, 60);
             picBanner.SizeMode = PictureBoxSizeMode.StretchImage;
-
-            lblPrompt.Text = "This archive is encrypted. Enter password:";
-            lblPrompt.Location = new Point(12, 70);
-            lblPrompt.Size = new Size(516, 20);
-
-            txtPassword.Location = new Point(12, 94);
-            txtPassword.Size = new Size(516, 23);
-            txtPassword.UseSystemPasswordChar = true;
-
-            lblInfo.Text = "";
-            lblInfo.Location = new Point(12, 124);
-            lblInfo.Size = new Size(516, 20);
-            lblInfo.ForeColor = Color.DimGray;
-
-            btnOK.Text = "OK";
-            btnOK.Location = new Point(360, 160);
-            btnOK.Size = new Size(80, 28);
-            btnOK.DialogResult = DialogResult.OK;
-
-            btnCancel.Text = "Cancel";
-            btnCancel.Location = new Point(448, 160);
-            btnCancel.Size = new Size(80, 28);
-            btnCancel.DialogResult = DialogResult.Cancel;
-
+            picBanner.TabIndex = 0;
+            picBanner.TabStop = false;
+            // 
+            // PasswordDialog
+            // 
+            AcceptButton = btnOK;
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            CancelButton = btnCancel;
+            ClientSize = new Size(540, 200);
             Controls.Add(picBanner);
             Controls.Add(lblPrompt);
             Controls.Add(txtPassword);
             Controls.Add(lblInfo);
             Controls.Add(btnOK);
             Controls.Add(btnCancel);
-
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            Name = "PasswordDialog";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Enter Password";
+            Load += PasswordDialog_Load;
+            ((ISupportInitialize)picBanner).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }

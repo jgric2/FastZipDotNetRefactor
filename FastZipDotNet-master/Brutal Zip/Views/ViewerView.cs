@@ -52,24 +52,24 @@ namespace Brutal_Zip.Views
             }
 
 
-            btnBackHome.Click += (s, e) => BackHomeClicked?.Invoke();
-            btnAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
-            btnAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();
+          //  btnBackHome.Click += (s, e) => BackHomeClicked?.Invoke();
+          //  btnAddFiles.Click += (s, e) => AddFilesClicked?.Invoke();
+         //   btnAddFolder.Click += (s, e) => AddFolderClicked?.Invoke();
 
-            btnExtractSplit.ButtonClick += (s, e) => ExtractSelectedToClicked?.Invoke();
-            btnExtractSplit.DropDownItems[0].Click += (s, e) => ExtractSelectedToClicked?.Invoke();
-            btnExtractSplit.DropDownItems[1].Click += (s, e) => ExtractHereClicked?.Invoke();
-            btnExtractSplit.DropDownItems[2].Click += (s, e) => ExtractSmartClicked?.Invoke();
-            btnExtractSplit.DropDownItems[3].Click += (s, e) => ExtractSelectedToClicked?.Invoke();
+            //btnExtractSplit.ButtonClick += (s, e) => ExtractSelectedToClicked?.Invoke();
+            //btnExtractSplit.DropDownItems[0].Click += (s, e) => ExtractSelectedToClicked?.Invoke();
+            //btnExtractSplit.DropDownItems[1].Click += (s, e) => ExtractHereClicked?.Invoke();
+            //btnExtractSplit.DropDownItems[2].Click += (s, e) => ExtractSmartClicked?.Invoke();
+            //btnExtractSplit.DropDownItems[3].Click += (s, e) => ExtractSelectedToClicked?.Invoke();
 
-            btnInfo.Click += (s, e) => InfoClicked?.Invoke();
-            btnTest.Click += (s, e) => TestClicked?.Invoke();
-            btnSettings.Click += (s, e) => SettingsClicked?.Invoke();
-            txtSearch.TextChanged += (s, e) => SearchTextChanged?.Invoke(txtSearch.Text);
+            //btnInfo.Click += (s, e) => InfoClicked?.Invoke();
+            //btnTest.Click += (s, e) => TestClicked?.Invoke();
+            //btnSettings.Click += (s, e) => SettingsClicked?.Invoke();
+            //txtSearch.TextChanged += (s, e) => SearchTextChanged?.Invoke(txtSearch.Text);
 
 
-            mnuEncryptNew.CheckedChanged += (s, e) => EncryptNewItemsChanged?.Invoke(mnuEncryptNew.Checked);
-            mnuSetAddPassword.Click += (s, e) => SetAddPasswordClicked?.Invoke();
+            //mnuEncryptNew.CheckedChanged += (s, e) => EncryptNewItemsChanged?.Invoke(mnuEncryptNew.Checked);
+            //mnuSetAddPassword.Click += (s, e) => SetAddPasswordClicked?.Invoke();
 
             void ClearAlgoChecks()
             {
@@ -79,36 +79,36 @@ namespace Brutal_Zip.Views
                 mnuAlgoAES256.Checked = false;
             }
 
-            mnuAlgoZipCrypto.Click += (s, e) =>
-            {
-                ClearAlgoChecks();
-                SetAddEncryptionSelection(EncryptionAlgorithm.ZipCrypto);
-                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.ZipCrypto);
-            };
-            mnuAlgoAES128.Click += (s, e) =>
-            {
-                ClearAlgoChecks();
-                SetAddEncryptionSelection(EncryptionAlgorithm.Aes128);
-                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes128);
-            };
-            mnuAlgoAES192.Click += (s, e) =>
-            {
-                ClearAlgoChecks();
-                SetAddEncryptionSelection(EncryptionAlgorithm.Aes192);
-                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes192);
-            };
-            mnuAlgoAES256.Click += (s, e) =>
-            {
-                ClearAlgoChecks();
-                SetAddEncryptionSelection(EncryptionAlgorithm.Aes256);
-                AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes256);
-            };
+            //mnuAlgoZipCrypto.Click += (s, e) =>
+            //{
+            //    ClearAlgoChecks();
+            //    SetAddEncryptionSelection(EncryptionAlgorithm.ZipCrypto);
+            //    AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.ZipCrypto);
+            //};
+            //mnuAlgoAES128.Click += (s, e) =>
+            //{
+            //    ClearAlgoChecks();
+            //    SetAddEncryptionSelection(EncryptionAlgorithm.Aes128);
+            //    AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes128);
+            //};
+            //mnuAlgoAES192.Click += (s, e) =>
+            //{
+            //    ClearAlgoChecks();
+            //    SetAddEncryptionSelection(EncryptionAlgorithm.Aes192);
+            //    AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes192);
+            //};
+            //mnuAlgoAES256.Click += (s, e) =>
+            //{
+            //    ClearAlgoChecks();
+            //    SetAddEncryptionSelection(EncryptionAlgorithm.Aes256);
+            //    AddEncryptionAlgorithmChanged?.Invoke(EncryptionAlgorithm.Aes256);
+            //};
 
 
-            btnComment.Click += (s, e) => CommentClicked?.Invoke();
-            btnWizard.Click += (s, e) => WizardClicked?.Invoke();
+           // btnComment.Click += (s, e) => CommentClicked?.Invoke();
+           // btnWizard.Click += (s, e) => WizardClicked?.Invoke();
 
-            btnToggleInfo.Click += (s, e) => InfoToggleClicked?.Invoke(); // NEW
+           // btnToggleInfo.Click += (s, e) => InfoToggleClicked?.Invoke(); // NEW
         }
 
 

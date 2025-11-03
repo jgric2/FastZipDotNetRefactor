@@ -1,5 +1,7 @@
 ﻿using Brutal_Zip.Controls.BrutalControls.FileOrFolderDialog;
+using System.CodeDom;
 using System.Data;
+using System.Xml.Linq;
 
 namespace Brutal_Zip.Views
 {
@@ -201,12 +203,31 @@ namespace Brutal_Zip.Views
 
         private void lvStaging_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) 
+                e.Effect = DragDropEffects.Copy;
+            else if (e.Data.GetDataPresent("TreeNodeArray"))
+            {
+                e.Effect = DragDropEffects.Move;
+            }
         }
 
         private void lvStaging_DragDrop(object sender, DragEventArgs e)
         {
+         
+
+
             var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+            TreeNode[] nodes = null;
+            DataObject[] nn = null;
+            if (paths == null)
+            {
+                if (e.Data.GetDataPresent(typeof(TreeNode[])))
+                    nodes = (TreeNode[])e.Data.GetData(typeof(TreeNode[]));
+                else if (e.Data.GetDataPresent(typeof(DataObject)))
+                    nn = new[] { (DataObject)e.Data.GetData(typeof(DataObject)) };
+            }
+
+
             FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
         }
 
@@ -325,6 +346,54 @@ namespace Brutal_Zip.Views
         private void buttonWizardExtract_Click(object sender, EventArgs e)
         {
             WizardClicked?.Invoke();
+        }
+
+        private void treeViewExplorer_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            // Move the dragged node when the left mouse button is used.
+            if (e.Button == MouseButtons.Left)
+            {
+                //var data = new TreeNode(typeof(TreeNode[]), new[] { (TreeNode)e.Item });
+                DoDragDrop(e.Item, DragDropEffects.Copy);
+            }
+
+            // Copy the dragged node when the right mouse button is used.
+            //else if (e.Button == MouseButtons.Right)
+            //{
+            //    DoDragDrop(e.Item, DragDropEffects.Copy);
+            //}
+        }
+
+        private void treeViewExplorer_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        {
+            //if (e.Node.Nodes[0].Text == "")
+            //{
+            //    TreeNode node = fe.EnumerateDirectory(e.Node);
+            //    if (Directory.Exists(node.Tag.ToString()))
+            //    {
+            //        backHistory.Push(currentPath);
+            //        string nextPath = node.Tag.ToString();
+            //        LoadDirectory(nextPath);
+            //    }
+            //}
+        }
+
+        private void treeViewExplorer_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Node.Nodes.Count == 0)
+                return;
+
+            if (e.Node.Nodes[0].Text == "")
+            {
+                // TreeNode node = fe.EnumerateDirectory(e.Node);
+                if (Directory.Exists(e.Node.Tag.ToString()))
+                {
+                    e.Node.Expand();
+                    //backHistory.Push(currentPath);
+                    //string nextPath = e.Node.Tag.ToString();
+                    //LoadDirectory(nextPath);
+                }
+            }
         }
     }
 }

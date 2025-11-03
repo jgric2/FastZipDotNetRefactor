@@ -59,11 +59,15 @@
             lnkSite.Size = new Size(420, 20);
             lnkSite.TabIndex = 3;
             lnkSite.TabStop = true;
-            lnkSite.Text = "https://example.com/brutalzip";
+            lnkSite.Text = "https://limintel.com/brutalzip";
             // 
             // btnClose
             // 
             btnClose.DialogResult = DialogResult.OK;
+            btnClose.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnClose.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnClose.FlatStyle = FlatStyle.Flat;
             btnClose.Location = new Point(356, 140);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(88, 28);
@@ -87,6 +91,7 @@
             Name = "AboutForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "About Brutal Zip";
+            Load += AboutForm_Load;
             ResumeLayout(false);
 
             // Events wired in code-behind

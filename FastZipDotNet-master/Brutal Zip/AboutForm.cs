@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BrutalZip2025.BrutalControls;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,7 +13,7 @@ using System.Windows.Forms;
 
 namespace Brutal_Zip
 {
-    public partial class AboutForm : Form
+    public partial class AboutForm : ModernForm
     {
         public AboutForm()
         {
@@ -27,6 +28,11 @@ namespace Brutal_Zip
                 try { Process.Start(new ProcessStartInfo(lnkSite.Text) { UseShellExecute = true }); }
                 catch { }
             };
+        }
+
+        private void AboutForm_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

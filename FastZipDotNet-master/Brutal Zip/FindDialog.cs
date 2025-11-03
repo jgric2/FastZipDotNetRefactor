@@ -1,12 +1,13 @@
 ﻿
 namespace Brutal_Zip
 {
+    using BrutalZip2025.BrutalControls;
     using System;
     using System.Linq;
     using System.Text.RegularExpressions;
     using System.Windows.Forms;
 
-    public partial class FindDialog : Form
+    public partial class FindDialog : ModernForm
     {
         public string Pattern => txtPattern.Text.Trim();
         public bool MatchCase => chkCase.Checked;
@@ -31,6 +32,16 @@ namespace Brutal_Zip
             string combined = string.Join("|", parts.Select(WildToRegex));
             var opts = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
             return new Regex(combined.Length > 0 ? combined : ".*", opts);
+        }
+
+        private void FindDialog_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void chkCase_CheckedChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

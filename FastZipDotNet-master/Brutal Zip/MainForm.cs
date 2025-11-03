@@ -1565,7 +1565,7 @@ return await sharedTask.ConfigureAwait(false);
                             SpeedBytesPerSec = speed
                         });
 
-                        try { await Task.Delay(200, reportCts.Token); } catch { break; }
+                        try { await Task.Delay(50, reportCts.Token); } catch { break; }
                     }
                 });
 
@@ -2594,7 +2594,7 @@ return await sharedTask.ConfigureAwait(false);
                             SpeedBytesPerSec = speed
                         });
 
-                        try { await Task.Delay(200, reportCts.Token); } catch { break; }
+                        try { await Task.Delay(50, reportCts.Token); } catch { break; }
                     }
                 });
 
@@ -2976,7 +2976,7 @@ return await sharedTask.ConfigureAwait(false);
                             SpeedBytesPerSec = speed
                         });
 
-                        try { await Task.Delay(200, reportCts.Token); } catch { break; }
+                        try { await Task.Delay(50, reportCts.Token); } catch { break; }
                     }
                 });
 

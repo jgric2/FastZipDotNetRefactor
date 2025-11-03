@@ -649,6 +649,8 @@ namespace CustomProgBarSpeed
             int W = Width, H = Height;
             float px = _speeds.Count;                          // fill width in pixels
             float yLine = H - (_currentSpeed / _maxSpeed) * H; // current‐speed Y
+           // yLine = Math.Max(yLine, 0);
+
 
             // 1) Build & fill the speed‐curve path (with ripple & hatch & gradients)
             GraphicsPath curvePath = null;
@@ -734,9 +736,14 @@ namespace CustomProgBarSpeed
                 g.ResetClip();
             }
 
-            // 3) current‐speed horizontal line
-            using (var pen = new Pen(_speedColor, 2))
-                g.DrawLine(pen, 0, yLine, W, yLine);
+            try
+            {
+                // 3) current‐speed horizontal line
+                using (var pen = new Pen(_speedColor, 2))
+                    g.DrawLine(pen, 0, yLine, W, yLine);
+            }
+            catch { }
+
 
             // 4) label (MB/s + files/s)
             string txt = FormatSpeed(_currentSpeed) + "\n" + _filesPerSecond + " files/s";
