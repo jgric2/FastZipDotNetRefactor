@@ -222,7 +222,6 @@ namespace Brutal_Zip
             Name = "BuilderPreviewForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "SFX Preview";
-            Load += BuilderPreviewForm_Load;
             ((ISupportInitialize)picBanner).EndInit();
             pnlTopAccent.ResumeLayout(false);
             brutalGradientPanel1.ResumeLayout(false);
