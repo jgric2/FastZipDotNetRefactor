@@ -2,6 +2,7 @@
 using BrutalZip2025.BrutalControls;
 using System.Text;
 using System.Text.Json;
+using System.Reflection;
 
 namespace Brutal_Zip
 {
@@ -24,7 +25,8 @@ namespace Brutal_Zip
             chkOverwrite.Checked = true;
             chkShowDone.Checked = true;
             pnlThemeColor.BackColor = Color.DodgerBlue;
-
+            gradientPanelPreview.StartColor = pnlThemeColor.BackColor;
+            gradientPanelPreview.EndColor = pnlThemeColorEnd.BackColor;
             // Prefill password convenience
             try
             {
@@ -163,18 +165,12 @@ namespace Brutal_Zip
         {
             try
             {
-                string stubPath = txtStubPath.Text;
-                if (string.IsNullOrWhiteSpace(stubPath) || !File.Exists(stubPath))
-                {
-                    MessageBox.Show(this, "Select the SFX stub executable.", "Build SFX");
-                    return;
-                }
-
+                // 1) Resolve source ZIP (current or chosen)
                 string sourceZip = rdoUseCurrent.Checked
-                    ? ResolveCurrentZipOrThrow()
-                    : ResolveZipFromFileOrThrow();
+                ? ResolveCurrentZipOrThrow()
+                : ResolveZipFromFileOrThrow();
 
-                // Build config used by stub at runtime for branding/options
+                // 2) Build config for the stub
                 var cfg = new SfxBuildConfig
                 {
                     Title = txtTitle.Text?.Trim(),
@@ -188,61 +184,55 @@ namespace Brutal_Zip
                     Password = string.IsNullOrWhiteSpace(txtPassword.Text) ? null : txtPassword.Text,
                     LicenseText = string.IsNullOrWhiteSpace(txtLicense.Text) ? null : txtLicense.Text,
                     RequireLicenseAccept = chkRequireAccept.Checked,
-                    ShowFileList = false, //chkShowFileList.Checked,
+                    ShowFileList = true, // or false if you prefer
                     IconBase64 = ToBase64File(txtIconPath.Text),
                     BannerImageBase64 = ToBase64File(txtBannerPath.Text),
                     ThemeColorStart = ToHexColor(pnlThemeColor.BackColor),
                     ThemeColorEnd = ToHexColor(pnlThemeColorEnd.BackColor)
                 };
 
+                // 3) Choose output
                 using var sfd = new SaveFileDialog { Filter = "Self-extracting exe|*.exe", FileName = "Setup.exe" };
                 if (sfd.ShowDialog(this) != DialogResult.OK) return;
                 string outExe = sfd.FileName;
 
-                // 1) Ensure fresh target
                 try { if (File.Exists(outExe)) File.Delete(outExe); } catch { }
 
-                // 2) Copy stub first (do not UpdateResource icon on single-file stubs)
-                File.Copy(stubPath, outExe, overwrite: false);
+                // 4) Load embedded stub bytes and write stub to disk
+                byte[] stubBytes = LoadEmbeddedStubBytes();
+                File.WriteAllBytes(outExe, stubBytes);
 
-                // 3) Preserve the .NET single-file bundle trailer 8 bytes
-                byte[] bundleTail8 = TryReadLast8Bytes(outExe);
-                if (bundleTail8 == null || bundleTail8.Length != 8)
+                // 5) BRANDING STEP: patch icon BEFORE appending payload
+                if (!string.IsNullOrWhiteSpace(txtIconPath.Text) && File.Exists(txtIconPath.Text))
                 {
-                    MessageBox.Show(this,
-                        "Warning: Could not read the .NET single-file footer. Proceeding without preserving it may break the runtime.",
-                        "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    // UpdateResource rewrites PE; must run now. Do not do this after payload is appended.
+                    TryEmbedIconWithRetry(outExe, txtIconPath.Text);
                 }
 
-                // 4) Append config + zip + SFX footer, then re-append the .NET trailer 8 bytes
-                byte[] cfgBytes = JsonSerializer.SerializeToUtf8Bytes(cfg, new JsonSerializerOptions { WriteIndented = false });
+                // 6) Now that icon is patched, read the stub’s updated .NET single-file bundle trailer (last 8 bytes)
+                byte[] bundleTail8 = TryReadLast8Bytes(outExe); // null if not single-file; ok either way
+
+                // 7) Append config + zip + our custom footer, then re-append bundleTail8
+                byte[] cfgBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(cfg, new System.Text.Json.JsonSerializerOptions { WriteIndented = false });
                 uint cfgLen = (uint)cfgBytes.Length;
                 ulong zipLen = (ulong)new FileInfo(sourceZip).Length;
 
                 using (var fout = OpenForAppendWithRetry(outExe))
                 using (var bw = new BinaryWriter(fout, Encoding.UTF8, leaveOpen: true))
                 {
-                    // write config
+                    // config
                     bw.Write(cfgBytes);
 
-                    // write zip (open with permissive share to avoid sharing violation)
-                    // IMPORTANT: Share must allow READ and WRITE, because the viewer's existing handle desires WRITE.
-
-                    for (int i = 0; i < 5; i++)
+                    // zip
+                    using (var fsZip = new FileStream(sourceZip, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
                     {
-                        try
-                        {
-                            using var fsZip = new FileStream(sourceZip, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                            fsZip.CopyTo(fout);
-                            break;
-                        }
-                        catch (IOException) { System.Threading.Thread.Sleep(100); if (i == 4) throw; }
+                        fsZip.CopyTo(fout);
                     }
 
-                    // write our custom footer (magic + lengths)
+                    // our SFX footer
                     WriteFooter(bw, cfgLen, zipLen);
 
-                    // restore the .NET single-file tail 8 bytes at EOF
+                    // restore .NET single-file bundle trailer at EOF (if any)
                     if (bundleTail8 != null && bundleTail8.Length == 8)
                         bw.Write(bundleTail8);
 
@@ -257,6 +247,54 @@ namespace Brutal_Zip
                 MessageBox.Show(this, ex.Message, "Build SFX", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
+        // Loads the embedded stub bytes: prefers Resources (SfxStubExe), falls back to manifest search.
+        private static byte[] LoadEmbeddedStubBytes()
+        {
+            // Option A: via Resources.resx
+            //try
+            //{
+            //    var r = Properties.Resources.SfxStubExe; // byte[]
+            //    if (r != null && r.Length > 0) return r;
+            //}
+            //catch { /* ignore if resource not added */ }
+
+            // Option B: manifest resource (EmbeddedResource)
+            var asm = Assembly.GetExecutingAssembly();
+            string resName = null;
+            foreach (var n in asm.GetManifestResourceNames())
+            {
+                // Accept common variants
+                if (n.EndsWith(".SfxStub.exe", StringComparison.OrdinalIgnoreCase) ||
+                    n.EndsWith("SfxStub.exe", StringComparison.OrdinalIgnoreCase) ||
+                    n.Contains(".SfxStub", StringComparison.OrdinalIgnoreCase))
+                {
+                    resName = n; break;
+                }
+            }
+            if (resName == null)
+                throw new InvalidOperationException(
+                    "Embedded SFX stub not found. Add the compiled SfxStub.exe as a resource " +
+                    "(Properties/Resources as 'SfxStubExe' or EmbeddedResource with LogicalName 'SfxStub.exe').");
+
+            using var s = asm.GetManifestResourceStream(resName) ?? throw new InvalidOperationException("Cannot open embedded stub resource stream.");
+            using var ms = new MemoryStream();
+            s.CopyTo(ms);
+            return ms.ToArray();
+        }
+
+        // Returns the last 8 bytes of the stub (the .NET single-file bundle trailer) if present.
+        private static byte[] TryGetDotnetTail(byte[] stubBytes)
+        {
+            if (stubBytes == null || stubBytes.Length < 8) return null;
+            var tail = new byte[8];
+            Buffer.BlockCopy(stubBytes, stubBytes.Length - 8, tail, 0, 8);
+            return tail;
+        }
+
+   
+
 
         private string ResolveCurrentZipOrThrow()
         {

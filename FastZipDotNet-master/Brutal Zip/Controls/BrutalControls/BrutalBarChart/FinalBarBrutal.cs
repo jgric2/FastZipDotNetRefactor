@@ -388,12 +388,37 @@ namespace CustomProgBarSpeed
             }
         }
 
+
+        private static double SafeRatio(long current, float max)
+        {
+            // Avoid zero/very small denominator and clamp to non-negative.
+            double denom = Math.Max(1e-6, (double)max);
+            double r = (double)current / denom;
+            if (double.IsNaN(r) || double.IsInfinity(r)) r = 0.0;
+            if (r < 0) r = 0.0;
+            return r;
+        }
+
+        private static float Clamp(float v, float min, float max)
+        {
+            if (v < min) return min;
+            if (v > max) return max;
+            return v;
+        }
+
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+
+            // Reset history (one sample per pixel), but do not leave _maxSpeed = 1
             _speeds.Clear();
+            _fileSpeeds.Clear();
+            _speedTimes.Clear();
             _lastPixel = 0;
-            _maxSpeed = 1f;
+
+            // Keep vertical scale sane relative to current speed so ratio can’t explode
+            _maxSpeed = Math.Max(1f, (float)Math.Max(1, _currentSpeed));
+
             Invalidate();
         }
 
@@ -642,289 +667,179 @@ namespace CustomProgBarSpeed
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;//SmoothingMode.AntiAlias;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
             g.CompositingQuality = CompositingQuality.HighQuality;
-      
 
-            int W = Width, H = Height;
-            float px = _speeds.Count;                          // fill width in pixels
-            float yLine = H - (_currentSpeed / _maxSpeed) * H; // current‐speed Y
-           // yLine = Math.Max(yLine, 0);
+            int W = ClientSize.Width, H = ClientSize.Height;
+            if (W <= 0 || H <= 0) return;
 
+            // progress width (never more than control width)
+            float px = Math.Max(0, Math.Min(W, (float)_speeds.Count));
 
-            // 1) Build & fill the speed‐curve path (with ripple & hatch & gradients)
+            // ONLY paint the background gradient up to current progress (px)
+            // Leave the rest transparent so the parent shows through.
+            if (px > 0.5f)
+            {
+                using (var bg = new LinearGradientBrush(
+                           new RectangleF(0f, 0f, px, H),
+                           _backBot, _backTop,
+                           LinearGradientMode.Vertical))
+                {
+                    g.FillRectangle(bg, 0f, 0f, px, H);
+                }
+            }
+
+            // Compute a safe yLine
+            double ratio = SafeRatio(_currentSpeed, Math.Max(1f, _maxSpeed));
+            double capped = Math.Min(1.0, ratio);
+            float yLine = (float)(H * (1.0 - capped));
+            if (float.IsNaN(yLine) || float.IsInfinity(yLine)) yLine = 0f;
+            yLine = Clamp(yLine, 0f, H);
+
+            // Draw the curve if we have enough samples
             GraphicsPath curvePath = null;
             if (_speeds.Count >= 2)
             {
                 int n = _speeds.Count;
-                // build points (with ripple)
-                PointF[] pts = new PointF[n + 2];
+
+                var pts = new PointF[n + 2];
                 pts[0] = new PointF(0, H);
                 for (int i = 0; i < n; i++)
                 {
-                    float baseY = H - (_speeds[i] / _maxSpeed) * H;
-                    float rip = _rippleActive
-                                 ? _rippleAmp * (float)Math.Sin(i * 0.3f + _ripplePhase)
-                                 : 0f;
-                    pts[i + 1] = new PointF(i, baseY + rip);
+                    float baseY = H - (_speeds[i] / Math.Max(1e-6f, _maxSpeed)) * H;
+                    float rip = _rippleActive ? _rippleAmp * (float)Math.Sin(i * 0.3f + _ripplePhase) : 0f;
+                    float y = Clamp(baseY + rip, 0f, H);
+                    pts[i + 1] = new PointF(i, y);
                 }
                 pts[n + 1] = new PointF(n - 1, H);
 
-                // create & fill path
                 curvePath = new GraphicsPath();
                 curvePath.AddPolygon(pts);
+
+                // Overlays ONLY in the curve (line gradient + hatch).
+                // We no longer fill a full rect in 'bounds' here, because base bg up to px is already painted.
                 var bounds = curvePath.GetBounds();
-
-
-                if (bounds.Width != 0 && bounds.Height != 0)
+                if (bounds.Width > 0 && bounds.Height > 0)
                 {
-
-                    // a) background gradient
-                    using (var bg = new LinearGradientBrush(bounds, _backBot, _backTop, LinearGradientMode.Vertical))
-                        g.FillRectangle(bg, bounds);
-
-                    // b) line gradient
                     using (var lg = new LinearGradientBrush(bounds, _lineBot, _lineTop, LinearGradientMode.Vertical))
                         g.FillPath(lg, curvePath);
 
-                    // c) optional hatch
                     using (var hb = new HatchBrush(_hatchStyle, _hatchFore, _hatchBack))
                         g.FillPath(hb, curvePath);
                 }
 
-
-            }
-          
-
-            // 2) Segment‐by‐segment LED tint & hover‐highlight
-            if (curvePath != null)
-            {
-                var segs = ComputeSegments();  // your list of Segment {Start,Length,Speed,Duration}
-
-                // clip to the fill‐area
+                // Segment tint
+                var segs = ComputeSegments();
                 g.SetClip(curvePath);
-
-                // a dark base for low speeds
                 Color segDarkBase = LerpColor(_lineTop, Color.Black, 0.9999f);
-                Color DarkbaseCol = LerpColor(segDarkBase, _lineTop, 0.35f);
+                Color darkBaseCol = LerpColor(segDarkBase, _lineTop, 0.35f);
+
                 for (int i = 0; i < segs.Count; i++)
                 {
                     var seg = segs[i];
-                    float t = seg.Speed / _maxSpeed;                  // 0..1
+                    float t = Clamp(seg.Speed / Math.Max(1e-6f, _maxSpeed), 0f, 1f);
                     Color baseCol = LerpColor(segDarkBase, _lineTop, t);
+                    Color fillCol = (_hoverSegment == -1)
+                        ? Color.FromArgb(100, baseCol)
+                        : (i == _hoverSegment ? darkBaseCol : Color.FromArgb(100, baseCol));
 
-                    // if this is the hovered segment, push it deep toward black
-                    Color fillCol;
-                    if (_hoverSegment == -1)
-                    {
-                        fillCol = Color.FromArgb(100, baseCol);
-                    }
-                    else
-                    {
-                        if (i == _hoverSegment)
-                            fillCol = DarkbaseCol;
-                        // fillCol = LerpColor(baseCol, _backTop, 0.25f);
-                        else
-                            fillCol = Color.FromArgb(100, baseCol);
-                    }
-                   
-
-                    using (var br = new SolidBrush(fillCol))
-                        g.FillRectangle(br, seg.Start, 0, seg.Length, H);
+                    g.FillRectangle(new SolidBrush(fillCol), seg.Start, 0, seg.Length, H);
                 }
-
                 g.ResetClip();
             }
+            else
+            {
+                // Not enough samples for a curved path yet.
+                // Paint a simple overlay up to px so it looks alive immediately.
+                if (px > 0.5f)
+                {
+                    using (var lg = new LinearGradientBrush(
+                               new RectangleF(0, 0, px, H),
+                               _lineBot, _lineTop,
+                               LinearGradientMode.Vertical))
+                    {
+                        g.FillRectangle(lg, 0, 0, px, H);
+                    }
+                    using (var hb = new HatchBrush(_hatchStyle, _hatchFore, _hatchBack))
+                        g.FillRectangle(hb, 0, 0, px, H);
+                }
+            }
 
+            // Current-speed horizontal line
             try
             {
-                // 3) current‐speed horizontal line
-                using (var pen = new Pen(_speedColor, 2))
-                    g.DrawLine(pen, 0, yLine, W, yLine);
+                float yDraw = Clamp(yLine, 0.5f, Math.Max(0.5f, H - 0.5f));
+                using (var pen = new Pen(_speedColor, 2f))
+                    g.DrawLine(pen, 0f, yDraw, W, yDraw);
             }
             catch { }
 
-
-            // 4) label (MB/s + files/s)
+            // Speed/files label
             string txt = FormatSpeed(_currentSpeed) + "\n" + _filesPerSecond + " files/s";
             SizeF sz = g.MeasureString(txt, _font);
-            float tx = px - sz.Width; 
-            if (tx < 0) 
-                tx = 4; 
-
-            if (tx + sz.Width > W) 
-                tx = W - sz.Width;
+            float tx = px - sz.Width;
+            if (tx < 4) tx = 4;
+            if (tx + sz.Width > W) tx = W - sz.Width;
 
             float ty = (yLine < sz.Height + 4) ? yLine + 2 : yLine - sz.Height - 2;
+            ty = Clamp(ty, 0, Math.Max(0, H - sz.Height));
+
             using (var tb = new SolidBrush(_textColor))
                 g.DrawString(txt, _font, tb, tx, ty, _sf);
 
-            // 5) optional shimmer sweep (only when _shimmerActive)
-            if (!_paused && px > 0 && _shimmerActive)
+            // Small orb
             {
-                g.SetClip(new RectangleF(0, 0, px, H));
-                float shimmerW = px * 0.5f;
-                var shimmerRect = new RectangleF(
-                    -shimmerW + (px + shimmerW) * _shimmerPos,
-                     0, shimmerW, H);
-                using (var sb = new LinearGradientBrush(
-                           shimmerRect,
-                           Color.Transparent,
-                           Color.FromArgb(80, Color.White),
-                           45f))
-                {
-                    g.FillRectangle(sb, shimmerRect);
-                }
-                g.ResetClip();
-            }
+                float r = 3f;
+                float cx = Clamp(px, 0, W);
+                float cy = Clamp(yLine, 0, H);
+                _orbRect = new RectangleF(cx - r, cy - r, 2 * r, 2 * r);
 
-            // 6) glowing orb at the edge
-            {
-                float baseR = 3f;
-                float r = baseR; //* (1f + 0.3f * _pulse) + (_hoverOrb ? baseR * 0.4f : 0f);
-                var center = new PointF(px, yLine);
-                _orbRect = new RectangleF(center.X - r, center.Y - r, 2 * r, 2 * r);
-
-                // outer glow
                 using (var gp = new GraphicsPath())
                 {
                     gp.AddEllipse(_orbRect);
                     using (var pg = new PathGradientBrush(gp))
                     {
-                        Color c = _lineTop;
-                        int alpha = 100;//_hoverOrb ? 200 : 100;
-                        pg.CenterColor = Color.FromArgb(alpha, c);
+                        var c = _lineTop;
+                        pg.CenterColor = Color.FromArgb(100, c);
                         pg.SurroundColors = new[] { Color.FromArgb(0, c) };
                         g.FillPath(pg, gp);
                     }
                 }
-                // fill & outline
-                using (var ofb = new SolidBrush(_hoverOrb ? _lineBot : _lineTop))//Color.LightGoldenrodYellow))
+                using (var ofb = new SolidBrush(_lineTop))
                     g.FillEllipse(ofb, _orbRect);
                 using (var op = new Pen(_lineBot, 1f))
                     g.DrawEllipse(op, _orbRect);
             }
 
-            // 7) pause overlay & icon (if paused)
+            // Pause overlay kept as-is (your existing code) — it uses yLine safely now.
             if (_paused)
             {
-                // dim the entire control
                 using (var fade = new SolidBrush(Color.FromArgb(32, Color.Black)))
                     g.FillRectangle(fade, ClientRectangle);
 
-                // compute a pulsing white for the bars
                 float p = 0.5f + 0.5f * (float)Math.Sin(_pausePulse * 2 * Math.PI);
                 var clr = Color.FromArgb((int)(p * 200), Color.White);
 
-                // layout two vertical bars centered
                 int iconSize = Math.Min(W, H) / 4;
                 float barW = iconSize * 0.2f;
                 float barH = iconSize;
                 float gap = barW;
                 float cx = W / 2f;
                 float cy = H / 2f;
-
-                // left bar
                 float x1 = cx - gap / 2f - barW;
                 float y1 = cy - barH / 2f;
                 var r1 = new RectangleF(x1, y1, barW, barH);
-                // right bar
                 float x2 = cx + gap / 2f;
                 var r2 = new RectangleF(x2, y1, barW, barH);
 
-                // store the overall hit‐area (includes the gap between)
-                _pauseIconRect = new RectangleF(
-                    x1, y1,
-                    (x2 + barW) - x1,
-                    barH
-                );
+                _pauseIconRect = new RectangleF(x1, y1, (x2 + barW) - x1, barH);
 
-                // draw them
                 using (var br = new SolidBrush(clr))
                 {
                     g.FillRectangle(br, r1);
                     g.FillRectangle(br, r2);
                 }
             }
-
-            /*else if (_paused)
-            {
-                using (var fade = new SolidBrush(Color.FromArgb(100, 0, 0, 0)))
-                    g.FillRectangle(fade, ClientRectangle);
-            }*/
-
-            // 2) current‐speed horizontal line
-            //yLine = H - (_currentSpeed / _maxSpeed) * H;
-            //using (var pen = new Pen(_speedColor, 2))
-            //    g.DrawLine(pen, 0, yLine, W, yLine);
-
-            //// 3) speed/files label
-            //txt = FormatSpeed(_currentSpeed)
-            //           + "\n"
-            //           + _filesPerSecond + " files/s";
-            //sz = g.MeasureString(txt, _font);
-            //px = _speeds.Count;
-            //float x = px - sz.Width;
-            //if (x < 0) x = 0;
-            //if (x + sz.Width > W) x = W - sz.Width;
-            //float y = (yLine < sz.Height + 4)
-            //         ? yLine + 2
-            //         : yLine - sz.Height - 2;
-            //using (var tb = new SolidBrush(_textColor))
-            //    g.DrawString(txt, _font, tb, x, y, _sf);
-
-            // 4) shimmer sweep
-           /* if (!_paused && px > 0 && _shimmerActive)
-            {
-                g.SetClip(new RectangleF(0, 0, px, H));
-                float shimmerW = px * 0.5f;
-                var shimmerRect = new RectangleF(
-                   -shimmerW + (px + shimmerW) * _shimmerPos,
-                    0, shimmerW, H);
-                using (var sb = new LinearGradientBrush(
-                               shimmerRect,
-                               Color.Transparent,
-                               Color.FromArgb(80, _lineTop),
-                               45f))
-                {
-                    g.FillRectangle(sb, shimmerRect);
-                }
-                g.ResetClip();
-            }*/
-
-      /*      // 5) glowing orb
-            {
-                float baseR = 6f;
-                float r = baseR * (1f + 0.3f * _pulse)
-                        + (_hoverOrb ? baseR * 0.4f : 0f);
-                var center = new PointF(px, yLine);
-                _orbRect = new RectangleF(center.X - r, center.Y - r, 2 * r, 2 * r);
-
-                // outer glow
-                using (var gp = new GraphicsPath())
-                {
-                    gp.AddEllipse(_orbRect);
-                    using (var pg = new PathGradientBrush(gp))
-                    {
-                        Color c = _lineTop;
-                        int alpha = _hoverOrb ? 200 : 100;
-                        pg.CenterColor = Color.FromArgb(alpha, c);
-                        pg.SurroundColors = new[] { Color.FromArgb(0, c) };
-                        g.FillPath(pg, gp);
-                    }
-                }
-                // orb fill
-                using (var ofb = new SolidBrush(
-                           _hoverOrb
-                             ? Color.White
-                             : Color.LightGoldenrodYellow))
-                {
-                    g.FillEllipse(ofb, _orbRect);
-                }
-                // outline
-                using (var op = new Pen(Color.White, 1f))
-                    g.DrawEllipse(op, _orbRect);
-            }*/
         }
 
         //—— Helpers ————————————————————————————————————————————————

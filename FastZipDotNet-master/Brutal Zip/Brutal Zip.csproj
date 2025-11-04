@@ -20,6 +20,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Embedded\SfxStub.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
     <COMReference Include="WMPLib">
       <WrapperTool>tlbimp</WrapperTool>
       <VersionMinor>0</VersionMinor>
@@ -33,6 +37,10 @@
 
   <ItemGroup>
     <Content Include="BrutalZip.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Embedded\SfxStub.exe" />
   </ItemGroup>
 
   <ItemGroup>

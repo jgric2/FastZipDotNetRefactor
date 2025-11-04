@@ -8,7 +8,6 @@ namespace Brutal_Zip
     {
         private IContainer components = null;
         private PictureBox picBanner;
-        private Button btnClose;
 
         protected override void Dispose(bool disposing)
         {
@@ -19,7 +18,6 @@ namespace Brutal_Zip
         private void InitializeComponent()
         {
             picBanner = new PictureBox();
-            btnClose = new Button();
             pnlTopAccent = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
             lblTitle = new Label();
             brutalGradientPanel1 = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
@@ -45,20 +43,6 @@ namespace Brutal_Zip
             picBanner.SizeMode = PictureBoxSizeMode.StretchImage;
             picBanner.TabIndex = 1;
             picBanner.TabStop = false;
-            // 
-            // btnClose
-            // 
-            btnClose.DialogResult = DialogResult.OK;
-            btnClose.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
-            btnClose.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
-            btnClose.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
-            btnClose.FlatStyle = FlatStyle.Flat;
-            btnClose.Location = new Point(314, 108);
-            btnClose.Name = "btnClose";
-            btnClose.Size = new Size(113, 28);
-            btnClose.TabIndex = 7;
-            btnClose.Text = "Toggle File List";
-            btnClose.Click += btnClose_Click;
             // 
             // pnlTopAccent
             // 
@@ -117,6 +101,7 @@ namespace Brutal_Zip
             btnCancel.Size = new Size(80, 28);
             btnCancel.TabIndex = 4;
             btnCancel.Text = "Cancel";
+            btnCancel.Click += btnCancel_Click;
             // 
             // labelFilesProcessed
             // 
@@ -214,7 +199,6 @@ namespace Brutal_Zip
             Controls.Add(labelPercentageBar);
             Controls.Add(finalBarBrutal1);
             Controls.Add(picBanner);
-            Controls.Add(btnClose);
             Controls.Add(pnlTopAccent);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;

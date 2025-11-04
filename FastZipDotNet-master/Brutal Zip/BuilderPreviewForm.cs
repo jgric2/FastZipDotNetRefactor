@@ -50,7 +50,7 @@ namespace Brutal_Zip
             Controls.Add(_fileListBox);
 
             // Make the button actually toggle the file list (we re-use your “Toggle File List” Button)
-            btnClose.Click += (_, __) => ToggleFileList();
+            //   btnClose.Click += (_, __) => ToggleFileList();
 
             // Start the demo when shown
             Shown += BuilderPreviewForm_Shown;
@@ -67,27 +67,27 @@ namespace Brutal_Zip
             try { _cts?.Cancel(); } catch { }
         }
 
-        private void ToggleFileList()
-        {
-            bool listVisible = _fileListBox.Visible;
-            _fileListBox.Visible = !listVisible;
-            brutalGradientPanel1.Visible = listVisible; // swap the detail panel visibility
+        //private void ToggleFileList()
+        //{
+        //    bool listVisible = _fileListBox.Visible;
+        //    _fileListBox.Visible = !listVisible;
+        //    brutalGradientPanel1.Visible = listVisible; // swap the detail panel visibility
 
-            // Fill the list if becoming visible
-            if (!listVisible)
-            {
-                _fileListBox.BeginUpdate();
-                try
-                {
-                    _fileListBox.Items.Clear();
-                    foreach (var f in _files)
-                    {
-                        _fileListBox.Items.Add($"{f.Name}  ({FormatBytes(f.Size)})");
-                    }
-                }
-                finally { _fileListBox.EndUpdate(); }
-            }
-        }
+        //    // Fill the list if becoming visible
+        //    if (!listVisible)
+        //    {
+        //        _fileListBox.BeginUpdate();
+        //        try
+        //        {
+        //            _fileListBox.Items.Clear();
+        //            foreach (var f in _files)
+        //            {
+        //                _fileListBox.Items.Add($"{f.Name}  ({FormatBytes(f.Size)})");
+        //            }
+        //        }
+        //        finally { _fileListBox.EndUpdate(); }
+        //    }
+        //}
 
         private void StartDemo()
         {
@@ -168,8 +168,8 @@ namespace Brutal_Zip
             var rnd = new Random(unchecked(Environment.TickCount * 37 + 13));
             string[] roots = new[] { "assets", "bin", "res", "images", "docs", "data", "scripts", "content" };
             string[] exts = new[] { ".dll", ".png", ".jpg", ".json", ".txt", ".dat", ".wav", ".mp4", ".js", ".css" };
-
-            int count = rnd.Next(40, 90); // feels busy but not forever
+            
+            int count = rnd.Next(400, 900); // feels busy but not forever
             for (int i = 0; i < count; i++)
             {
                 string root = roots[rnd.Next(roots.Length)];
@@ -305,7 +305,7 @@ namespace Brutal_Zip
         // Button currently labeled “Toggle File List”
         private void btnClose_Click(object sender, EventArgs e)
         {
-            ToggleFileList();
+            //  ToggleFileList();
         }
 
         // Formatting helper
@@ -315,6 +315,11 @@ namespace Brutal_Zip
             double s = bytes; int i = 0;
             while (s >= 1024 && i < u.Length - 1) { s /= 1024; i++; }
             return $"{s:F1} {u[i]}";
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            Close();
         }
     }
 }
