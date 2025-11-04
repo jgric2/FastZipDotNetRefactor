@@ -18,9 +18,9 @@ namespace SfxStub
         private ColumnHeader colSize;
 
         public Label LabelTitle => lblTitle;
-        public ProgressBar ProgressBar => progressOverall;
+       // public ProgressBar ProgressBar => progressOverall;
         public Label LabelFile => lblFile;
-        public Label LabelStat => lblStat;
+      //  public Label LabelStat => lblStat;
         public Button ButtonCancel => btnCancel;
         public ListView FileList => lvFiles;
 

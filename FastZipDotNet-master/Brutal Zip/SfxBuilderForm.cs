@@ -1,15 +1,11 @@
 ﻿using Brutal_Zip.Classes;
-using System;
-using System.Drawing;
-using System.IO;
-using System.Linq;
+using BrutalZip2025.BrutalControls;
 using System.Text;
 using System.Text.Json;
-using System.Windows.Forms;
 
 namespace Brutal_Zip
 {
-    public partial class SfxBuilderForm : Form
+    public partial class SfxBuilderForm : ModernForm
     {
         private const string Magic = "BXZSFX10";
         private const int FooterSize = 8 + 4 + 8; // magic(8) + cfgLen(4) + zipLen(8)
@@ -22,21 +18,9 @@ namespace Brutal_Zip
             _main = main;
             InitializeComponent();
 
-            rdoUseCurrent.CheckedChanged += (_, __) => UpdateSourceMode();
-            rdoUseFile.CheckedChanged += (_, __) => UpdateSourceMode();
-            btnBrowseZip.Click += (_, __) => BrowseZip();
-            btnBrowseStub.Click += (_, __) => BrowseStub();
-            btnBrowseIcon.Click += (_, __) => BrowseIcon();
-            btnBrowseBanner.Click += (_, __) => BrowseBanner();
-            btnPickColor.Click += (_, __) => PickThemeColor();
-            btnLoadLicense.Click += (_, __) => LoadLicense();
-            btnPreview.Click += (_, __) => ShowPreview(); // NEW
-            btnBuild.Click += (_, __) => BuildSfx();
-            btnClose.Click += (_, __) => Close();
-
             txtTitle.Text = "Self Extracting Archive";
             txtDefaultDir.Text = "%TEMP%\\SFX_%NAME%";
-            chkShowFileList.Checked = true;
+            //chkShowFileList.Checked = true;
             chkOverwrite.Checked = true;
             chkShowDone.Checked = true;
             pnlThemeColor.BackColor = Color.DodgerBlue;
@@ -48,7 +32,8 @@ namespace Brutal_Zip
                 if (fi != null)
                 {
                     var pw = fi.GetValue(_main) as string;
-                    if (!string.IsNullOrEmpty(pw)) txtPassword.Text = pw;
+                    if (!string.IsNullOrEmpty(pw))
+                        txtPassword.Text = pw;
                 }
             }
             catch { }
@@ -134,7 +119,7 @@ namespace Brutal_Zip
             }
         }
 
-     
+
         private void ShowPreview()
         {
             try
@@ -144,7 +129,7 @@ namespace Brutal_Zip
                 Icon icon = TryLoadIconFromPath(txtIconPath.Text);
                 Image banner = TryLoadImageFromPath(txtBannerPath.Text);
                 Color theme = pnlThemeColor.BackColor;
-                bool showList = chkShowFileList.Checked;
+                bool showList = false;//chkShowFileList.Checked;
 
                 using var prev = new BuilderPreviewForm(title, company, banner, icon, theme, showList);
                 prev.ShowDialog(this);
@@ -184,7 +169,7 @@ namespace Brutal_Zip
                     Password = string.IsNullOrWhiteSpace(txtPassword.Text) ? null : txtPassword.Text,
                     LicenseText = string.IsNullOrWhiteSpace(txtLicense.Text) ? null : txtLicense.Text,
                     RequireLicenseAccept = chkRequireAccept.Checked,
-                    ShowFileList = chkShowFileList.Checked,
+                    ShowFileList = false, //chkShowFileList.Checked,
                     IconBase64 = ToBase64File(txtIconPath.Text),
                     BannerImageBase64 = ToBase64File(txtBannerPath.Text),
                     ThemeColor = ToHexColor(pnlThemeColor.BackColor)
@@ -233,15 +218,6 @@ namespace Brutal_Zip
                         }
                         catch (IOException) { System.Threading.Thread.Sleep(100); if (i == 4) throw; }
                     }
-
-                    ////using (var fsZip = new FileStream(
-                    ////    sourceZip,
-                    ////    FileMode.Open,
-                    ////    FileAccess.Read,
-                    ////    FileShare.ReadWrite | FileShare.Delete))
-                    ////{
-                    ////    fsZip.CopyTo(fout);
-                    ////}
 
                     // write our custom footer (magic + lengths)
                     WriteFooter(bw, cfgLen, zipLen);
@@ -336,16 +312,6 @@ namespace Brutal_Zip
 
         private static string ToHexColor(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
 
-        private Icon TryLoadIconFromPath(string p)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(p) || !File.Exists(p)) return null;
-                using var s = File.OpenRead(p);
-                return new Icon(s);
-            }
-            catch { return null; }
-        }
 
         private Image TryLoadImageFromPath(string p)
         {
@@ -369,6 +335,11 @@ namespace Brutal_Zip
 
 
 
+
+
+
+        #region Issue Getting icon set and debug issue
+
         private static bool IsSelfContainedStub(string stubPath)
         {
             try
@@ -381,6 +352,19 @@ namespace Brutal_Zip
             }
             catch { return false; }
         }
+
+
+        private Icon TryLoadIconFromPath(string p)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(p) || !File.Exists(p)) return null;
+                using var s = File.OpenRead(p);
+                return new Icon(s);
+            }
+            catch { return null; }
+        }
+
 
         // Show a quick reminder for stub .csproj publish settings
         private void ShowStubCsprojGuidance()
@@ -446,5 +430,107 @@ Then select the published EXE as the stub in the Builder.";
                 throw last;
         }
 
+        #endregion
+
+        private void SfxBuilderForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void rdoUseCurrent_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateSourceMode();
+        }
+
+        private void rdoUseFile_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateSourceMode();
+        }
+
+        private void btnBrowseStub_Click(object sender, EventArgs e)
+        {
+            BrowseStub();
+        }
+
+        private void btnBrowseZip_Click(object sender, EventArgs e)
+        {
+            BrowseZip();
+        }
+
+        private void btnBrowseIcon_Click(object sender, EventArgs e)
+        {
+            BrowseIcon();
+        }
+
+        private void btnBrowseBanner_Click(object sender, EventArgs e)
+        {
+            BrowseBanner();
+        }
+
+        private void btnPickColor_Click(object sender, EventArgs e)
+        {
+            PickThemeColor();
+        }
+
+        private void btnLoadLicense_Click(object sender, EventArgs e)
+        {
+            LoadLicense();
+        }
+
+        private void btnPreview_Click(object sender, EventArgs e)
+        {
+            ShowPreview();
+        }
+
+        private void btnBuild_Click(object sender, EventArgs e)
+        {
+            BuildSfx();
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        private void lblCompany_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void buttonBuild_Click(object sender, EventArgs e)
+        {
+            BuildSfx();
+        }
+
+        private void brutalGradientPanel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void buttonPreview_Click(object sender, EventArgs e)
+        {
+            ShowPreview();
+        }
+
+        private void buttonMain_Click(object sender, EventArgs e)
+        {
+            panelMain.Show();
+            panelBranding.Hide();
+            panelLicence.Hide();
+        }
+
+        private void buttonBranding_Click(object sender, EventArgs e)
+        {
+            panelMain.Hide();
+            panelBranding.Show();
+            panelLicence.Hide();
+        }
+
+        private void buttonLicence_Click(object sender, EventArgs e)
+        {
+            panelMain.Hide();
+            panelBranding.Hide();
+            panelLicence.Show();
+        }
     }
 }

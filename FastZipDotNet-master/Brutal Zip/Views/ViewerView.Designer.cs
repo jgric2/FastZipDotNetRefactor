@@ -110,6 +110,7 @@ namespace Brutal_Zip.Views
             splitRight = new SplitContainer();
             infoPane = new InfoPane();
             brutalGradientPanel1 = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            panel1 = new Panel();
             tableLayoutPanel1 = new TableLayoutPanel();
             buttonInfoPane = new Button();
             buttonFilePreview = new Button();
@@ -136,7 +137,6 @@ namespace Brutal_Zip.Views
             pictureBox2 = new PictureBox();
             textBoxSearch = new TextBox();
             brutalGradientPanel2 = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
-            panel1 = new Panel();
             toolStrip.SuspendLayout();
             ((ISupportInitialize)splitMain).BeginInit();
             splitMain.Panel1.SuspendLayout();
@@ -344,7 +344,7 @@ namespace Brutal_Zip.Views
             breadcrumb.Location = new Point(0, 2);
             breadcrumb.Name = "breadcrumb";
             breadcrumb.Padding = new Padding(8, 4, 8, 4);
-            breadcrumb.Size = new Size(1003, 28);
+            breadcrumb.Size = new Size(1000, 28);
             breadcrumb.TabIndex = 1;
             // 
             // splitMain
@@ -489,7 +489,6 @@ namespace Brutal_Zip.Views
             // 
             // brutalGradientPanel1
             // 
-            brutalGradientPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             brutalGradientPanel1.BackColor = Color.FromArgb(32, 32, 32);
             brutalGradientPanel1.Controls.Add(panel1);
             brutalGradientPanel1.Controls.Add(tableLayoutPanel1);
@@ -503,6 +502,7 @@ namespace Brutal_Zip.Views
             brutalGradientPanel1.Controls.Add(buttonAddFiles);
             brutalGradientPanel1.Controls.Add(buttonHome);
             brutalGradientPanel1.Controls.Add(panelSearch);
+            brutalGradientPanel1.Dock = DockStyle.Top;
             brutalGradientPanel1.EndColor = Color.FromArgb(64, 64, 64);
             brutalGradientPanel1.ForeColor = Color.White;
             brutalGradientPanel1.GlowCenterMaxOpacity = 200;
@@ -510,14 +510,24 @@ namespace Brutal_Zip.Views
             brutalGradientPanel1.GlowMinSurroundOpacity = 30;
             brutalGradientPanel1.GradientEndSide = BrutalZip2025.BrutalControls.GradientSide.Bottom;
             brutalGradientPanel1.GradientStartSide = BrutalZip2025.BrutalControls.GradientSide.Top;
-            brutalGradientPanel1.Location = new Point(-1, 0);
+            brutalGradientPanel1.Location = new Point(0, 0);
             brutalGradientPanel1.Margin = new Padding(0);
             brutalGradientPanel1.MouseEvents = true;
             brutalGradientPanel1.Name = "brutalGradientPanel1";
-            brutalGradientPanel1.Size = new Size(1003, 84);
+            brutalGradientPanel1.Size = new Size(1000, 84);
             brutalGradientPanel1.StartColor = Color.FromArgb(32, 32, 32);
             brutalGradientPanel1.TabIndex = 4;
             brutalGradientPanel1.Paint += brutalGradientPanel1_Paint;
+            // 
+            // panel1
+            // 
+            panel1.BackColor = Color.FromArgb(32, 32, 32);
+            panel1.Dock = DockStyle.Left;
+            panel1.Location = new Point(740, 0);
+            panel1.Name = "panel1";
+            panel1.Padding = new Padding(0, 0, 0, 2);
+            panel1.Size = new Size(2, 84);
+            panel1.TabIndex = 34;
             // 
             // tableLayoutPanel1
             // 
@@ -929,9 +939,9 @@ namespace Brutal_Zip.Views
             // 
             // brutalGradientPanel2
             // 
-            brutalGradientPanel2.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             brutalGradientPanel2.BackColor = Color.FromArgb(32, 32, 32);
             brutalGradientPanel2.Controls.Add(breadcrumb);
+            brutalGradientPanel2.Dock = DockStyle.Top;
             brutalGradientPanel2.EndColor = Color.FromArgb(64, 64, 64);
             brutalGradientPanel2.ForeColor = Color.White;
             brutalGradientPanel2.GlowCenterMaxOpacity = 200;
@@ -939,34 +949,24 @@ namespace Brutal_Zip.Views
             brutalGradientPanel2.GlowMinSurroundOpacity = 30;
             brutalGradientPanel2.GradientEndSide = BrutalZip2025.BrutalControls.GradientSide.Top;
             brutalGradientPanel2.GradientStartSide = BrutalZip2025.BrutalControls.GradientSide.Bottom;
-            brutalGradientPanel2.Location = new Point(-1, 82);
+            brutalGradientPanel2.Location = new Point(0, 84);
             brutalGradientPanel2.Margin = new Padding(0);
             brutalGradientPanel2.MouseEvents = true;
             brutalGradientPanel2.Name = "brutalGradientPanel2";
-            brutalGradientPanel2.Size = new Size(1003, 30);
+            brutalGradientPanel2.Size = new Size(1000, 30);
             brutalGradientPanel2.StartColor = Color.FromArgb(32, 32, 32);
             brutalGradientPanel2.TabIndex = 5;
-            // 
-            // panel1
-            // 
-            panel1.BackColor = Color.FromArgb(32, 32, 32);
-            panel1.Dock = DockStyle.Left;
-            panel1.Location = new Point(740, 0);
-            panel1.Name = "panel1";
-            panel1.Padding = new Padding(0, 0, 0, 2);
-            panel1.Size = new Size(2, 84);
-            panel1.TabIndex = 34;
             // 
             // ViewerView
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = Color.FromArgb(32, 32, 32);
-            Controls.Add(brutalGradientPanel1);
             Controls.Add(splitRight);
             Controls.Add(statusStrip);
             Controls.Add(brutalGradientPanel2);
             Controls.Add(PanelDropExtract);
+            Controls.Add(brutalGradientPanel1);
             ForeColor = Color.White;
             Name = "ViewerView";
             Size = new Size(1000, 700);

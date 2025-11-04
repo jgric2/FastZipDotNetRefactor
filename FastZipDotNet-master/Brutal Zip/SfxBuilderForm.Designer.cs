@@ -7,8 +7,6 @@ namespace Brutal_Zip
     partial class SfxBuilderForm
     {
         private IContainer components = null;
-
-        private GroupBox grpSource;
         internal RadioButton rdoUseCurrent;
         internal RadioButton rdoUseFile;
         internal TextBox txtZipPath;
@@ -17,8 +15,6 @@ namespace Brutal_Zip
         private GroupBox grpStub;
         internal TextBox txtStubPath;
         internal Button btnBrowseStub;
-
-        private GroupBox grpBrand;
         private Label lblTitle;
         internal TextBox txtTitle;
         private Label lblCompany;
@@ -40,10 +36,6 @@ namespace Brutal_Zip
         private Label lblTheme;
         internal Panel pnlThemeColor;
         internal Button btnPickColor;
-
-        internal CheckBox chkShowFileList;
-
-        private GroupBox grpOptions;
         internal CheckBox chkSilent;
         internal CheckBox chkOverwrite;
         internal CheckBox chkRequireElevation;
@@ -54,15 +46,9 @@ namespace Brutal_Zip
 
         private Label lblPassword;
         internal TextBox txtPassword;
-
-        private GroupBox grpLicense;
         internal TextBox txtLicense;
         internal Button btnLoadLicense;
         internal CheckBox chkRequireAccept;
-
-        internal Button btnBuild;
-        internal Button btnClose;
-        internal Button btnPreview; // NEW
 
         protected override void Dispose(bool disposing)
         {
@@ -72,7 +58,6 @@ namespace Brutal_Zip
 
         private void InitializeComponent()
         {
-            grpSource = new GroupBox();
             rdoUseCurrent = new RadioButton();
             rdoUseFile = new RadioButton();
             txtZipPath = new TextBox();
@@ -80,12 +65,10 @@ namespace Brutal_Zip
             grpStub = new GroupBox();
             txtStubPath = new TextBox();
             btnBrowseStub = new Button();
-            grpBrand = new GroupBox();
             lblTitle = new Label();
             txtTitle = new TextBox();
             lblCompany = new Label();
             txtCompany = new TextBox();
-            chkShowFileList = new CheckBox();
             lblDefaultDir = new Label();
             txtDefaultDir = new TextBox();
             lblMacros = new Label();
@@ -100,7 +83,6 @@ namespace Brutal_Zip
             lblTheme = new Label();
             pnlThemeColor = new Panel();
             btnPickColor = new Button();
-            grpOptions = new GroupBox();
             chkSilent = new CheckBox();
             chkOverwrite = new CheckBox();
             chkRequireElevation = new CheckBox();
@@ -109,130 +91,111 @@ namespace Brutal_Zip
             txtRunAfter = new TextBox();
             lblPassword = new Label();
             txtPassword = new TextBox();
-            grpLicense = new GroupBox();
             txtLicense = new TextBox();
             btnLoadLicense = new Button();
             chkRequireAccept = new CheckBox();
-            btnBuild = new Button();
-            btnClose = new Button();
-            btnPreview = new Button();
-            grpSource.SuspendLayout();
+            brutalGradientPanel1 = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            panel1 = new Panel();
+            buttonBuild = new Button();
+            buttonPreview = new Button();
+            panel6 = new Panel();
+            buttonLicence = new Button();
+            buttonBranding = new Button();
+            buttonMain = new Button();
+            panelMain = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            label1 = new Label();
+            panelBranding = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            label2 = new Label();
+            panelLicence = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
             grpStub.SuspendLayout();
-            grpBrand.SuspendLayout();
             ((ISupportInitialize)picIcon).BeginInit();
             ((ISupportInitialize)picBanner).BeginInit();
-            grpOptions.SuspendLayout();
-            grpLicense.SuspendLayout();
+            brutalGradientPanel1.SuspendLayout();
+            panelMain.SuspendLayout();
+            panelBranding.SuspendLayout();
+            panelLicence.SuspendLayout();
             SuspendLayout();
-            // 
-            // grpSource
-            // 
-            grpSource.Controls.Add(rdoUseCurrent);
-            grpSource.Controls.Add(rdoUseFile);
-            grpSource.Controls.Add(txtZipPath);
-            grpSource.Controls.Add(btnBrowseZip);
-            grpSource.Location = new Point(12, 12);
-            grpSource.Name = "grpSource";
-            grpSource.Size = new Size(956, 90);
-            grpSource.TabIndex = 0;
-            grpSource.TabStop = false;
-            grpSource.Text = "Source ZIP";
             // 
             // rdoUseCurrent
             // 
             rdoUseCurrent.AutoSize = true;
             rdoUseCurrent.Checked = true;
-            rdoUseCurrent.Location = new Point(16, 24);
+            rdoUseCurrent.Location = new Point(12, 16);
             rdoUseCurrent.Name = "rdoUseCurrent";
             rdoUseCurrent.Size = new Size(178, 19);
             rdoUseCurrent.TabIndex = 0;
             rdoUseCurrent.TabStop = true;
             rdoUseCurrent.Text = "Use currently opened archive";
+            rdoUseCurrent.CheckedChanged += rdoUseCurrent_CheckedChanged;
             // 
             // rdoUseFile
             // 
             rdoUseFile.AutoSize = true;
-            rdoUseFile.Location = new Point(16, 54);
+            rdoUseFile.Location = new Point(12, 41);
             rdoUseFile.Name = "rdoUseFile";
             rdoUseFile.Size = new Size(86, 19);
             rdoUseFile.TabIndex = 1;
             rdoUseFile.Text = "Use ZIP file:";
+            rdoUseFile.CheckedChanged += rdoUseFile_CheckedChanged;
             // 
             // txtZipPath
             // 
+            txtZipPath.BackColor = Color.FromArgb(32, 32, 32);
+            txtZipPath.BorderStyle = BorderStyle.FixedSingle;
             txtZipPath.Enabled = false;
-            txtZipPath.Location = new Point(110, 52);
+            txtZipPath.ForeColor = Color.White;
+            txtZipPath.Location = new Point(104, 41);
             txtZipPath.Name = "txtZipPath";
-            txtZipPath.Size = new Size(750, 23);
+            txtZipPath.Size = new Size(262, 23);
             txtZipPath.TabIndex = 2;
             // 
             // btnBrowseZip
             // 
             btnBrowseZip.Enabled = false;
-            btnBrowseZip.Location = new Point(868, 50);
+            btnBrowseZip.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnBrowseZip.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnBrowseZip.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnBrowseZip.FlatStyle = FlatStyle.Flat;
+            btnBrowseZip.Location = new Point(372, 41);
             btnBrowseZip.Name = "btnBrowseZip";
             btnBrowseZip.Size = new Size(74, 26);
             btnBrowseZip.TabIndex = 3;
             btnBrowseZip.Text = "Browse…";
+            btnBrowseZip.Click += btnBrowseZip_Click;
             // 
             // grpStub
             // 
             grpStub.Controls.Add(txtStubPath);
             grpStub.Controls.Add(btnBrowseStub);
-            grpStub.Location = new Point(12, 108);
+            grpStub.ForeColor = Color.White;
+            grpStub.Location = new Point(85, 283);
             grpStub.Name = "grpStub";
-            grpStub.Size = new Size(956, 72);
+            grpStub.Size = new Size(318, 72);
             grpStub.TabIndex = 1;
             grpStub.TabStop = false;
             grpStub.Text = "SFX Stub Executable";
+            grpStub.Visible = false;
             // 
             // txtStubPath
             // 
             txtStubPath.Location = new Point(16, 30);
             txtStubPath.Name = "txtStubPath";
-            txtStubPath.Size = new Size(844, 23);
+            txtStubPath.Size = new Size(150, 23);
             txtStubPath.TabIndex = 0;
             // 
             // btnBrowseStub
             // 
-            btnBrowseStub.Location = new Point(868, 28);
+            btnBrowseStub.Location = new Point(186, 27);
             btnBrowseStub.Name = "btnBrowseStub";
             btnBrowseStub.Size = new Size(74, 26);
             btnBrowseStub.TabIndex = 1;
             btnBrowseStub.Text = "Browse…";
-            // 
-            // grpBrand
-            // 
-            grpBrand.Controls.Add(lblTitle);
-            grpBrand.Controls.Add(txtTitle);
-            grpBrand.Controls.Add(lblCompany);
-            grpBrand.Controls.Add(txtCompany);
-            grpBrand.Controls.Add(chkShowFileList);
-            grpBrand.Controls.Add(lblDefaultDir);
-            grpBrand.Controls.Add(txtDefaultDir);
-            grpBrand.Controls.Add(lblMacros);
-            grpBrand.Controls.Add(lblIcon);
-            grpBrand.Controls.Add(txtIconPath);
-            grpBrand.Controls.Add(btnBrowseIcon);
-            grpBrand.Controls.Add(picIcon);
-            grpBrand.Controls.Add(lblBanner);
-            grpBrand.Controls.Add(txtBannerPath);
-            grpBrand.Controls.Add(btnBrowseBanner);
-            grpBrand.Controls.Add(picBanner);
-            grpBrand.Controls.Add(lblTheme);
-            grpBrand.Controls.Add(pnlThemeColor);
-            grpBrand.Controls.Add(btnPickColor);
-            grpBrand.Location = new Point(12, 184);
-            grpBrand.Name = "grpBrand";
-            grpBrand.Size = new Size(956, 232);
-            grpBrand.TabIndex = 2;
-            grpBrand.TabStop = false;
-            grpBrand.Text = "Branding";
+            btnBrowseStub.Click += btnBrowseStub_Click;
             // 
             // lblTitle
             // 
             lblTitle.AutoSize = true;
-            lblTitle.Location = new Point(16, 28);
+            lblTitle.Location = new Point(14, 30);
             lblTitle.Name = "lblTitle";
             lblTitle.Size = new Size(33, 15);
             lblTitle.TabIndex = 0;
@@ -240,15 +203,18 @@ namespace Brutal_Zip
             // 
             // txtTitle
             // 
-            txtTitle.Location = new Point(80, 26);
+            txtTitle.BackColor = Color.FromArgb(32, 32, 32);
+            txtTitle.BorderStyle = BorderStyle.FixedSingle;
+            txtTitle.ForeColor = Color.White;
+            txtTitle.Location = new Point(123, 28);
             txtTitle.Name = "txtTitle";
-            txtTitle.Size = new Size(300, 23);
+            txtTitle.Size = new Size(255, 23);
             txtTitle.TabIndex = 1;
             // 
             // lblCompany
             // 
             lblCompany.AutoSize = true;
-            lblCompany.Location = new Point(398, 28);
+            lblCompany.Location = new Point(14, 60);
             lblCompany.Name = "lblCompany";
             lblCompany.Size = new Size(62, 15);
             lblCompany.TabIndex = 2;
@@ -256,25 +222,18 @@ namespace Brutal_Zip
             // 
             // txtCompany
             // 
-            txtCompany.Location = new Point(468, 26);
+            txtCompany.BackColor = Color.FromArgb(32, 32, 32);
+            txtCompany.BorderStyle = BorderStyle.FixedSingle;
+            txtCompany.ForeColor = Color.White;
+            txtCompany.Location = new Point(123, 58);
             txtCompany.Name = "txtCompany";
-            txtCompany.Size = new Size(300, 23);
+            txtCompany.Size = new Size(255, 23);
             txtCompany.TabIndex = 3;
-            // 
-            // chkShowFileList
-            // 
-            chkShowFileList.Checked = true;
-            chkShowFileList.CheckState = CheckState.Checked;
-            chkShowFileList.Location = new Point(780, 27);
-            chkShowFileList.Name = "chkShowFileList";
-            chkShowFileList.Size = new Size(160, 20);
-            chkShowFileList.TabIndex = 4;
-            chkShowFileList.Text = "Show file list in progress";
             // 
             // lblDefaultDir
             // 
             lblDefaultDir.AutoSize = true;
-            lblDefaultDir.Location = new Point(16, 58);
+            lblDefaultDir.Location = new Point(14, 106);
             lblDefaultDir.Name = "lblDefaultDir";
             lblDefaultDir.Size = new Size(103, 15);
             lblDefaultDir.TabIndex = 5;
@@ -282,9 +241,12 @@ namespace Brutal_Zip
             // 
             // txtDefaultDir
             // 
-            txtDefaultDir.Location = new Point(140, 56);
+            txtDefaultDir.BackColor = Color.FromArgb(32, 32, 32);
+            txtDefaultDir.BorderStyle = BorderStyle.FixedSingle;
+            txtDefaultDir.ForeColor = Color.White;
+            txtDefaultDir.Location = new Point(123, 103);
             txtDefaultDir.Name = "txtDefaultDir";
-            txtDefaultDir.Size = new Size(240, 23);
+            txtDefaultDir.Size = new Size(255, 23);
             txtDefaultDir.TabIndex = 6;
             txtDefaultDir.Text = "%TEMP%\\SFX_%NAME%";
             // 
@@ -292,7 +254,7 @@ namespace Brutal_Zip
             // 
             lblMacros.AutoSize = true;
             lblMacros.ForeColor = Color.DimGray;
-            lblMacros.Location = new Point(390, 58);
+            lblMacros.Location = new Point(14, 130);
             lblMacros.Name = "lblMacros";
             lblMacros.Size = new Size(433, 15);
             lblMacros.TabIndex = 7;
@@ -301,7 +263,7 @@ namespace Brutal_Zip
             // lblIcon
             // 
             lblIcon.AutoSize = true;
-            lblIcon.Location = new Point(16, 92);
+            lblIcon.Location = new Point(14, 157);
             lblIcon.Name = "lblIcon";
             lblIcon.Size = new Size(63, 15);
             lblIcon.TabIndex = 8;
@@ -310,24 +272,32 @@ namespace Brutal_Zip
             // 
             // txtIconPath
             // 
-            txtIconPath.Location = new Point(96, 90);
+            txtIconPath.BackColor = Color.FromArgb(32, 32, 32);
+            txtIconPath.BorderStyle = BorderStyle.FixedSingle;
+            txtIconPath.ForeColor = Color.White;
+            txtIconPath.Location = new Point(123, 154);
             txtIconPath.Name = "txtIconPath";
-            txtIconPath.Size = new Size(420, 23);
+            txtIconPath.Size = new Size(255, 23);
             txtIconPath.TabIndex = 9;
             txtIconPath.Visible = false;
             // 
             // btnBrowseIcon
             // 
-            btnBrowseIcon.Location = new Point(522, 88);
+            btnBrowseIcon.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnBrowseIcon.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnBrowseIcon.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnBrowseIcon.FlatStyle = FlatStyle.Flat;
+            btnBrowseIcon.Location = new Point(382, 153);
             btnBrowseIcon.Name = "btnBrowseIcon";
             btnBrowseIcon.Size = new Size(74, 26);
             btnBrowseIcon.TabIndex = 10;
             btnBrowseIcon.Text = "Browse…";
             btnBrowseIcon.Visible = false;
+            btnBrowseIcon.Click += btnBrowseIcon_Click;
             // 
             // picIcon
             // 
-            picIcon.Location = new Point(606, 86);
+            picIcon.Location = new Point(87, 150);
             picIcon.Name = "picIcon";
             picIcon.Size = new Size(32, 32);
             picIcon.SizeMode = PictureBoxSizeMode.StretchImage;
@@ -338,7 +308,7 @@ namespace Brutal_Zip
             // lblBanner
             // 
             lblBanner.AutoSize = true;
-            lblBanner.Location = new Point(16, 124);
+            lblBanner.Location = new Point(14, 184);
             lblBanner.Name = "lblBanner";
             lblBanner.Size = new Size(101, 15);
             lblBanner.TabIndex = 12;
@@ -346,23 +316,31 @@ namespace Brutal_Zip
             // 
             // txtBannerPath
             // 
-            txtBannerPath.Location = new Point(140, 122);
+            txtBannerPath.BackColor = Color.FromArgb(32, 32, 32);
+            txtBannerPath.BorderStyle = BorderStyle.FixedSingle;
+            txtBannerPath.ForeColor = Color.White;
+            txtBannerPath.Location = new Point(123, 184);
             txtBannerPath.Name = "txtBannerPath";
-            txtBannerPath.Size = new Size(376, 23);
+            txtBannerPath.Size = new Size(255, 23);
             txtBannerPath.TabIndex = 13;
             // 
             // btnBrowseBanner
             // 
-            btnBrowseBanner.Location = new Point(522, 120);
+            btnBrowseBanner.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnBrowseBanner.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnBrowseBanner.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnBrowseBanner.FlatStyle = FlatStyle.Flat;
+            btnBrowseBanner.Location = new Point(382, 184);
             btnBrowseBanner.Name = "btnBrowseBanner";
             btnBrowseBanner.Size = new Size(74, 26);
             btnBrowseBanner.TabIndex = 14;
             btnBrowseBanner.Text = "Browse…";
+            btnBrowseBanner.Click += btnBrowseBanner_Click;
             // 
             // picBanner
             // 
             picBanner.BorderStyle = BorderStyle.FixedSingle;
-            picBanner.Location = new Point(606, 120);
+            picBanner.Location = new Point(123, 211);
             picBanner.Name = "picBanner";
             picBanner.Size = new Size(330, 84);
             picBanner.SizeMode = PictureBoxSizeMode.StretchImage;
@@ -371,7 +349,7 @@ namespace Brutal_Zip
             // 
             // lblTheme
             // 
-            lblTheme.Location = new Point(16, 158);
+            lblTheme.Location = new Point(14, 305);
             lblTheme.Name = "lblTheme";
             lblTheme.Size = new Size(90, 20);
             lblTheme.TabIndex = 16;
@@ -380,40 +358,28 @@ namespace Brutal_Zip
             // pnlThemeColor
             // 
             pnlThemeColor.BackColor = Color.DodgerBlue;
-            pnlThemeColor.Location = new Point(110, 156);
+            pnlThemeColor.Location = new Point(123, 301);
             pnlThemeColor.Name = "pnlThemeColor";
             pnlThemeColor.Size = new Size(40, 24);
             pnlThemeColor.TabIndex = 17;
             // 
             // btnPickColor
             // 
-            btnPickColor.Location = new Point(160, 154);
+            btnPickColor.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnPickColor.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnPickColor.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnPickColor.FlatStyle = FlatStyle.Flat;
+            btnPickColor.Location = new Point(173, 299);
             btnPickColor.Name = "btnPickColor";
             btnPickColor.Size = new Size(60, 28);
             btnPickColor.TabIndex = 18;
             btnPickColor.Text = "Pick…";
-            // 
-            // grpOptions
-            // 
-            grpOptions.Controls.Add(chkSilent);
-            grpOptions.Controls.Add(chkOverwrite);
-            grpOptions.Controls.Add(chkRequireElevation);
-            grpOptions.Controls.Add(chkShowDone);
-            grpOptions.Controls.Add(lblRunAfter);
-            grpOptions.Controls.Add(txtRunAfter);
-            grpOptions.Controls.Add(lblPassword);
-            grpOptions.Controls.Add(txtPassword);
-            grpOptions.Location = new Point(12, 420);
-            grpOptions.Name = "grpOptions";
-            grpOptions.Size = new Size(956, 116);
-            grpOptions.TabIndex = 3;
-            grpOptions.TabStop = false;
-            grpOptions.Text = "Options";
+            btnPickColor.Click += btnPickColor_Click;
             // 
             // chkSilent
             // 
             chkSilent.AutoSize = true;
-            chkSilent.Location = new Point(16, 24);
+            chkSilent.Location = new Point(12, 105);
             chkSilent.Name = "chkSilent";
             chkSilent.Size = new Size(55, 19);
             chkSilent.TabIndex = 0;
@@ -424,7 +390,7 @@ namespace Brutal_Zip
             chkOverwrite.AutoSize = true;
             chkOverwrite.Checked = true;
             chkOverwrite.CheckState = CheckState.Checked;
-            chkOverwrite.Location = new Point(90, 24);
+            chkOverwrite.Location = new Point(12, 130);
             chkOverwrite.Name = "chkOverwrite";
             chkOverwrite.Size = new Size(144, 19);
             chkOverwrite.TabIndex = 1;
@@ -433,7 +399,7 @@ namespace Brutal_Zip
             // chkRequireElevation
             // 
             chkRequireElevation.AutoSize = true;
-            chkRequireElevation.Location = new Point(270, 24);
+            chkRequireElevation.Location = new Point(12, 155);
             chkRequireElevation.Name = "chkRequireElevation";
             chkRequireElevation.Size = new Size(152, 19);
             chkRequireElevation.TabIndex = 2;
@@ -444,7 +410,7 @@ namespace Brutal_Zip
             chkShowDone.AutoSize = true;
             chkShowDone.Checked = true;
             chkShowDone.CheckState = CheckState.Checked;
-            chkShowDone.Location = new Point(450, 24);
+            chkShowDone.Location = new Point(12, 180);
             chkShowDone.Name = "chkShowDone";
             chkShowDone.Size = new Size(157, 19);
             chkShowDone.TabIndex = 3;
@@ -453,7 +419,7 @@ namespace Brutal_Zip
             // lblRunAfter
             // 
             lblRunAfter.AutoSize = true;
-            lblRunAfter.Location = new Point(16, 54);
+            lblRunAfter.Location = new Point(12, 211);
             lblRunAfter.Name = "lblRunAfter";
             lblRunAfter.Size = new Size(145, 15);
             lblRunAfter.TabIndex = 4;
@@ -461,15 +427,18 @@ namespace Brutal_Zip
             // 
             // txtRunAfter
             // 
-            txtRunAfter.Location = new Point(218, 52);
+            txtRunAfter.BackColor = Color.FromArgb(32, 32, 32);
+            txtRunAfter.BorderStyle = BorderStyle.FixedSingle;
+            txtRunAfter.ForeColor = Color.White;
+            txtRunAfter.Location = new Point(189, 209);
             txtRunAfter.Name = "txtRunAfter";
-            txtRunAfter.Size = new Size(320, 23);
+            txtRunAfter.Size = new Size(247, 23);
             txtRunAfter.TabIndex = 5;
             // 
             // lblPassword
             // 
             lblPassword.AutoSize = true;
-            lblPassword.Location = new Point(550, 54);
+            lblPassword.Location = new Point(12, 239);
             lblPassword.Name = "lblPassword";
             lblPassword.Size = new Size(134, 15);
             lblPassword.TabIndex = 6;
@@ -477,107 +446,334 @@ namespace Brutal_Zip
             // 
             // txtPassword
             // 
-            txtPassword.Location = new Point(706, 52);
+            txtPassword.BackColor = Color.FromArgb(32, 32, 32);
+            txtPassword.BorderStyle = BorderStyle.FixedSingle;
+            txtPassword.ForeColor = Color.White;
+            txtPassword.Location = new Point(189, 238);
             txtPassword.Name = "txtPassword";
-            txtPassword.Size = new Size(230, 23);
+            txtPassword.Size = new Size(247, 23);
             txtPassword.TabIndex = 7;
             txtPassword.UseSystemPasswordChar = true;
             // 
-            // grpLicense
-            // 
-            grpLicense.Controls.Add(txtLicense);
-            grpLicense.Controls.Add(btnLoadLicense);
-            grpLicense.Controls.Add(chkRequireAccept);
-            grpLicense.Location = new Point(12, 540);
-            grpLicense.Name = "grpLicense";
-            grpLicense.Size = new Size(956, 120);
-            grpLicense.TabIndex = 4;
-            grpLicense.TabStop = false;
-            grpLicense.Text = "License (optional)";
-            // 
             // txtLicense
             // 
-            txtLicense.Location = new Point(16, 24);
+            txtLicense.BackColor = Color.FromArgb(32, 32, 32);
+            txtLicense.BorderStyle = BorderStyle.FixedSingle;
+            txtLicense.ForeColor = Color.White;
+            txtLicense.Location = new Point(10, 11);
             txtLicense.Multiline = true;
             txtLicense.Name = "txtLicense";
             txtLicense.ScrollBars = ScrollBars.Vertical;
-            txtLicense.Size = new Size(820, 80);
+            txtLicense.Size = new Size(444, 250);
             txtLicense.TabIndex = 0;
             // 
             // btnLoadLicense
             // 
-            btnLoadLicense.Location = new Point(846, 24);
+            btnLoadLicense.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            btnLoadLicense.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            btnLoadLicense.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            btnLoadLicense.FlatStyle = FlatStyle.Flat;
+            btnLoadLicense.Location = new Point(367, 283);
             btnLoadLicense.Name = "btnLoadLicense";
             btnLoadLicense.Size = new Size(84, 26);
             btnLoadLicense.TabIndex = 1;
             btnLoadLicense.Text = "Load…";
+            btnLoadLicense.Click += btnLoadLicense_Click;
             // 
             // chkRequireAccept
             // 
+            chkRequireAccept.BackColor = Color.Transparent;
             chkRequireAccept.Checked = true;
             chkRequireAccept.CheckState = CheckState.Checked;
-            chkRequireAccept.Location = new Point(846, 56);
+            chkRequireAccept.Location = new Point(10, 269);
             chkRequireAccept.Name = "chkRequireAccept";
             chkRequireAccept.Size = new Size(104, 48);
             chkRequireAccept.TabIndex = 2;
             chkRequireAccept.Text = "Require acceptance";
+            chkRequireAccept.UseVisualStyleBackColor = false;
             // 
-            // btnBuild
+            // brutalGradientPanel1
             // 
-            btnBuild.Location = new Point(792, 666);
-            btnBuild.Name = "btnBuild";
-            btnBuild.Size = new Size(84, 28);
-            btnBuild.TabIndex = 6;
-            btnBuild.Text = "Build…";
+            brutalGradientPanel1.BackColor = Color.FromArgb(32, 32, 32);
+            brutalGradientPanel1.Controls.Add(panel1);
+            brutalGradientPanel1.Controls.Add(buttonBuild);
+            brutalGradientPanel1.Controls.Add(buttonPreview);
+            brutalGradientPanel1.Controls.Add(panel6);
+            brutalGradientPanel1.Controls.Add(buttonLicence);
+            brutalGradientPanel1.Controls.Add(buttonBranding);
+            brutalGradientPanel1.Controls.Add(buttonMain);
+            brutalGradientPanel1.Dock = DockStyle.Top;
+            brutalGradientPanel1.EndColor = Color.FromArgb(64, 64, 64);
+            brutalGradientPanel1.ForeColor = Color.White;
+            brutalGradientPanel1.GlowCenterMaxOpacity = 200;
+            brutalGradientPanel1.GlowCenterMinOpacity = 50;
+            brutalGradientPanel1.GlowMinSurroundOpacity = 30;
+            brutalGradientPanel1.GradientEndSide = BrutalZip2025.BrutalControls.GradientSide.Bottom;
+            brutalGradientPanel1.GradientStartSide = BrutalZip2025.BrutalControls.GradientSide.Top;
+            brutalGradientPanel1.Location = new Point(0, 0);
+            brutalGradientPanel1.Margin = new Padding(0);
+            brutalGradientPanel1.MouseEvents = true;
+            brutalGradientPanel1.Name = "brutalGradientPanel1";
+            brutalGradientPanel1.Size = new Size(462, 84);
+            brutalGradientPanel1.StartColor = Color.FromArgb(32, 32, 32);
+            brutalGradientPanel1.TabIndex = 8;
+            brutalGradientPanel1.Paint += brutalGradientPanel1_Paint;
             // 
-            // btnClose
+            // panel1
             // 
-            btnClose.Location = new Point(884, 666);
-            btnClose.Name = "btnClose";
-            btnClose.Size = new Size(84, 28);
-            btnClose.TabIndex = 7;
-            btnClose.Text = "Close";
+            panel1.BackColor = Color.FromArgb(32, 32, 32);
+            panel1.Dock = DockStyle.Left;
+            panel1.Location = new Point(427, 0);
+            panel1.Name = "panel1";
+            panel1.Padding = new Padding(0, 0, 0, 2);
+            panel1.Size = new Size(2, 84);
+            panel1.TabIndex = 36;
             // 
-            // btnPreview
+            // buttonBuild
             // 
-            btnPreview.Location = new Point(700, 666);
-            btnPreview.Name = "btnPreview";
-            btnPreview.Size = new Size(84, 28);
-            btnPreview.TabIndex = 5;
-            btnPreview.Text = "Preview";
+            buttonBuild.BackColor = Color.Transparent;
+            buttonBuild.Dock = DockStyle.Left;
+            buttonBuild.FlatAppearance.BorderSize = 0;
+            buttonBuild.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            buttonBuild.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            buttonBuild.FlatStyle = FlatStyle.Flat;
+            buttonBuild.Location = new Point(342, 0);
+            buttonBuild.Name = "buttonBuild";
+            buttonBuild.Size = new Size(85, 84);
+            buttonBuild.TabIndex = 35;
+            buttonBuild.Text = "Build";
+            buttonBuild.TextAlign = ContentAlignment.BottomCenter;
+            buttonBuild.UseVisualStyleBackColor = false;
+            buttonBuild.Click += buttonBuild_Click;
+            // 
+            // buttonPreview
+            // 
+            buttonPreview.BackColor = Color.Transparent;
+            buttonPreview.Dock = DockStyle.Left;
+            buttonPreview.FlatAppearance.BorderSize = 0;
+            buttonPreview.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            buttonPreview.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            buttonPreview.FlatStyle = FlatStyle.Flat;
+            buttonPreview.Location = new Point(257, 0);
+            buttonPreview.Name = "buttonPreview";
+            buttonPreview.Size = new Size(85, 84);
+            buttonPreview.TabIndex = 34;
+            buttonPreview.Text = "Preview";
+            buttonPreview.TextAlign = ContentAlignment.BottomCenter;
+            buttonPreview.UseVisualStyleBackColor = false;
+            buttonPreview.Click += buttonPreview_Click;
+            // 
+            // panel6
+            // 
+            panel6.BackColor = Color.FromArgb(32, 32, 32);
+            panel6.Dock = DockStyle.Left;
+            panel6.Location = new Point(255, 0);
+            panel6.Name = "panel6";
+            panel6.Padding = new Padding(0, 0, 0, 2);
+            panel6.Size = new Size(2, 84);
+            panel6.TabIndex = 33;
+            // 
+            // buttonLicence
+            // 
+            buttonLicence.BackColor = Color.Transparent;
+            buttonLicence.Dock = DockStyle.Left;
+            buttonLicence.FlatAppearance.BorderSize = 0;
+            buttonLicence.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            buttonLicence.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            buttonLicence.FlatStyle = FlatStyle.Flat;
+            buttonLicence.Location = new Point(170, 0);
+            buttonLicence.Name = "buttonLicence";
+            buttonLicence.Size = new Size(85, 84);
+            buttonLicence.TabIndex = 38;
+            buttonLicence.Text = "Licence";
+            buttonLicence.TextAlign = ContentAlignment.BottomCenter;
+            buttonLicence.UseVisualStyleBackColor = false;
+            buttonLicence.Click += buttonLicence_Click;
+            // 
+            // buttonBranding
+            // 
+            buttonBranding.BackColor = Color.Transparent;
+            buttonBranding.Dock = DockStyle.Left;
+            buttonBranding.FlatAppearance.BorderSize = 0;
+            buttonBranding.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            buttonBranding.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            buttonBranding.FlatStyle = FlatStyle.Flat;
+            buttonBranding.Location = new Point(85, 0);
+            buttonBranding.Name = "buttonBranding";
+            buttonBranding.Size = new Size(85, 84);
+            buttonBranding.TabIndex = 37;
+            buttonBranding.Text = "Branding";
+            buttonBranding.TextAlign = ContentAlignment.BottomCenter;
+            buttonBranding.UseVisualStyleBackColor = false;
+            buttonBranding.Click += buttonBranding_Click;
+            // 
+            // buttonMain
+            // 
+            buttonMain.BackColor = Color.Transparent;
+            buttonMain.Dock = DockStyle.Left;
+            buttonMain.FlatAppearance.BorderSize = 0;
+            buttonMain.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            buttonMain.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            buttonMain.FlatStyle = FlatStyle.Flat;
+            buttonMain.Location = new Point(0, 0);
+            buttonMain.Name = "buttonMain";
+            buttonMain.Size = new Size(85, 84);
+            buttonMain.TabIndex = 0;
+            buttonMain.Text = "Main";
+            buttonMain.TextAlign = ContentAlignment.BottomCenter;
+            buttonMain.UseVisualStyleBackColor = false;
+            buttonMain.Click += buttonMain_Click;
+            // 
+            // panelMain
+            // 
+            panelMain.Controls.Add(grpStub);
+            panelMain.Controls.Add(label1);
+            panelMain.Controls.Add(chkSilent);
+            panelMain.Controls.Add(chkOverwrite);
+            panelMain.Controls.Add(btnBrowseZip);
+            panelMain.Controls.Add(txtZipPath);
+            panelMain.Controls.Add(chkRequireElevation);
+            panelMain.Controls.Add(rdoUseFile);
+            panelMain.Controls.Add(rdoUseCurrent);
+            panelMain.Controls.Add(chkShowDone);
+            panelMain.Controls.Add(txtPassword);
+            panelMain.Controls.Add(lblPassword);
+            panelMain.Controls.Add(lblRunAfter);
+            panelMain.Controls.Add(txtRunAfter);
+            panelMain.EndColor = Color.FromArgb(25, 25, 25);
+            panelMain.ForeColor = Color.White;
+            panelMain.GlowCenterMaxOpacity = 200;
+            panelMain.GlowCenterMinOpacity = 50;
+            panelMain.GlowMinSurroundOpacity = 30;
+            panelMain.GradientEndSide = BrutalZip2025.BrutalControls.GradientSide.Top;
+            panelMain.GradientStartSide = BrutalZip2025.BrutalControls.GradientSide.Bottom;
+            panelMain.Location = new Point(0, 84);
+            panelMain.MouseEvents = true;
+            panelMain.Name = "panelMain";
+            panelMain.Size = new Size(460, 330);
+            panelMain.StartColor = Color.FromArgb(16, 16, 16);
+            panelMain.TabIndex = 9;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label1.Location = new Point(3, 79);
+            label1.Name = "label1";
+            label1.Size = new Size(50, 15);
+            label1.TabIndex = 8;
+            label1.Text = "Options";
+            // 
+            // panelBranding
+            // 
+            panelBranding.Controls.Add(lblCompany);
+            panelBranding.Controls.Add(lblTheme);
+            panelBranding.Controls.Add(pnlThemeColor);
+            panelBranding.Controls.Add(picBanner);
+            panelBranding.Controls.Add(btnPickColor);
+            panelBranding.Controls.Add(picIcon);
+            panelBranding.Controls.Add(btnBrowseIcon);
+            panelBranding.Controls.Add(btnBrowseBanner);
+            panelBranding.Controls.Add(txtBannerPath);
+            panelBranding.Controls.Add(lblBanner);
+            panelBranding.Controls.Add(lblIcon);
+            panelBranding.Controls.Add(txtIconPath);
+            panelBranding.Controls.Add(lblMacros);
+            panelBranding.Controls.Add(txtDefaultDir);
+            panelBranding.Controls.Add(lblDefaultDir);
+            panelBranding.Controls.Add(txtCompany);
+            panelBranding.Controls.Add(lblTitle);
+            panelBranding.Controls.Add(txtTitle);
+            panelBranding.Controls.Add(label2);
+            panelBranding.EndColor = Color.FromArgb(25, 25, 25);
+            panelBranding.ForeColor = Color.White;
+            panelBranding.GlowCenterMaxOpacity = 200;
+            panelBranding.GlowCenterMinOpacity = 50;
+            panelBranding.GlowMinSurroundOpacity = 30;
+            panelBranding.GradientEndSide = BrutalZip2025.BrutalControls.GradientSide.Top;
+            panelBranding.GradientStartSide = BrutalZip2025.BrutalControls.GradientSide.Bottom;
+            panelBranding.Location = new Point(0, 84);
+            panelBranding.MouseEvents = true;
+            panelBranding.Name = "panelBranding";
+            panelBranding.Size = new Size(460, 330);
+            panelBranding.StartColor = Color.FromArgb(16, 16, 16);
+            panelBranding.TabIndex = 10;
+            panelBranding.Visible = false;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label2.Location = new Point(3, 3);
+            label2.Name = "label2";
+            label2.Size = new Size(57, 15);
+            label2.TabIndex = 9;
+            label2.Text = "Branding";
+            // 
+            // panelLicence
+            // 
+            panelLicence.Controls.Add(btnLoadLicense);
+            panelLicence.Controls.Add(txtLicense);
+            panelLicence.Controls.Add(chkRequireAccept);
+            panelLicence.EndColor = Color.FromArgb(25, 25, 25);
+            panelLicence.ForeColor = Color.White;
+            panelLicence.GlowCenterMaxOpacity = 200;
+            panelLicence.GlowCenterMinOpacity = 50;
+            panelLicence.GlowMinSurroundOpacity = 30;
+            panelLicence.GradientEndSide = BrutalZip2025.BrutalControls.GradientSide.Top;
+            panelLicence.GradientStartSide = BrutalZip2025.BrutalControls.GradientSide.Bottom;
+            panelLicence.Location = new Point(0, 84);
+            panelLicence.MouseEvents = true;
+            panelLicence.Name = "panelLicence";
+            panelLicence.Size = new Size(460, 330);
+            panelLicence.StartColor = Color.FromArgb(16, 16, 16);
+            panelLicence.TabIndex = 11;
+            panelLicence.Visible = false;
             // 
             // SfxBuilderForm
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(980, 720);
-            Controls.Add(grpSource);
-            Controls.Add(grpStub);
-            Controls.Add(grpBrand);
-            Controls.Add(grpOptions);
-            Controls.Add(grpLicense);
-            Controls.Add(btnPreview);
-            Controls.Add(btnBuild);
-            Controls.Add(btnClose);
+            ClientSize = new Size(462, 415);
+            Controls.Add(brutalGradientPanel1);
+            Controls.Add(panelMain);
+            Controls.Add(panelBranding);
+            Controls.Add(panelLicence);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "SfxBuilderForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "Build Self-Extracting Archive";
-            grpSource.ResumeLayout(false);
-            grpSource.PerformLayout();
+            Load += SfxBuilderForm_Load;
             grpStub.ResumeLayout(false);
             grpStub.PerformLayout();
-            grpBrand.ResumeLayout(false);
-            grpBrand.PerformLayout();
             ((ISupportInitialize)picIcon).EndInit();
             ((ISupportInitialize)picBanner).EndInit();
-            grpOptions.ResumeLayout(false);
-            grpOptions.PerformLayout();
-            grpLicense.ResumeLayout(false);
-            grpLicense.PerformLayout();
+            brutalGradientPanel1.ResumeLayout(false);
+            panelMain.ResumeLayout(false);
+            panelMain.PerformLayout();
+            panelBranding.ResumeLayout(false);
+            panelBranding.PerformLayout();
+            panelLicence.ResumeLayout(false);
+            panelLicence.PerformLayout();
             ResumeLayout(false);
         }
+        private BrutalZip2025.BrutalControls.BrutalGradientPanel brutalGradientPanel1;
+        private Panel panel6;
+        private Button buttonComment;
+        public Button buttonOpenFolder;
+        private Button buttonAddFolder;
+        private Button buttonMain;
+        private BrutalZip2025.BrutalControls.BrutalGradientPanel panelMain;
+        private Label label1;
+        private BrutalZip2025.BrutalControls.BrutalGradientPanel panelBranding;
+        private Label label2;
+        private BrutalZip2025.BrutalControls.BrutalGradientPanel panelLicence;
+        private Button buttonBuild;
+        private Button buttonPreview;
+        private Panel panel1;
+        private Button buttonLicence;
+        private Button buttonBranding;
     }
 }
