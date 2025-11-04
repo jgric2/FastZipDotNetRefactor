@@ -4,13 +4,14 @@ namespace SfxStub
 {
     public partial class PromptForm : ModernForm
     {
-        public PromptForm(Image banner = null, Icon icon = null, Color? theme = null, string title = null, string company = null)
+        public PromptForm(Image banner = null, Icon icon = null, Color? theme = null, Color? themeEnd = null, string title = null, string company = null)
         {
             InitializeComponent();
 
             if (banner != null) picBanner.Image = banner;
             if (icon != null) this.Icon = icon;
-            if (theme.HasValue) pnlTopAccent.BackColor = theme.Value;
+            if (theme.HasValue) pnlTopAccent.StartColor = theme.Value;
+            if (themeEnd.HasValue) pnlTopAccent.EndColor = themeEnd.Value;
             if (!string.IsNullOrWhiteSpace(title)) this.Text = title;
             if (!string.IsNullOrWhiteSpace(company)) lblCompany.Text = company;
         }

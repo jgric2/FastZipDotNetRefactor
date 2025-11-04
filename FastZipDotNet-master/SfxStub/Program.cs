@@ -91,7 +91,7 @@ namespace SfxStub
                 var icon = TryLoadIcon(cfg.IconBase64);
                 var banner = TryLoadImage(cfg.BannerImageBase64);
                 var theme = TryParseColor(cfg.ThemeColor);
-
+                var themeEnd = TryParseColor(cfg.ThemeColorEnd);
                 // Elevation if needed
                 if (cfg.RequireElevation && !IsElevated())
                 {
@@ -121,7 +121,7 @@ namespace SfxStub
 
                 if (!cfg.Silent)
                 {
-                    using var prompt = new PromptForm(banner, icon, theme, title, cfg.CompanyName);
+                    using var prompt = new PromptForm(banner, icon, theme, themeEnd, title, cfg.CompanyName);
                     prompt.SetFolder(extractDir);
                     var r = prompt.ShowDialog();
                     if (r != DialogResult.OK) return;
@@ -165,7 +165,7 @@ namespace SfxStub
 
                     if (!cfg.Silent)
                     {
-                        using var pf = new ProgressForm(title, banner, icon, theme, cfg.ShowFileList);
+                        using var pf = new ProgressForm(title, banner, icon, theme, themeEnd, cfg.ShowFileList);
                         pf.LabelTitle.Text = string.IsNullOrWhiteSpace(cfg.CompanyName) ? title : $"{cfg.CompanyName} — {title}";
                         var progress = pf.CreateProgress();
 

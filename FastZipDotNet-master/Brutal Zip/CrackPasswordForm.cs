@@ -25,6 +25,9 @@ namespace Brutal_Zip
         private CancellationTokenSource _cts;
         private AdjustableSemaphore _gate; // live-adjustable concurrency gate
 
+        private byte _zipCryptoCheck10;   // expected decrypted header[10]
+        private byte _zipCryptoCheck11;   // expected decrypted header[11]
+
         private long _attempts;
         private readonly Stopwatch _sw = new Stopwatch();
 
@@ -59,7 +62,6 @@ namespace Brutal_Zip
         {
             var zfe = _ctx.TargetEntry;
 
-            // Open with broad sharing to coexist with the engine’s read/write handle
             using var fs = new FileStream(
                 _ctx.ZipPath,
                 new FileStreamOptions
@@ -80,16 +82,15 @@ namespace Brutal_Zip
 
             ushort versionNeeded = br.ReadUInt16();
             ushort gpFlags = br.ReadUInt16();
-            ushort methodLocal = br.ReadUInt16(); // 99 if AES
+            ushort methodLocal = br.ReadUInt16(); // may be 99 for AES
             ushort lastModTime = br.ReadUInt16();
             ushort lastModDate = br.ReadUInt16();
-            uint crc32Local = br.ReadUInt32();           // may be 0 for AES
+            uint crc32Local = br.ReadUInt32();
             uint compSizeLocal = br.ReadUInt32();
             uint uncompSizeLocal = br.ReadUInt32();
             ushort nameLen = br.ReadUInt16();
             ushort extraLen = br.ReadUInt16();
 
-            // Skip name and extras
             if (nameLen > 0) br.ReadBytes(nameLen);
             if (extraLen > 0) br.ReadBytes(extraLen);
 
@@ -108,6 +109,8 @@ namespace Brutal_Zip
 
                 _aesPwv = br.ReadBytes(2);
                 if (_aesPwv.Length != 2) throw new EndOfStreamException("Unexpected EOF reading AES PWV");
+
+                // (AES PWV is checked later; nothing else to do here)
             }
             else
             {
@@ -118,9 +121,19 @@ namespace Brutal_Zip
                 if (hdr.Length != 12) throw new EndOfStreamException("Unexpected EOF reading ZipCrypto header");
                 _zipCryptoHdr12 = hdr;
 
-                // Verifier byte is either high CRC byte or time high byte (if data descriptor)
-                byte verifier = hasDD ? (byte)(lastModTime >> 8) : (byte)(zfe.Crc32 >> 24);
-                _zipCryptoVerifier = verifier;
+                // Compute the expected verifier BYTES for header[10] and header[11]
+                // If data descriptor present -> use lastModTime (little endian: low byte then high byte)
+                // Else -> use high-16 bits of CRC-32 (order: (crc>>16)&0xff, then (crc>>24)&0xff)
+                if (hasDD)
+                {
+                    _zipCryptoCheck10 = (byte)(lastModTime & 0xff);
+                    _zipCryptoCheck11 = (byte)(lastModTime >> 8);
+                }
+                else
+                {
+                    _zipCryptoCheck10 = (byte)((zfe.Crc32 >> 16) & 0xff);
+                    _zipCryptoCheck11 = (byte)((zfe.Crc32 >> 24) & 0xff);
+                }
             }
         }
 
@@ -257,38 +270,24 @@ namespace Brutal_Zip
         {
             if (_isAes)
             {
-                // Derive 2 keys + PWV and compare 2 bytes
-                var (enc, mac, pwv) = WinZipAes.DeriveKeys(pwd, _aesSalt, _aesStrength);
-                bool ok = pwv[0] == _aesPwv[0] && pwv[1] == _aesPwv[1];
-                Array.Clear(enc, 0, enc.Length);
-                Array.Clear(mac, 0, mac.Length);
-                Array.Clear(pwv, 0, pwv.Length);
-                return ok;
+                return TestCandidateAES(pwd);
             }
             else
             {
-                // ZipCrypto header test: decrypt 12 bytes and compare last byte
-                var tmp = ArrayPool<byte>.Shared.Rent(12);
-                try
-                {
-                    Buffer.BlockCopy(_zipCryptoHdr12, 0, tmp, 0, 12);
-                    var tc = new TraditionalZipCrypto(pwd);
-                    tc.Decrypt(tmp, 0, 12);
-                    return tmp[11] == _zipCryptoVerifier;
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(tmp);
-                }
+                return TestCandidatePK(pwd);
             }
         }
 
 
         private bool TestCandidateAES(string pwd)
         {
-            // Derive 2 keys + PWV and compare 2 bytes
-            var (enc, mac, pwv) = WinZipAes.DeriveKeys(pwd, _aesSalt, _aesStrength);
-            bool ok = pwv[0] == _aesPwv[0] && pwv[1] == _aesPwv[1];
+            var (enc, mac, pwv) = WinZipAes.DeriveKeys(pwd ?? string.Empty, _aesSalt, _aesStrength);
+
+            bool ok = pwv.Length >= 2 &&
+                      _aesPwv.Length >= 2 &&
+                      pwv[0] == _aesPwv[0] &&
+                      pwv[1] == _aesPwv[1];
+
             Array.Clear(enc, 0, enc.Length);
             Array.Clear(mac, 0, mac.Length);
             Array.Clear(pwv, 0, pwv.Length);
@@ -297,20 +296,24 @@ namespace Brutal_Zip
 
         private bool TestCandidatePK(string pwd)
         {
-            // ZipCrypto header test: decrypt 12 bytes and compare last byte
+            if (_zipCryptoHdr12 == null || _zipCryptoHdr12.Length != 12)
+                return false;
+
             var tmp = ArrayPool<byte>.Shared.Rent(12);
             try
             {
                 Buffer.BlockCopy(_zipCryptoHdr12, 0, tmp, 0, 12);
-                var tc = new TraditionalZipCrypto(pwd);
+
+                var tc = new TraditionalZipCrypto(pwd ?? string.Empty);
                 tc.Decrypt(tmp, 0, 12);
-                return tmp[11] == _zipCryptoVerifier;
+
+                // Verify both header[10] and header[11] against the expected two-byte check.
+                return tmp[10] == _zipCryptoCheck10 && tmp[11] == _zipCryptoCheck11;
             }
             finally
             {
                 ArrayPool<byte>.Shared.Return(tmp);
             }
-
         }
 
 
@@ -365,6 +368,7 @@ namespace Brutal_Zip
                                         FoundPassword = pwd;
                                         lblFound.BeginInvoke(new Action(() => lblFound.Text = "Found: " + pwd));
                                         _cts.Cancel();
+                                        MessageBox.Show("Password found: " + pwd);
                                         return;
                                     }
                                     Interlocked.Increment(ref _attempts);
@@ -400,6 +404,7 @@ namespace Brutal_Zip
                                         FoundPassword = pwd;
                                         lblFound.BeginInvoke(new Action(() => lblFound.Text = "Found: " + pwd));
                                         _cts.Cancel();
+                                        MessageBox.Show("Password found: " + pwd);
                                         return;
                                     }
                                     Interlocked.Increment(ref _attempts);
@@ -631,10 +636,10 @@ namespace Brutal_Zip
 
                                         if (TestCandidatePK(candidate))
                                         {
-                                            if (candidate == "asd")
-                                            {
-                                                var tt = "";
-                                            }
+                                            //if (candidate == "asd")
+                                            //{
+                                            //    var tt = "";
+                                            //}
 
                                             FoundPassword = candidate;
                                             lblFound.BeginInvoke(new Action(() => lblFound.Text = "Found: " + candidate));

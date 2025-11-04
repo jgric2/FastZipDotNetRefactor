@@ -28,6 +28,7 @@ namespace SfxStub
 
         // Theme color as hex "#RRGGBB" or "RRGGBB"
         public string ThemeColor { get; set; } = null;
+        public string ThemeColorEnd { get; set; } = null;
 
         // Extra UI options
         public bool ShowFileList { get; set; } = true;

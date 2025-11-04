@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using size_t = System.UIntPtr;
+﻿using size_t = System.UIntPtr;
 
 namespace FastZipDotNet.Zip.ZStd
 {

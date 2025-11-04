@@ -13,24 +13,18 @@ namespace SfxStub
         // Expose the last received progress snapshot for any external consumer
         public ZipProgress LastProgress { get; private set; }
 
-        public ProgressForm(string title, Image banner = null, Icon icon = null, Color? theme = null, bool showFileList = true)
+        public ProgressForm(string title, Image banner = null, Icon icon = null, Color? theme = null, Color? themeEnd = null, bool showFileList = true)
         {
             InitializeComponent();
 
             if (banner != null) picBanner.Image = banner;
             if (icon != null) this.Icon = icon;
             if (theme.HasValue) pnlTopAccent.StartColor = theme.Value;
+            if (themeEnd.HasValue) pnlTopAccent.EndColor = themeEnd.Value;
             if (!string.IsNullOrWhiteSpace(title)) lblTitle.Text = title;
 
             lvFiles.Visible = showFileList;
-            //if (!showFileList)
-            //{
-            //    // Simplify layout if file list is hidden
-            //   // btnCancel.Top = progressOverall.Bottom + 20;
-            //    Height = 240;
-            //}
-
-            //  btnCancel.Click += (_, __) => TokenSource.Cancel();
+ 
         }
 
         public IProgress<ZipProgress> CreateProgress()

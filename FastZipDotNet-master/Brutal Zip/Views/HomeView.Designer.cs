@@ -13,8 +13,6 @@ namespace Brutal_Zip.Views
         internal NumericUpDown numCreateLevel;
         internal Button btnCreate;
         internal Label lblCreateHint;
-       // internal ComboBox cmbEncrypt;
-     //   internal Button btnCreateSetPassword;
         internal Label lblPwdStatus;
 
         // Staging
@@ -1267,7 +1265,6 @@ namespace Brutal_Zip.Views
         private Panel panel4;
         private Panel panel3;
         private Label label6;
-      //  private BrutalZip2025.BrutalControls.BrutalComboBox cmbCreateMethod;
         private Panel panel5;
         private Label label8;
         private BrutalZip2025.BrutalControls.BrutalComboBox cmbEncrypt;

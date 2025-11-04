@@ -94,18 +94,21 @@ namespace Brutal_Zip
             buttonBranding = new Button();
             buttonMain = new Button();
             panelMain = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
-            label1 = new Label();
-            panelBranding = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
-            label2 = new Label();
-            panelLicence = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
-            label3 = new Label();
-            chkSilent = new BrutalZip2025.BrutalControls.BrutalCheckBox();
-            label4 = new Label();
-            chkOverwrite = new BrutalZip2025.BrutalControls.BrutalCheckBox();
-            label5 = new Label();
-            chkRequireElevation = new BrutalZip2025.BrutalControls.BrutalCheckBox();
             label6 = new Label();
             chkShowDone = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label5 = new Label();
+            chkRequireElevation = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label4 = new Label();
+            chkOverwrite = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label3 = new Label();
+            chkSilent = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label1 = new Label();
+            panelBranding = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            gradientPanelPreview = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            pnlThemeColorEnd = new Panel();
+            button1 = new Button();
+            label2 = new Label();
+            panelLicence = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
             label7 = new Label();
             chkRequireAccept = new BrutalZip2025.BrutalControls.BrutalCheckBox();
             grpStub.SuspendLayout();
@@ -358,10 +361,10 @@ namespace Brutal_Zip
             // 
             // pnlThemeColor
             // 
-            pnlThemeColor.BackColor = Color.DodgerBlue;
+            pnlThemeColor.BackColor = Color.FromArgb(29, 181, 82);
             pnlThemeColor.Location = new Point(123, 301);
             pnlThemeColor.Name = "pnlThemeColor";
-            pnlThemeColor.Size = new Size(40, 24);
+            pnlThemeColor.Size = new Size(13, 24);
             pnlThemeColor.TabIndex = 17;
             // 
             // btnPickColor
@@ -370,7 +373,7 @@ namespace Brutal_Zip
             btnPickColor.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnPickColor.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnPickColor.FlatStyle = FlatStyle.Flat;
-            btnPickColor.Location = new Point(173, 299);
+            btnPickColor.Location = new Point(140, 300);
             btnPickColor.Name = "btnPickColor";
             btnPickColor.Size = new Size(60, 28);
             btnPickColor.TabIndex = 18;
@@ -607,6 +610,130 @@ namespace Brutal_Zip
             panelMain.StartColor = Color.FromArgb(16, 16, 16);
             panelMain.TabIndex = 9;
             // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label6.Location = new Point(35, 183);
+            label6.Name = "label6";
+            label6.Size = new Size(145, 15);
+            label6.TabIndex = 52;
+            label6.Text = "Show 'completed' dialog";
+            // 
+            // chkShowDone
+            // 
+            chkShowDone.BackColor = Color.Transparent;
+            chkShowDone.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkShowDone.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkShowDone.BoxGradientEnabled = true;
+            chkShowDone.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkShowDone.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkShowDone.BoxSize = 14;
+            chkShowDone.CheckBorderColor = Color.Lime;
+            chkShowDone.CheckColor = Color.LawnGreen;
+            chkShowDone.Checked = true;
+            chkShowDone.CheckGradientEnabled = true;
+            chkShowDone.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkShowDone.CheckGradientStart = Color.Lime;
+            chkShowDone.CheckState = CheckState.Checked;
+            chkShowDone.Location = new Point(14, 177);
+            chkShowDone.Name = "chkShowDone";
+            chkShowDone.Size = new Size(18, 24);
+            chkShowDone.TabIndex = 51;
+            chkShowDone.UseVisualStyleBackColor = false;
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label5.Location = new Point(35, 158);
+            label5.Name = "label5";
+            label5.Size = new Size(141, 15);
+            label5.TabIndex = 50;
+            label5.Text = "Require elevation (UAC)";
+            // 
+            // chkRequireElevation
+            // 
+            chkRequireElevation.BackColor = Color.Transparent;
+            chkRequireElevation.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkRequireElevation.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkRequireElevation.BoxGradientEnabled = true;
+            chkRequireElevation.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkRequireElevation.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkRequireElevation.BoxSize = 14;
+            chkRequireElevation.CheckBorderColor = Color.Lime;
+            chkRequireElevation.CheckColor = Color.LawnGreen;
+            chkRequireElevation.CheckGradientEnabled = true;
+            chkRequireElevation.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkRequireElevation.CheckGradientStart = Color.Lime;
+            chkRequireElevation.Location = new Point(14, 152);
+            chkRequireElevation.Name = "chkRequireElevation";
+            chkRequireElevation.Size = new Size(18, 24);
+            chkRequireElevation.TabIndex = 49;
+            chkRequireElevation.UseVisualStyleBackColor = false;
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label4.Location = new Point(35, 134);
+            label4.Name = "label4";
+            label4.Size = new Size(138, 15);
+            label4.TabIndex = 48;
+            label4.Text = "Overwrite existing files";
+            // 
+            // chkOverwrite
+            // 
+            chkOverwrite.BackColor = Color.Transparent;
+            chkOverwrite.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkOverwrite.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkOverwrite.BoxGradientEnabled = true;
+            chkOverwrite.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkOverwrite.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkOverwrite.BoxSize = 14;
+            chkOverwrite.CheckBorderColor = Color.Lime;
+            chkOverwrite.CheckColor = Color.LawnGreen;
+            chkOverwrite.Checked = true;
+            chkOverwrite.CheckGradientEnabled = true;
+            chkOverwrite.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkOverwrite.CheckGradientStart = Color.Lime;
+            chkOverwrite.CheckState = CheckState.Checked;
+            chkOverwrite.Location = new Point(14, 128);
+            chkOverwrite.Name = "chkOverwrite";
+            chkOverwrite.Size = new Size(18, 24);
+            chkOverwrite.TabIndex = 47;
+            chkOverwrite.UseVisualStyleBackColor = false;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label3.Location = new Point(35, 109);
+            label3.Name = "label3";
+            label3.Size = new Size(39, 15);
+            label3.TabIndex = 46;
+            label3.Text = "Silent";
+            // 
+            // chkSilent
+            // 
+            chkSilent.BackColor = Color.Transparent;
+            chkSilent.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkSilent.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkSilent.BoxGradientEnabled = true;
+            chkSilent.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkSilent.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkSilent.BoxSize = 14;
+            chkSilent.CheckBorderColor = Color.Lime;
+            chkSilent.CheckColor = Color.LawnGreen;
+            chkSilent.CheckGradientEnabled = true;
+            chkSilent.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkSilent.CheckGradientStart = Color.Lime;
+            chkSilent.Location = new Point(14, 103);
+            chkSilent.Name = "chkSilent";
+            chkSilent.Size = new Size(18, 24);
+            chkSilent.TabIndex = 45;
+            chkSilent.UseVisualStyleBackColor = false;
+            // 
             // label1
             // 
             label1.AutoSize = true;
@@ -619,6 +746,9 @@ namespace Brutal_Zip
             // 
             // panelBranding
             // 
+            panelBranding.Controls.Add(gradientPanelPreview);
+            panelBranding.Controls.Add(pnlThemeColorEnd);
+            panelBranding.Controls.Add(button1);
             panelBranding.Controls.Add(lblCompany);
             panelBranding.Controls.Add(lblTheme);
             panelBranding.Controls.Add(pnlThemeColor);
@@ -653,6 +783,40 @@ namespace Brutal_Zip
             panelBranding.TabIndex = 10;
             panelBranding.Visible = false;
             // 
+            // gradientPanelPreview
+            // 
+            gradientPanelPreview.EndColor = Color.Black;
+            gradientPanelPreview.GlowCenterMaxOpacity = 200;
+            gradientPanelPreview.GlowCenterMinOpacity = 50;
+            gradientPanelPreview.GlowMinSurroundOpacity = 30;
+            gradientPanelPreview.Location = new Point(206, 300);
+            gradientPanelPreview.MouseEvents = true;
+            gradientPanelPreview.Name = "gradientPanelPreview";
+            gradientPanelPreview.Size = new Size(165, 27);
+            gradientPanelPreview.StartColor = Color.FromArgb(29, 181, 82);
+            gradientPanelPreview.TabIndex = 21;
+            // 
+            // pnlThemeColorEnd
+            // 
+            pnlThemeColorEnd.BackColor = Color.Black;
+            pnlThemeColorEnd.Location = new Point(376, 300);
+            pnlThemeColorEnd.Name = "pnlThemeColorEnd";
+            pnlThemeColorEnd.Size = new Size(13, 24);
+            pnlThemeColorEnd.TabIndex = 19;
+            // 
+            // button1
+            // 
+            button1.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
+            button1.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            button1.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            button1.FlatStyle = FlatStyle.Flat;
+            button1.Location = new Point(393, 299);
+            button1.Name = "button1";
+            button1.Size = new Size(60, 28);
+            button1.TabIndex = 20;
+            button1.Text = "Pick…";
+            button1.Click += button1_Click;
+            // 
             // label2
             // 
             label2.AutoSize = true;
@@ -683,130 +847,6 @@ namespace Brutal_Zip
             panelLicence.StartColor = Color.FromArgb(16, 16, 16);
             panelLicence.TabIndex = 11;
             panelLicence.Visible = false;
-            // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label3.Location = new Point(35, 109);
-            label3.Name = "label3";
-            label3.Size = new Size(39, 15);
-            label3.TabIndex = 46;
-            label3.Text = "Silent";
-            // 
-            // chkSilent
-            // 
-            chkSilent.BackColor = Color.Transparent;
-            chkSilent.BoxBackColor = Color.FromArgb(64, 64, 64);
-            chkSilent.BoxBorderColor = Color.FromArgb(29, 181, 82);
-            chkSilent.BoxGradientEnabled = true;
-            chkSilent.BoxGradientEnd = Color.FromArgb(16, 16, 16);
-            chkSilent.BoxGradientStart = Color.FromArgb(29, 181, 82);
-            chkSilent.BoxSize = 14;
-            chkSilent.CheckBorderColor = Color.Lime;
-            chkSilent.CheckColor = Color.LawnGreen;
-            chkSilent.CheckGradientEnabled = true;
-            chkSilent.CheckGradientEnd = Color.FromArgb(29, 181, 82);
-            chkSilent.CheckGradientStart = Color.Lime;
-            chkSilent.Location = new Point(14, 103);
-            chkSilent.Name = "chkSilent";
-            chkSilent.Size = new Size(18, 24);
-            chkSilent.TabIndex = 45;
-            chkSilent.UseVisualStyleBackColor = false;
-            // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label4.Location = new Point(35, 134);
-            label4.Name = "label4";
-            label4.Size = new Size(138, 15);
-            label4.TabIndex = 48;
-            label4.Text = "Overwrite existing files";
-            // 
-            // chkOverwrite
-            // 
-            chkOverwrite.BackColor = Color.Transparent;
-            chkOverwrite.BoxBackColor = Color.FromArgb(64, 64, 64);
-            chkOverwrite.BoxBorderColor = Color.FromArgb(29, 181, 82);
-            chkOverwrite.BoxGradientEnabled = true;
-            chkOverwrite.BoxGradientEnd = Color.FromArgb(16, 16, 16);
-            chkOverwrite.BoxGradientStart = Color.FromArgb(29, 181, 82);
-            chkOverwrite.BoxSize = 14;
-            chkOverwrite.CheckBorderColor = Color.Lime;
-            chkOverwrite.CheckColor = Color.LawnGreen;
-            chkOverwrite.Checked = true;
-            chkOverwrite.CheckGradientEnabled = true;
-            chkOverwrite.CheckGradientEnd = Color.FromArgb(29, 181, 82);
-            chkOverwrite.CheckGradientStart = Color.Lime;
-            chkOverwrite.CheckState = CheckState.Checked;
-            chkOverwrite.Location = new Point(14, 128);
-            chkOverwrite.Name = "chkOverwrite";
-            chkOverwrite.Size = new Size(18, 24);
-            chkOverwrite.TabIndex = 47;
-            chkOverwrite.UseVisualStyleBackColor = false;
-            // 
-            // label5
-            // 
-            label5.AutoSize = true;
-            label5.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label5.Location = new Point(35, 158);
-            label5.Name = "label5";
-            label5.Size = new Size(141, 15);
-            label5.TabIndex = 50;
-            label5.Text = "Require elevation (UAC)";
-            // 
-            // chkRequireElevation
-            // 
-            chkRequireElevation.BackColor = Color.Transparent;
-            chkRequireElevation.BoxBackColor = Color.FromArgb(64, 64, 64);
-            chkRequireElevation.BoxBorderColor = Color.FromArgb(29, 181, 82);
-            chkRequireElevation.BoxGradientEnabled = true;
-            chkRequireElevation.BoxGradientEnd = Color.FromArgb(16, 16, 16);
-            chkRequireElevation.BoxGradientStart = Color.FromArgb(29, 181, 82);
-            chkRequireElevation.BoxSize = 14;
-            chkRequireElevation.CheckBorderColor = Color.Lime;
-            chkRequireElevation.CheckColor = Color.LawnGreen;
-            chkRequireElevation.CheckGradientEnabled = true;
-            chkRequireElevation.CheckGradientEnd = Color.FromArgb(29, 181, 82);
-            chkRequireElevation.CheckGradientStart = Color.Lime;
-            chkRequireElevation.Location = new Point(14, 152);
-            chkRequireElevation.Name = "chkRequireElevation";
-            chkRequireElevation.Size = new Size(18, 24);
-            chkRequireElevation.TabIndex = 49;
-            chkRequireElevation.UseVisualStyleBackColor = false;
-            // 
-            // label6
-            // 
-            label6.AutoSize = true;
-            label6.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label6.Location = new Point(35, 183);
-            label6.Name = "label6";
-            label6.Size = new Size(145, 15);
-            label6.TabIndex = 52;
-            label6.Text = "Show 'completed' dialog";
-            // 
-            // chkShowDone
-            // 
-            chkShowDone.BackColor = Color.Transparent;
-            chkShowDone.BoxBackColor = Color.FromArgb(64, 64, 64);
-            chkShowDone.BoxBorderColor = Color.FromArgb(29, 181, 82);
-            chkShowDone.BoxGradientEnabled = true;
-            chkShowDone.BoxGradientEnd = Color.FromArgb(16, 16, 16);
-            chkShowDone.BoxGradientStart = Color.FromArgb(29, 181, 82);
-            chkShowDone.BoxSize = 14;
-            chkShowDone.CheckBorderColor = Color.Lime;
-            chkShowDone.CheckColor = Color.LawnGreen;
-            chkShowDone.Checked = true;
-            chkShowDone.CheckGradientEnabled = true;
-            chkShowDone.CheckGradientEnd = Color.FromArgb(29, 181, 82);
-            chkShowDone.CheckGradientStart = Color.Lime;
-            chkShowDone.CheckState = CheckState.Checked;
-            chkShowDone.Location = new Point(14, 177);
-            chkShowDone.Name = "chkShowDone";
-            chkShowDone.Size = new Size(18, 24);
-            chkShowDone.TabIndex = 51;
-            chkShowDone.UseVisualStyleBackColor = false;
             // 
             // label7
             // 
@@ -847,9 +887,9 @@ namespace Brutal_Zip
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(462, 415);
             Controls.Add(brutalGradientPanel1);
-            Controls.Add(panelMain);
             Controls.Add(panelBranding);
             Controls.Add(panelLicence);
+            Controls.Add(panelMain);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -896,5 +936,8 @@ namespace Brutal_Zip
         private BrutalZip2025.BrutalControls.BrutalCheckBox chkSilent;
         private Label label7;
         private BrutalZip2025.BrutalControls.BrutalCheckBox chkRequireAccept;
+        internal Panel pnlThemeColorEnd;
+        internal Button button1;
+        private BrutalZip2025.BrutalControls.BrutalGradientPanel gradientPanelPreview;
     }
 }

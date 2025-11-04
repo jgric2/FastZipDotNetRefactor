@@ -26,7 +26,8 @@ namespace Brutal_Zip.Classes
         public string BannerImageBase64 { get; set; } = null;  // bytes of .png/.jpg, base64
 
         // Theme color hex "#RRGGBB" or "RRGGBB"
-        public string ThemeColor { get; set; } = null;
+        public string ThemeColorStart { get; set; } = null;
+        public string ThemeColorEnd { get; set; } = null;
 
         // Extra UI
         public bool ShowFileList { get; set; } = true;

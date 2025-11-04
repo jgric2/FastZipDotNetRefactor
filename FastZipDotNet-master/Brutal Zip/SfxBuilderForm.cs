@@ -84,11 +84,29 @@ namespace Brutal_Zip
             }
         }
 
-        private void PickThemeColor()
+        private void PickThemeColorStart()
         {
             using var cd = new ColorDialog { Color = pnlThemeColor.BackColor, FullOpen = true };
             if (cd.ShowDialog(this) == DialogResult.OK)
+            {
                 pnlThemeColor.BackColor = cd.Color;
+
+                gradientPanelPreview.StartColor = cd.Color;
+                gradientPanelPreview.EndColor = pnlThemeColorEnd.BackColor;
+            }
+              
+        }
+
+        private void PickThemeColorEnd()
+        {
+            using var cd = new ColorDialog { Color = pnlThemeColorEnd.BackColor, FullOpen = true };
+            if (cd.ShowDialog(this) == DialogResult.OK)
+            {
+                pnlThemeColorEnd.BackColor = cd.Color;
+
+                gradientPanelPreview.EndColor = cd.Color;
+                gradientPanelPreview.StartColor = pnlThemeColor.BackColor;
+            }
         }
 
         private void LoadLicense()
@@ -129,9 +147,10 @@ namespace Brutal_Zip
                 Icon icon = TryLoadIconFromPath(txtIconPath.Text);
                 Image banner = TryLoadImageFromPath(txtBannerPath.Text);
                 Color theme = pnlThemeColor.BackColor;
+                Color themeEnd = pnlThemeColorEnd.BackColor;
                 bool showList = false;//chkShowFileList.Checked;
 
-                using var prev = new BuilderPreviewForm(title, company, banner, icon, theme, showList);
+                using var prev = new BuilderPreviewForm(title, company, banner, icon, theme, themeEnd, showList);
                 prev.ShowDialog(this);
             }
             catch (Exception ex)
@@ -172,7 +191,8 @@ namespace Brutal_Zip
                     ShowFileList = false, //chkShowFileList.Checked,
                     IconBase64 = ToBase64File(txtIconPath.Text),
                     BannerImageBase64 = ToBase64File(txtBannerPath.Text),
-                    ThemeColor = ToHexColor(pnlThemeColor.BackColor)
+                    ThemeColorStart = ToHexColor(pnlThemeColor.BackColor),
+                    ThemeColorEnd = ToHexColor(pnlThemeColorEnd.BackColor)
                 };
 
                 using var sfd = new SaveFileDialog { Filter = "Self-extracting exe|*.exe", FileName = "Setup.exe" };
@@ -469,7 +489,7 @@ Then select the published EXE as the stub in the Builder.";
 
         private void btnPickColor_Click(object sender, EventArgs e)
         {
-            PickThemeColor();
+            PickThemeColorStart();
         }
 
         private void btnLoadLicense_Click(object sender, EventArgs e)
@@ -531,6 +551,11 @@ Then select the published EXE as the stub in the Builder.";
             panelMain.Hide();
             panelBranding.Hide();
             panelLicence.Show();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            PickThemeColorEnd();
         }
     }
 }
