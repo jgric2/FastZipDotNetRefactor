@@ -1,5 +1,6 @@
 ﻿using Brutal_Zip.Controls.BrutalControls.FileOrFolderDialog;
 using System.CodeDom;
+using System.Collections;
 using System.Data;
 using System.Xml.Linq;
 
@@ -203,32 +204,61 @@ namespace Brutal_Zip.Views
 
         private void lvStaging_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop)) 
-                e.Effect = DragDropEffects.Copy;
-            else if (e.Data.GetDataPresent("TreeNodeArray"))
+            if (e.Data.GetDataPresent(DataFormats.FileDrop) ||
+            e.Data.GetDataPresent("TreeNodeArray"))
             {
-                e.Effect = DragDropEffects.Move;
+                e.Effect = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
             }
         }
 
         private void lvStaging_DragDrop(object sender, DragEventArgs e)
         {
-         
-
-
-            var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-            TreeNode[] nodes = null;
-            DataObject[] nn = null;
-            if (paths == null)
+            try
             {
-                if (e.Data.GetDataPresent(typeof(TreeNode[])))
-                    nodes = (TreeNode[])e.Data.GetData(typeof(TreeNode[]));
-                else if (e.Data.GetDataPresent(typeof(DataObject)))
-                    nn = new[] { (DataObject)e.Data.GetData(typeof(DataObject)) };
+                string[] paths = null;
+
+                // Preferred: Windows/TreeViewMS FileDrop payload
+                if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                {
+                    paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+                }
+                // Back-compat: your custom "TreeNodeArray" payload
+                else if (e.Data.GetDataPresent("TreeNodeArray"))
+                {
+                    var list = new List<string>();
+
+                    object obj = e.Data.GetData("TreeNodeArray");
+                    if (obj is ArrayList al)
+                    {
+                        foreach (var item in al)
+                        {
+                            if (item is TreeNode n && n.Tag is string p && !string.IsNullOrWhiteSpace(p))
+                                list.Add(p);
+                        }
+                    }
+                    else if (obj is TreeNode[] arr)
+                    {
+                        foreach (var n in arr)
+                        {
+                            if (n?.Tag is string p && !string.IsNullOrWhiteSpace(p))
+                                list.Add(p);
+                        }
+                    }
+
+                    paths = list.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                }
+
+                if (paths != null && paths.Length > 0)
+                    FilesDroppedForCreate?.Invoke(paths);
             }
-
-
-            FilesDroppedForCreate?.Invoke(paths ?? Array.Empty<string>());
+            catch
+            {
+                // keep it quiet for UI
+            }
         }
 
         private void btnCreateQuick_Click(object sender, EventArgs e)
@@ -350,18 +380,8 @@ namespace Brutal_Zip.Views
 
         private void treeViewExplorer_ItemDrag(object sender, ItemDragEventArgs e)
         {
-            // Move the dragged node when the left mouse button is used.
-            if (e.Button == MouseButtons.Left)
-            {
-                //var data = new TreeNode(typeof(TreeNode[]), new[] { (TreeNode)e.Item });
-                DoDragDrop(e.Item, DragDropEffects.Copy);
-            }
-
-            // Copy the dragged node when the right mouse button is used.
-            //else if (e.Button == MouseButtons.Right)
-            //{
-            //    DoDragDrop(e.Item, DragDropEffects.Copy);
-            //}
+            // Let TreeViewMS.OnItemDrag produce the proper DataObject (FileDrop + TreeNodeArray).
+            // No action here.
         }
 
         private void treeViewExplorer_BeforeExpand(object sender, TreeViewCancelEventArgs e)

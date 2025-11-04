@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Specialized;
 using System.ComponentModel;
 
 namespace TreeViewMS
@@ -166,25 +167,50 @@ namespace TreeViewMS
 
         protected override void OnItemDrag(ItemDragEventArgs e)
         {
-            if (ModifierKeys == Keys.Control || ModifierKeys == Keys.Shift)
+            // Only start a drag for left-button drags; ignore Ctrl/Shift modifiers to avoid clashing with multi-select
+            if (e.Button != MouseButtons.Left)
             {
+                base.OnItemDrag(e);
                 return;
             }
 
-            if (SelectedNodes != null && SelectedNodes.Contains((TreeNode)e.Item))
+            // Build list of nodes to drag (multi-select aware)
+            var nodes = new List<TreeNode>();
+            if (m_coll != null && m_coll.Count > 0 && m_coll.Contains((TreeNode)e.Item))
             {
-                ArrayList dragNodes = new ArrayList();
-                foreach (TreeNode node in SelectedNodes)
-                {
-                    dragNodes.Add(node);
-                }
-                DataObject dataObj = new DataObject("TreeNodeArray", dragNodes);
-                DoDragDrop(dataObj, DragDropEffects.Move);
+                foreach (TreeNode n in m_coll)
+                    if (n != null) nodes.Add(n);
             }
             else
             {
-                base.OnItemDrag(e);
+                nodes.Add((TreeNode)e.Item);
             }
+
+            // Extract distinct paths (Tag holds full path)
+            var paths = new List<string>(nodes.Count);
+            foreach (var n in nodes)
+            {
+                if (n?.Tag is string p && !string.IsNullOrWhiteSpace(p))
+                    paths.Add(p);
+            }
+            var distinct = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+            // Prepare a DataObject that contains:
+            // 1) Standard FileDrop (so any drop target that expects explorer-like drops will work)
+            // 2) Your custom "TreeNodeArray" (back-compat with your app)
+            var data = new DataObject();
+
+            if (distinct.Length > 0)
+            {
+                var sc = new StringCollection();
+                sc.AddRange(distinct);
+                data.SetFileDropList(sc);
+            }
+
+            var arr = new ArrayList(nodes);
+            data.SetData("TreeNodeArray", arr);
+
+            DoDragDrop(data, DragDropEffects.Copy);
         }
 
         protected bool isParent(TreeNode parentNode, TreeNode childNode)
