@@ -27,7 +27,6 @@ namespace Brutal_Zip.Views
         private Button btnFindNext;             // NEW
         private Button btnCopyPreview;          // NEW
         private Button btnSaveAs;               // NEW
-        private CheckBox chkHex;                // NEW
 
 
         // WebView2 for media
@@ -62,11 +61,12 @@ namespace Brutal_Zip.Views
             txtPreview = new RichTextBox();
             scintilla = new Scintilla();
             panelTop = new Panel();
+            label1 = new Label();
+            chkHex = new BrutalZip2025.BrutalControls.BrutalCheckBox();
             txtFind = new TextBox();
             btnFindNext = new Button();
             btnCopyPreview = new Button();
             btnSaveAs = new Button();
-            chkHex = new CheckBox();
             panelContent.SuspendLayout();
             ((ISupportInitialize)webView).BeginInit();
             ((ISupportInitialize)picture).BeginInit();
@@ -222,17 +222,49 @@ namespace Brutal_Zip.Views
             // 
             // panelTop
             // 
+            panelTop.Controls.Add(label1);
+            panelTop.Controls.Add(chkHex);
             panelTop.Controls.Add(txtFind);
             panelTop.Controls.Add(btnFindNext);
             panelTop.Controls.Add(btnCopyPreview);
             panelTop.Controls.Add(btnSaveAs);
-            panelTop.Controls.Add(chkHex);
             panelTop.Dock = DockStyle.Top;
             panelTop.Location = new Point(0, 0);
             panelTop.Name = "panelTop";
             panelTop.Padding = new Padding(6);
             panelTop.Size = new Size(800, 34);
             panelTop.TabIndex = 0;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.BackColor = Color.Transparent;
+            label1.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label1.Location = new Point(422, 11);
+            label1.Name = "label1";
+            label1.Size = new Size(30, 15);
+            label1.TabIndex = 38;
+            label1.Text = "Hex";
+            // 
+            // chkHex
+            // 
+            chkHex.BackColor = Color.Transparent;
+            chkHex.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkHex.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkHex.BoxGradientEnabled = true;
+            chkHex.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkHex.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkHex.BoxSize = 14;
+            chkHex.CheckBorderColor = Color.Lime;
+            chkHex.CheckColor = Color.LawnGreen;
+            chkHex.CheckGradientEnabled = true;
+            chkHex.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkHex.CheckGradientStart = Color.Lime;
+            chkHex.Location = new Point(402, 6);
+            chkHex.Name = "chkHex";
+            chkHex.Size = new Size(18, 24);
+            chkHex.TabIndex = 37;
+            chkHex.UseVisualStyleBackColor = false;
             // 
             // txtFind
             // 
@@ -245,6 +277,7 @@ namespace Brutal_Zip.Views
             // 
             // btnFindNext
             // 
+            btnFindNext.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnFindNext.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnFindNext.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnFindNext.FlatStyle = FlatStyle.Flat;
@@ -256,6 +289,7 @@ namespace Brutal_Zip.Views
             // 
             // btnCopyPreview
             // 
+            btnCopyPreview.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnCopyPreview.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnCopyPreview.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnCopyPreview.FlatStyle = FlatStyle.Flat;
@@ -267,6 +301,7 @@ namespace Brutal_Zip.Views
             // 
             // btnSaveAs
             // 
+            btnSaveAs.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnSaveAs.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnSaveAs.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnSaveAs.FlatStyle = FlatStyle.Flat;
@@ -275,15 +310,6 @@ namespace Brutal_Zip.Views
             btnSaveAs.Size = new Size(80, 26);
             btnSaveAs.TabIndex = 3;
             btnSaveAs.Text = "Save As…";
-            // 
-            // chkHex
-            // 
-            chkHex.AutoSize = true;
-            chkHex.Location = new Point(404, 8);
-            chkHex.Name = "chkHex";
-            chkHex.Size = new Size(46, 19);
-            chkHex.TabIndex = 4;
-            chkHex.Text = "Hex";
             // 
             // PreviewPane
             // 
@@ -307,5 +333,7 @@ namespace Brutal_Zip.Views
             panelTop.PerformLayout();
             ResumeLayout(false);
         }
+        private Label label1;
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkHex;
     }
 }

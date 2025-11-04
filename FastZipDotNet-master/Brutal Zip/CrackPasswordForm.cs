@@ -708,5 +708,10 @@ namespace Brutal_Zip
             panelJob.Show();
 
         }
+
+        private void panelDictionary_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
     }
 }

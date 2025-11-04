@@ -1,8 +1,9 @@
-﻿using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
+﻿using BrutalZip2025.BrutalControls;
+using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 
 namespace Brutal_Zip
 {
-    public partial class WizardForm : Form
+    public partial class WizardForm : ModernForm
     {
         private class StagedItem
         {
@@ -25,7 +26,7 @@ namespace Brutal_Zip
             InitializeComponent();
 
             // Hook events (designer-friendly: no lambdas inside InitializeComponent)
-            btnClose.Click += (_, __) => Close();
+            //btnClose.Click += (_, __) => Close();
 
             btnCreateAddFiles.Click += (_, __) => AddFiles();
             btnCreateAddFolder.Click += (_, __) => AddFolder();
@@ -412,6 +413,25 @@ namespace Brutal_Zip
         {
             tbExtractThreads.Maximum = Environment.ProcessorCount * 2;
             tbCreateThreads.Maximum = Environment.ProcessorCount * 2;
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        private void buttonCreateTab_Click(object sender, EventArgs e)
+        {
+            panelCreate.Show();
+            panelExtract.Hide();
+            this.Height = 588;
+        }
+
+        private void buttonExtractTab_Click(object sender, EventArgs e)
+        {
+            panelCreate.Hide();
+            panelExtract.Show();
+            this.Height = 322;
         }
     }
 }

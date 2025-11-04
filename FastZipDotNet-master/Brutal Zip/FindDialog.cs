@@ -1,12 +1,10 @@
 ﻿
+using BrutalZip2025.BrutalControls;
+using System;
+using System.Linq;
+using System.Text.RegularExpressions;
 namespace Brutal_Zip
 {
-    using BrutalZip2025.BrutalControls;
-    using System;
-    using System.Linq;
-    using System.Text.RegularExpressions;
-    using System.Windows.Forms;
-
     public partial class FindDialog : ModernForm
     {
         public string Pattern => txtPattern.Text.Trim();

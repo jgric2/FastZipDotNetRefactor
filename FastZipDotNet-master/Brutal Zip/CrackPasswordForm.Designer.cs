@@ -5,12 +5,6 @@ namespace Brutal_Zip
     partial class CrackPasswordForm
     {
         private IContainer components = null;
-
-        // Brute-force controls
-        private CheckBox chkLower;
-        private CheckBox chkUpper;
-        private CheckBox chkDigits;
-        private CheckBox chkSymbols;
         private Label lblCustom;
         private TextBox txtCustom;
         private Label lblMinLen;
@@ -26,8 +20,6 @@ namespace Brutal_Zip
         private Label lblDictPath;
         private TextBox txtDictPath;
         private Button btnBrowseDict;
-        private CheckBox chkMutateCase;
-        private CheckBox chkAppendDigits;
 
         // Bottom controls
         private Label lblThreads;
@@ -45,10 +37,6 @@ namespace Brutal_Zip
 
         private void InitializeComponent()
         {
-            chkDigits = new CheckBox();
-            chkLower = new CheckBox();
-            chkUpper = new CheckBox();
-            chkSymbols = new CheckBox();
             lblCustom = new Label();
             txtCustom = new TextBox();
             lblMinLen = new Label();
@@ -62,8 +50,6 @@ namespace Brutal_Zip
             lblDictPath = new Label();
             txtDictPath = new TextBox();
             btnBrowseDict = new Button();
-            chkMutateCase = new CheckBox();
-            chkAppendDigits = new CheckBox();
             lblThreads = new Label();
             lblThreadsVal = new Label();
             btnStart = new Button();
@@ -77,7 +63,19 @@ namespace Brutal_Zip
             buttonDictionary = new Button();
             buttonBruteForce = new Button();
             panelBruteForce = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            label4 = new Label();
+            chkSymbols = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label3 = new Label();
+            chkDigits = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label2 = new Label();
+            chkUpper = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label1 = new Label();
+            chkLower = new BrutalZip2025.BrutalControls.BrutalCheckBox();
             panelDictionary = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            label6 = new Label();
+            chkAppendDigits = new BrutalZip2025.BrutalControls.BrutalCheckBox();
+            label5 = new Label();
+            chkMutateCase = new BrutalZip2025.BrutalControls.BrutalCheckBox();
             panelJob = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
             labelElapsed = new Label();
             labelSpeed = new Label();
@@ -95,52 +93,6 @@ namespace Brutal_Zip
             ((ISupportInitialize)tbThreads).BeginInit();
             statusStrip.SuspendLayout();
             SuspendLayout();
-            // 
-            // chkDigits
-            // 
-            chkDigits.BackColor = Color.Transparent;
-            chkDigits.Checked = true;
-            chkDigits.CheckState = CheckState.Checked;
-            chkDigits.Location = new Point(148, 17);
-            chkDigits.Name = "chkDigits";
-            chkDigits.Size = new Size(54, 24);
-            chkDigits.TabIndex = 2;
-            chkDigits.Text = "0-9";
-            chkDigits.UseVisualStyleBackColor = false;
-            // 
-            // chkLower
-            // 
-            chkLower.BackColor = Color.Transparent;
-            chkLower.Checked = true;
-            chkLower.CheckState = CheckState.Checked;
-            chkLower.Location = new Point(24, 17);
-            chkLower.Name = "chkLower";
-            chkLower.Size = new Size(46, 24);
-            chkLower.TabIndex = 0;
-            chkLower.Text = "a-z";
-            chkLower.UseVisualStyleBackColor = false;
-            // 
-            // chkUpper
-            // 
-            chkUpper.BackColor = Color.Transparent;
-            chkUpper.Checked = true;
-            chkUpper.CheckState = CheckState.Checked;
-            chkUpper.Location = new Point(86, 17);
-            chkUpper.Name = "chkUpper";
-            chkUpper.Size = new Size(58, 24);
-            chkUpper.TabIndex = 1;
-            chkUpper.Text = "A-Z";
-            chkUpper.UseVisualStyleBackColor = false;
-            // 
-            // chkSymbols
-            // 
-            chkSymbols.BackColor = Color.Transparent;
-            chkSymbols.Location = new Point(203, 17);
-            chkSymbols.Name = "chkSymbols";
-            chkSymbols.Size = new Size(65, 24);
-            chkSymbols.TabIndex = 3;
-            chkSymbols.Text = "!@#$...";
-            chkSymbols.UseVisualStyleBackColor = false;
             // 
             // lblCustom
             // 
@@ -281,28 +233,6 @@ namespace Brutal_Zip
             btnBrowseDict.TabIndex = 2;
             btnBrowseDict.Text = "Browse…";
             btnBrowseDict.Click += btnBrowseDict_Click;
-            // 
-            // chkMutateCase
-            // 
-            chkMutateCase.BackColor = Color.Transparent;
-            chkMutateCase.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            chkMutateCase.Location = new Point(14, 53);
-            chkMutateCase.Name = "chkMutateCase";
-            chkMutateCase.Size = new Size(282, 24);
-            chkMutateCase.TabIndex = 3;
-            chkMutateCase.Text = "Try lower/UPPER/Title-case variants";
-            chkMutateCase.UseVisualStyleBackColor = false;
-            // 
-            // chkAppendDigits
-            // 
-            chkAppendDigits.BackColor = Color.Transparent;
-            chkAppendDigits.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            chkAppendDigits.Location = new Point(14, 75);
-            chkAppendDigits.Name = "chkAppendDigits";
-            chkAppendDigits.Size = new Size(244, 24);
-            chkAppendDigits.TabIndex = 4;
-            chkAppendDigits.Text = "Try digits suffix (0–999)";
-            chkAppendDigits.UseVisualStyleBackColor = false;
             // 
             // lblThreads
             // 
@@ -468,6 +398,14 @@ namespace Brutal_Zip
             // 
             // panelBruteForce
             // 
+            panelBruteForce.Controls.Add(label4);
+            panelBruteForce.Controls.Add(chkSymbols);
+            panelBruteForce.Controls.Add(label3);
+            panelBruteForce.Controls.Add(chkDigits);
+            panelBruteForce.Controls.Add(label2);
+            panelBruteForce.Controls.Add(chkUpper);
+            panelBruteForce.Controls.Add(label1);
+            panelBruteForce.Controls.Add(chkLower);
             panelBruteForce.Controls.Add(lblKeyspace);
             panelBruteForce.Controls.Add(btnEstimate);
             panelBruteForce.Controls.Add(lblPrefix);
@@ -476,11 +414,7 @@ namespace Brutal_Zip
             panelBruteForce.Controls.Add(lblMinLen);
             panelBruteForce.Controls.Add(lblCustom);
             panelBruteForce.Controls.Add(numMinLen);
-            panelBruteForce.Controls.Add(chkDigits);
             panelBruteForce.Controls.Add(txtCustom);
-            panelBruteForce.Controls.Add(chkLower);
-            panelBruteForce.Controls.Add(chkSymbols);
-            panelBruteForce.Controls.Add(chkUpper);
             panelBruteForce.Controls.Add(lblMaxLen);
             panelBruteForce.EndColor = Color.FromArgb(25, 25, 25);
             panelBruteForce.ForeColor = Color.White;
@@ -496,13 +430,147 @@ namespace Brutal_Zip
             panelBruteForce.StartColor = Color.FromArgb(16, 16, 16);
             panelBruteForce.TabIndex = 10;
             // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.BackColor = Color.Transparent;
+            label4.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label4.Location = new Point(205, 20);
+            label4.Name = "label4";
+            label4.Size = new Size(45, 15);
+            label4.TabIndex = 42;
+            label4.Text = "!@#$...";
+            // 
+            // chkSymbols
+            // 
+            chkSymbols.BackColor = Color.Transparent;
+            chkSymbols.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkSymbols.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkSymbols.BoxGradientEnabled = true;
+            chkSymbols.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkSymbols.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkSymbols.BoxSize = 14;
+            chkSymbols.CheckBorderColor = Color.Lime;
+            chkSymbols.CheckColor = Color.LawnGreen;
+            chkSymbols.Checked = true;
+            chkSymbols.CheckGradientEnabled = true;
+            chkSymbols.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkSymbols.CheckGradientStart = Color.Lime;
+            chkSymbols.CheckState = CheckState.Checked;
+            chkSymbols.Location = new Point(185, 15);
+            chkSymbols.Name = "chkSymbols";
+            chkSymbols.Size = new Size(18, 24);
+            chkSymbols.TabIndex = 41;
+            chkSymbols.UseVisualStyleBackColor = false;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.BackColor = Color.Transparent;
+            label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label3.Location = new Point(153, 20);
+            label3.Name = "label3";
+            label3.Size = new Size(26, 15);
+            label3.TabIndex = 40;
+            label3.Text = "0-9";
+            // 
+            // chkDigits
+            // 
+            chkDigits.BackColor = Color.Transparent;
+            chkDigits.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkDigits.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkDigits.BoxGradientEnabled = true;
+            chkDigits.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkDigits.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkDigits.BoxSize = 14;
+            chkDigits.CheckBorderColor = Color.Lime;
+            chkDigits.CheckColor = Color.LawnGreen;
+            chkDigits.Checked = true;
+            chkDigits.CheckGradientEnabled = true;
+            chkDigits.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkDigits.CheckGradientStart = Color.Lime;
+            chkDigits.CheckState = CheckState.Checked;
+            chkDigits.Location = new Point(133, 15);
+            chkDigits.Name = "chkDigits";
+            chkDigits.Size = new Size(18, 24);
+            chkDigits.TabIndex = 39;
+            chkDigits.UseVisualStyleBackColor = false;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.BackColor = Color.Transparent;
+            label2.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label2.Location = new Point(97, 20);
+            label2.Name = "label2";
+            label2.Size = new Size(27, 15);
+            label2.TabIndex = 38;
+            label2.Text = "A-Z";
+            // 
+            // chkUpper
+            // 
+            chkUpper.BackColor = Color.Transparent;
+            chkUpper.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkUpper.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkUpper.BoxGradientEnabled = true;
+            chkUpper.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkUpper.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkUpper.BoxSize = 14;
+            chkUpper.CheckBorderColor = Color.Lime;
+            chkUpper.CheckColor = Color.LawnGreen;
+            chkUpper.Checked = true;
+            chkUpper.CheckGradientEnabled = true;
+            chkUpper.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkUpper.CheckGradientStart = Color.Lime;
+            chkUpper.CheckState = CheckState.Checked;
+            chkUpper.Location = new Point(77, 15);
+            chkUpper.Name = "chkUpper";
+            chkUpper.Size = new Size(18, 24);
+            chkUpper.TabIndex = 37;
+            chkUpper.UseVisualStyleBackColor = false;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.BackColor = Color.Transparent;
+            label1.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label1.Location = new Point(40, 20);
+            label1.Name = "label1";
+            label1.Size = new Size(24, 15);
+            label1.TabIndex = 36;
+            label1.Text = "a-z";
+            // 
+            // chkLower
+            // 
+            chkLower.BackColor = Color.Transparent;
+            chkLower.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkLower.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkLower.BoxGradientEnabled = true;
+            chkLower.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkLower.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkLower.BoxSize = 14;
+            chkLower.CheckBorderColor = Color.Lime;
+            chkLower.CheckColor = Color.LawnGreen;
+            chkLower.Checked = true;
+            chkLower.CheckGradientEnabled = true;
+            chkLower.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkLower.CheckGradientStart = Color.Lime;
+            chkLower.CheckState = CheckState.Checked;
+            chkLower.Location = new Point(20, 15);
+            chkLower.Name = "chkLower";
+            chkLower.Size = new Size(18, 24);
+            chkLower.TabIndex = 35;
+            chkLower.UseVisualStyleBackColor = false;
+            // 
             // panelDictionary
             // 
+            panelDictionary.Controls.Add(label6);
+            panelDictionary.Controls.Add(chkAppendDigits);
+            panelDictionary.Controls.Add(label5);
+            panelDictionary.Controls.Add(chkMutateCase);
             panelDictionary.Controls.Add(lblDictPath);
             panelDictionary.Controls.Add(txtDictPath);
-            panelDictionary.Controls.Add(chkAppendDigits);
             panelDictionary.Controls.Add(btnBrowseDict);
-            panelDictionary.Controls.Add(chkMutateCase);
             panelDictionary.EndColor = Color.FromArgb(25, 25, 25);
             panelDictionary.ForeColor = Color.White;
             panelDictionary.GlowCenterMaxOpacity = 200;
@@ -517,6 +585,73 @@ namespace Brutal_Zip
             panelDictionary.StartColor = Color.FromArgb(16, 16, 16);
             panelDictionary.TabIndex = 11;
             panelDictionary.Visible = false;
+            panelDictionary.Paint += panelDictionary_Paint;
+            // 
+            // label6
+            // 
+            label6.AutoSize = true;
+            label6.BackColor = Color.Transparent;
+            label6.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label6.Location = new Point(36, 84);
+            label6.Name = "label6";
+            label6.Size = new Size(137, 15);
+            label6.TabIndex = 44;
+            label6.Text = "Try digits suffix (0–999)";
+            // 
+            // chkAppendDigits
+            // 
+            chkAppendDigits.BackColor = Color.Transparent;
+            chkAppendDigits.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkAppendDigits.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkAppendDigits.BoxGradientEnabled = true;
+            chkAppendDigits.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkAppendDigits.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkAppendDigits.BoxSize = 14;
+            chkAppendDigits.CheckBorderColor = Color.Lime;
+            chkAppendDigits.CheckColor = Color.LawnGreen;
+            chkAppendDigits.Checked = true;
+            chkAppendDigits.CheckGradientEnabled = true;
+            chkAppendDigits.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkAppendDigits.CheckGradientStart = Color.Lime;
+            chkAppendDigits.CheckState = CheckState.Checked;
+            chkAppendDigits.Location = new Point(16, 79);
+            chkAppendDigits.Name = "chkAppendDigits";
+            chkAppendDigits.Size = new Size(18, 24);
+            chkAppendDigits.TabIndex = 43;
+            chkAppendDigits.UseVisualStyleBackColor = false;
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.BackColor = Color.Transparent;
+            label5.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label5.Location = new Point(36, 57);
+            label5.Name = "label5";
+            label5.Size = new Size(207, 15);
+            label5.TabIndex = 42;
+            label5.Text = "Try lower/UPPER/Title-case variants";
+            // 
+            // chkMutateCase
+            // 
+            chkMutateCase.BackColor = Color.Transparent;
+            chkMutateCase.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkMutateCase.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkMutateCase.BoxGradientEnabled = true;
+            chkMutateCase.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkMutateCase.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkMutateCase.BoxSize = 14;
+            chkMutateCase.CheckBorderColor = Color.Lime;
+            chkMutateCase.CheckColor = Color.LawnGreen;
+            chkMutateCase.Checked = true;
+            chkMutateCase.CheckGradientEnabled = true;
+            chkMutateCase.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkMutateCase.CheckGradientStart = Color.Lime;
+            chkMutateCase.CheckState = CheckState.Checked;
+            chkMutateCase.Location = new Point(16, 52);
+            chkMutateCase.Name = "chkMutateCase";
+            chkMutateCase.Size = new Size(18, 24);
+            chkMutateCase.TabIndex = 41;
+            chkMutateCase.UseVisualStyleBackColor = false;
             // 
             // panelJob
             // 
@@ -658,5 +793,17 @@ namespace Brutal_Zip
         private Label labelSpeed;
         private Label labelAttempts;
         private Label labelElapsed;
+        private Label label1;
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkLower;
+        private Label label2;
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkUpper;
+        private Label label3;
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkDigits;
+        private Label label4;
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkSymbols;
+        private Label label5;
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkMutateCase;
+        private Label label6;
+        private BrutalZip2025.BrutalControls.BrutalCheckBox chkAppendDigits;
     }
 }

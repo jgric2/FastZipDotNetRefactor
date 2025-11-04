@@ -1,7 +1,5 @@
 ﻿using Brutal_Zip.Classes.Helpers;
 using BrutalZip2025.BrutalControls;
-using System;
-using System.Windows.Forms;
 
 namespace BrutalZip
 {

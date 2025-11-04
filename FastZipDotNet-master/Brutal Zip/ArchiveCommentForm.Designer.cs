@@ -29,6 +29,7 @@ namespace Brutal_Zip
             // 
             // lblTitle
             // 
+            lblTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblTitle.Location = new Point(12, 12);
             lblTitle.Name = "lblTitle";
             lblTitle.Size = new Size(616, 20);
@@ -49,6 +50,7 @@ namespace Brutal_Zip
             // 
             // lblCount
             // 
+            lblCount.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblCount.Location = new Point(12, 362);
             lblCount.Name = "lblCount";
             lblCount.Size = new Size(400, 20);
