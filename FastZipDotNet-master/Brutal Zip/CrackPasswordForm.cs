@@ -1,20 +1,13 @@
-﻿using System;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO;
-using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using BrutalZip2025.BrutalControls;
 using FastZipDotNet.Zip.Encryption;
-using static FastZipDotNet.Zip.Structure.ZipEntryStructs;
-using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 
 namespace Brutal_Zip
 {
-    public partial class CrackPasswordForm : Form
+    public partial class CrackPasswordForm : ModernForm
     {
         private readonly PasswordCrackContext _ctx;
 
@@ -174,12 +167,21 @@ namespace Brutal_Zip
                 txtDictPath.Text = ofd.FileName;
         }
 
+
+        public enum CrackType
+        {
+            BruteForce,
+            Dictionary
+        }
+
+        CrackType selectedTabCrackType = CrackType.BruteForce;
+
         private void btnStart_Click(object sender, EventArgs e)
         {
             if (_running) return;
 
             // sanity check
-            if (tabs.SelectedTab == tabBrute)
+            if (selectedTabCrackType == CrackType.BruteForce)
             {
                 if (BuildCharset().Length == 0)
                 {
@@ -196,6 +198,9 @@ namespace Brutal_Zip
                 }
             }
 
+            buttonBruteForce.Enabled = false;
+            buttonDictionary.Enabled = false;
+
             _running = true;
             btnStart.Enabled = false;
             btnStop.Enabled = true;
@@ -206,7 +211,7 @@ namespace Brutal_Zip
             lblFound.Text = "Found: -";
             lblStatus.Text = "Working…";
 
-            if (tabs.SelectedTab == tabBrute)
+            if (selectedTabCrackType == CrackType.BruteForce)
                 _ = RunBruteforceAsync(_cts.Token);
             else
                 _ = RunDictionaryAsync(_cts.Token);
@@ -216,6 +221,9 @@ namespace Brutal_Zip
         {
             if (!_running) return;
             _cts?.Cancel();
+
+            buttonBruteForce.Enabled = true;
+            buttonDictionary.Enabled = true;
         }
 
         private void StopUi(string msg)
@@ -278,31 +286,31 @@ namespace Brutal_Zip
 
         private bool TestCandidateAES(string pwd)
         {
-                // Derive 2 keys + PWV and compare 2 bytes
-                var (enc, mac, pwv) = WinZipAes.DeriveKeys(pwd, _aesSalt, _aesStrength);
-                bool ok = pwv[0] == _aesPwv[0] && pwv[1] == _aesPwv[1];
-                Array.Clear(enc, 0, enc.Length);
-                Array.Clear(mac, 0, mac.Length);
-                Array.Clear(pwv, 0, pwv.Length);
-                return ok;
+            // Derive 2 keys + PWV and compare 2 bytes
+            var (enc, mac, pwv) = WinZipAes.DeriveKeys(pwd, _aesSalt, _aesStrength);
+            bool ok = pwv[0] == _aesPwv[0] && pwv[1] == _aesPwv[1];
+            Array.Clear(enc, 0, enc.Length);
+            Array.Clear(mac, 0, mac.Length);
+            Array.Clear(pwv, 0, pwv.Length);
+            return ok;
         }
 
         private bool TestCandidatePK(string pwd)
         {
-                // ZipCrypto header test: decrypt 12 bytes and compare last byte
-                var tmp = ArrayPool<byte>.Shared.Rent(12);
-                try
-                {
-                    Buffer.BlockCopy(_zipCryptoHdr12, 0, tmp, 0, 12);
-                    var tc = new TraditionalZipCrypto(pwd);
-                    tc.Decrypt(tmp, 0, 12);
-                    return tmp[11] == _zipCryptoVerifier;
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(tmp);
-                }
-            
+            // ZipCrypto header test: decrypt 12 bytes and compare last byte
+            var tmp = ArrayPool<byte>.Shared.Rent(12);
+            try
+            {
+                Buffer.BlockCopy(_zipCryptoHdr12, 0, tmp, 0, 12);
+                var tc = new TraditionalZipCrypto(pwd);
+                tc.Decrypt(tmp, 0, 12);
+                return tmp[11] == _zipCryptoVerifier;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(tmp);
+            }
+
         }
 
 
@@ -319,6 +327,11 @@ namespace Brutal_Zip
             double aps = attempts / secs;
             lblStatus.Text = $"Attempts: {attempts:N0}   Speed: {aps:N0}/s   Elapsed: {_sw.Elapsed:hh\\:mm\\:ss}" +
                              (extra != null ? $"   {extra}" : "");
+
+            labelAttempts.Text = $"Attempts: {attempts:N0}";
+            labelSpeed.Text = $"Speed: {aps:N0}/s";
+            labelElapsed.Text = $"Elapsed: {_sw.Elapsed:hh\\:mm\\:ss}";
+
         }
 
         // Dictionary runner
@@ -405,7 +418,7 @@ namespace Brutal_Zip
 
 
 
-           
+
 
                 await producer;
                 await Task.WhenAll(tasks);
@@ -618,6 +631,11 @@ namespace Brutal_Zip
 
                                         if (TestCandidatePK(candidate))
                                         {
+                                            if (candidate == "asd")
+                                            {
+                                                var tt = "";
+                                            }
+
                                             FoundPassword = candidate;
                                             lblFound.BeginInvoke(new Action(() => lblFound.Text = "Found: " + candidate));
                                             _cts.Cancel();
@@ -640,72 +658,7 @@ namespace Brutal_Zip
                 }
 
 
-
-                    //for (int w = 0; w < maxWorkers; w++)
-                    //{
-                    //    tasks.Add(Task.Run(async () =>
-                    //    {
-                    //        var rnd = new Random(unchecked(Environment.TickCount * 31 + Thread.CurrentThread.ManagedThreadId));
-                    //        var buf = new char[128];
-
-                    //        while (!ct.IsCancellationRequested)
-                    //        {
-                    //            _gate.WaitOne();
-                    //            try
-                    //            {
-                    //                long chunkId = Interlocked.Add(ref chunkCursor, 1) - 1;
-
-                    //                // Map chunkId to a (length, baseIndex) by cycling lengths
-                    //                int iLen = (int)(chunkId % lens.Length);
-                    //                long L = lens[iLen].L;
-                    //                var totalForLen = lens[iLen].Count;
-
-                    //                // Convert chunkId to big starting index approximated by chunkId * ChunkSize modulo total
-                    //                var baseIndex = (System.Numerics.BigInteger)(chunkId / lens.Length) * ChunkSize;
-                    //                if (baseIndex >= totalForLen) baseIndex %= totalForLen;
-
-                    //                // Iterate ChunkSize candidates in this length
-                    //                for (int j = 0; j < ChunkSize && !ct.IsCancellationRequested; j++)
-                    //                {
-                    //                    var idx = baseIndex + j;
-                    //                    if (idx >= totalForLen) break;
-
-                    //                    // convert idx to string of length L from chars[]
-                    //                    int plen = prefix.Length;
-                    //                    for (int x = 0; x < plen; x++) buf[x] = prefix[x];
-
-                    //                    var n = idx;
-                    //                    for (long pos = L - 1; pos >= 0; pos--)
-                    //                    {
-                    //                        var rem = (int)(n % chars.Length);
-                    //                        buf[plen + pos] = chars[rem];
-                    //                        n /= chars.Length;
-                    //                    }
-                    //                    string candidate = new string(buf, 0, plen + (int)L);
-
-                    //                    if (TestCandidate(candidate))
-                    //                    {
-                    //                        FoundPassword = candidate;
-                    //                        lblFound.BeginInvoke(new Action(() => lblFound.Text = "Found: " + candidate));
-                    //                        _cts.Cancel();
-                    //                        return;
-                    //                    }
-
-                    //                    Interlocked.Increment(ref _attempts);
-                    //                    if ((_attempts & 0x1FFF) == 0) UpdateStatusUi();
-                    //                }
-                    //            }
-                    //            finally
-                    //            {
-                    //                _gate.Release();
-                    //            }
-
-                    //            await Task.Yield();
-                    //        }
-                    //    }, ct));
-                    //}
-
-                    await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks);
                 if (!ct.IsCancellationRequested && string.IsNullOrEmpty(FoundPassword))
                     StopUi("Finished. No match.");
                 else if (!string.IsNullOrEmpty(FoundPassword))
@@ -727,7 +680,33 @@ namespace Brutal_Zip
 
         private void CrackPasswordForm_Load(object sender, EventArgs e)
         {
-            
+
+        }
+
+        private void buttonBruteForce_Click(object sender, EventArgs e)
+        {
+            panelBruteForce.Show();
+            panelDictionary.Hide();
+            panelJob.Hide();
+
+            selectedTabCrackType = CrackType.BruteForce;
+        }
+
+        private void buttonDictionary_Click(object sender, EventArgs e)
+        {
+            panelBruteForce.Hide();
+            panelDictionary.Show();
+            panelJob.Hide();
+
+            selectedTabCrackType = CrackType.Dictionary;
+        }
+
+        private void buttonJob_Click(object sender, EventArgs e)
+        {
+            panelBruteForce.Hide();
+            panelDictionary.Hide();
+            panelJob.Show();
+
         }
     }
 }
