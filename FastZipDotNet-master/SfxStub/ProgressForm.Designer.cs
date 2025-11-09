@@ -32,6 +32,7 @@ namespace SfxStub
 
         private void InitializeComponent()
         {
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(ProgressForm));
             picBanner = new PictureBox();
             btnCancel = new Button();
             lvFiles = new ListView();
@@ -267,6 +268,7 @@ namespace SfxStub
             Controls.Add(lvFiles);
             Controls.Add(pnlTopAccent);
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "ProgressForm";

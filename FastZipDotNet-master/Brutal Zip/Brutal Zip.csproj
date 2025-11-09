@@ -50,7 +50,7 @@
   <ItemGroup>
     <PackageReference Include="GroBuf" Version="1.9.2" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50" />
-    <PackageReference Include="Scintilla.NET" Version="5.3.2.9" />
+    <PackageReference Include="Scintilla5.NET" Version="6.0.1" />
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
   </ItemGroup>
 

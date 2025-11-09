@@ -112,7 +112,7 @@ namespace Brutal_Zip.Views
 
         public void SetStagingInfo(string text) => lblCreateHint.Text = text;
 
-        public string CreateDestination { get => txtCreateDest.Text; set => txtCreateDest.Text = value; }
+        public string CreateDestination = "";//{ get => txtCreateDest.Text; set => txtCreateDest.Text = value; }
         public int CreateMethodIndex { get => cmbCreateMethod.SelectedIndex; set => cmbCreateMethod.SelectedIndex = value; }
         public int CreateLevel
         {
@@ -127,7 +127,7 @@ namespace Brutal_Zip.Views
 
         public bool ExtractToArchiveName => rdoExtractToFolderName.Checked;
         public bool ExtractHere => rdoExtractHere.Checked;
-        public string ExtractDestination { get => txtExtractDest.Text; set => txtExtractDest.Text = value; }
+        public string ExtractDestination = ""; //{ get => txtExtractDest.Text; set => txtExtractDest.Text = value; }
 
         public void SetThreadSlider(int max, int value, bool auto)
         {

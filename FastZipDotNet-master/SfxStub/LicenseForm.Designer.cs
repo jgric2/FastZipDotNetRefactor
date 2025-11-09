@@ -30,6 +30,7 @@ namespace SfxStub
 
         private void InitializeComponent()
         {
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(LicenseForm));
             picBanner = new PictureBox();
             lblTitle = new Label();
             txtLicense = new TextBox();
@@ -140,6 +141,7 @@ namespace SfxStub
             Controls.Add(btnOK);
             Controls.Add(btnCancel);
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "LicenseForm";

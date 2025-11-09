@@ -205,20 +205,14 @@ namespace Brutal_Zip.Views
             // scintilla
             // 
             scintilla.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            scintilla.AutoCMaxHeight = 9;
-            scintilla.BiDirectionality = BiDirectionalDisplayType.Disabled;
+            scintilla.AutocompleteListSelectedBackColor = Color.FromArgb(0, 120, 215);
             scintilla.CaretLineBackColor = Color.Black;
-            scintilla.CaretLineVisible = true;
             scintilla.LexerName = null;
             scintilla.Location = new Point(0, 0);
             scintilla.Name = "scintilla";
-            scintilla.ScrollWidth = 1;
             scintilla.Size = new Size(776, 163);
-            scintilla.TabIndents = true;
             scintilla.TabIndex = 3;
-            scintilla.UseRightToLeftReadingLayout = false;
             scintilla.Visible = false;
-            scintilla.WrapMode = WrapMode.None;
             // 
             // panelTop
             // 
@@ -270,6 +264,7 @@ namespace Brutal_Zip.Views
             // 
             txtFind.BackColor = Color.FromArgb(32, 32, 32);
             txtFind.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            txtFind.ForeColor = Color.White;
             txtFind.Location = new Point(8, 6);
             txtFind.Name = "txtFind";
             txtFind.Size = new Size(180, 23);

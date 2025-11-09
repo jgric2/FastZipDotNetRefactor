@@ -992,6 +992,8 @@ return await sharedTask.ConfigureAwait(false);
             }
         }
 
+
+
         private async Task PreviewSelectedAsync()
         {
             if (_zip == null) return;
@@ -1016,6 +1018,8 @@ return await sharedTask.ConfigureAwait(false);
                 string tempPath = await ExtractEntryToTempAsync(r.Entry, ct);
                 _lastPreviewTempFile = tempPath;
                 viewerView.infoPane.SetTempFile(tempPath);
+                viewerView.previewPane.Clear();
+                viewerView.previewPane.ShowStatus("Loading preview…");
                 await viewerView.previewPane.ShowFileAsync(tempPath);
                 if (viewerView.splitMain.Panel2Collapsed)
                     TogglePreviewPane();
@@ -1868,12 +1872,12 @@ return await sharedTask.ConfigureAwait(false);
         private async Task DoExtractSmartAsync()
         {
             // Pick archive if none
-            if (string.IsNullOrEmpty(_zipPath))
-            {
+           // if (string.IsNullOrEmpty(_zipPath))
+           // {
                 using var ofd = new OpenFileDialog { Filter = "Zip files|*.zip" };
                 if (ofd.ShowDialog(this) != DialogResult.OK) return;
                 _zipPath = ofd.FileName;
-            }
+          //  }
 
             // Destination policy with single-root heuristic
             string outDir;

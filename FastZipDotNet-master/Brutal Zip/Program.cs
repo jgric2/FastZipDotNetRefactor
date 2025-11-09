@@ -1,9 +1,29 @@
 using BrutalZip;
+using System.Runtime.InteropServices;
 
 namespace Brutal_Zip
 {
     internal static class Program
     {
+        class CaretHygieneFilter : IMessageFilter 
+        { 
+            private const int WM_SETFOCUS = 0x0007; 
+            [DllImport("user32.dll")] 
+            private static extern bool DestroyCaret(); 
+            public bool PreFilterMessage(ref Message m) 
+            { 
+                if (m.Msg == WM_SETFOCUS) 
+                { 
+                    try 
+                    { 
+                        DestroyCaret(); 
+                    } catch { } 
+                } 
+                
+                return false; 
+            } 
+        }
+
         [STAThread]
         static void Main(string[] args)
         {
@@ -20,6 +40,9 @@ Application.EnableVisualStyles();
 Application.SetCompatibleTextRenderingDefault(false);
 #endif
             SettingsService.Load();
+
+
+            Application.AddMessageFilter(new CaretHygieneFilter());
 
             // 1) Best case: a server is already up – try to forward and exit
             if (SingleInstance.TryForwardToPrimary(args, totalWaitMs: 400, attemptIntervalMs: 80, connectTimeoutMs: 150))

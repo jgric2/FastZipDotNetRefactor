@@ -12,7 +12,13 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <ApplicationIcon>BrutalZip.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="BrutalZip.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FastZipDotNet\FastZipDotNet.csproj" />

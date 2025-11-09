@@ -25,6 +25,7 @@ namespace SfxStub
 
         private void InitializeComponent()
         {
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(PasswordDialog));
             lblPrompt = new Label();
             txtPassword = new TextBox();
             btnOK = new Button();
@@ -110,6 +111,7 @@ namespace SfxStub
             Controls.Add(btnOK);
             Controls.Add(btnCancel);
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "PasswordDialog";

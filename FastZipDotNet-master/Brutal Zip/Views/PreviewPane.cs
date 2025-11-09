@@ -1,25 +1,24 @@
-﻿using Microsoft.Web.WebView2.Core;
+﻿using Brutal_Zip.Classes.Helpers;
+using Microsoft.Web.WebView2.Core;
 using ScintillaNET;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Web;
-using System.Windows.Forms;
-
 using System.Globalization;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
-using Brutal_Zip.Classes.Helpers;
+using System.Text;
+using System.Web;
 
 namespace Brutal_Zip.Views
 {
     public partial class PreviewPane : UserControl
     {
+        [DllImport("user32.dll")] 
+        private static extern bool DestroyCaret();
+
+        [DllImport("user32.dll")] 
+        private static extern bool HideCaret(IntPtr hWnd);
+
         public PreviewPane()
         {
             InitializeComponent();
@@ -34,9 +33,40 @@ namespace Brutal_Zip.Views
             btnPlayPause.Click += (s, e) => TogglePlay();
             btnStop.Click += (s, e) => Stop();
 
+            scintilla.Enter += (_, __) => SetScintillaFocus(true);
+            scintilla.Leave += (_, __) => SetScintillaFocus(false);
+            scintilla.VisibleChanged += (_, __) => { if (!scintilla.Visible) SetScintillaFocus(false); };
+            scintilla.HandleDestroyed += (_, __) => { try { DestroyCaret(); } catch { } };
+
             ConfigureScintillaDefaults();
             
             //scintilla.Dispose();
+        }
+
+        private void SetScintillaFocus(bool hasFocus)
+        {
+            try
+            {
+                // SCI_SETFOCUS = 2380
+                scintilla.DirectMessage(2380, new IntPtr(hasFocus ? 1 : 0), IntPtr.Zero); 
+                if (!hasFocus) 
+                { 
+                    // Make sure any stray OS caret is gone.
+                    try 
+                    { 
+                        HideCaret(scintilla.Handle); 
+                    } 
+                    catch { } 
+                    try
+                    { 
+                        DestroyCaret(); 
+                    } catch { } 
+                }
+            }
+            catch
+            {
+
+            }
         }
 
         private string _currentFilePath;
@@ -57,7 +87,7 @@ namespace Brutal_Zip.Views
             _kind = PreviewKind.None;
             lblFileName.Text = "-";
             lblInfo.Text = "";
-            ShowOnly(null);
+            ShowStatus("No preview");
         }
 
 
@@ -197,6 +227,12 @@ namespace Brutal_Zip.Views
             }
         }
 
+        public void ShowStatus(string message, bool isError = false)
+        {
+            lblUnsupported.Text = message;
+            lblUnsupported.ForeColor = isError ? Color.Firebrick : SystemColors.GrayText;
+            ShowOnly(lblUnsupported);
+        }
 
         public async Task ShowFileAsync(string path)
         {
@@ -414,7 +450,7 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
                 txtPreview.Clear();
                 txtPreview.Text = text;
                 txtPreview.Font = new Font("Consolas", 10f);
-                txtPreview.ForeColor = Color.Black;
+                txtPreview.ForeColor = Color.White;
                 ShowOnly(txtPreview);
             }
             catch { ShowUnsupported(); }
@@ -449,30 +485,72 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
 
         private void ConfigureScintillaDefaults()
         {
-            // Reset styles to defaults
+            // VS-like dark palette
+            var back = Color.FromArgb(30, 30, 30);            // editor background
+            var text = Color.FromArgb(212, 212, 212);         // default text
+            var marginBack = Color.FromArgb(37, 37, 38);      // margin background
+            var marginFore = Color.FromArgb(128, 128, 128);   // line number text
+            var caret = Color.White;                          // caret color
+            var caretLine = Color.FromArgb(45, 45, 48);       // current line background
+            var selection = Color.FromArgb(38, 79, 120);      // selection blue
+            var selectionText = Color.White;
+            var indentGuide = Color.FromArgb(52, 52, 52);
+            var edge = Color.FromArgb(60, 60, 60);
+
+            // Reset styles to defaults, then apply default font/colors
             scintilla.StyleResetDefault();
             scintilla.Styles[Style.Default].Font = "Consolas";
             scintilla.Styles[Style.Default].Size = 10;
-            scintilla.Styles[Style.Default].BackColor = Color.White;
-            scintilla.Styles[Style.Default].ForeColor = Color.Black;
-            scintilla.StyleClearAll();
+            scintilla.Styles[Style.Default].BackColor = back;
+            scintilla.Styles[Style.Default].ForeColor = text;
+            scintilla.StyleClearAll(); // apply to all styles
 
+            // DirectWrite for better text on dark backgrounds
+            scintilla.Technology = Technology.DirectWrite;
 
-            //scintilla.Technology = Technology.DirectWrite;
-            //const int SCI_SETBUFFEREDDRAW = 2034;
-            //scintilla.DirectMessage(SCI_SETBUFFEREDDRAW, IntPtr.Zero, IntPtr.Zero); // 0 = off
+            // Selection
+            scintilla.SetSelectionBackColor(true, selection);
+            scintilla.SetSelectionForeColor(true, selectionText);
 
-            //// Line numbers margin
-            //scintilla.Margins[0].Type = MarginType.Number;
-            //scintilla.Margins[0].Width = 36;
+            // Caret + caret line
+            scintilla.CaretForeColor = caret;
+            scintilla.CaretLineVisible = true;
+            scintilla.CaretLineBackColor = caretLine;
+            scintilla.CaretStyle = CaretStyle.Line;
+            scintilla.CaretWidth = 2;
 
-            //// Folding margin
-            //scintilla.Margins[2].Type = MarginType.Symbol;
-            //scintilla.Margins[2].Mask = Marker.MaskFolders;
-            //scintilla.Margins[2].Sensitive = true;
-            //scintilla.Margins[2].Width = 16;
+            // Indentation
+            scintilla.IndentWidth = 4;
+            scintilla.UseTabs = false;
+            scintilla.TabWidth = 4;
 
-            // Configure folding markers
+            // Indentation guides (when shown)
+            scintilla.Styles[Style.IndentGuide].ForeColor = indentGuide;
+            scintilla.Styles[Style.IndentGuide].BackColor = back;
+
+            // Edge (column guide) — optional
+            scintilla.EdgeMode = EdgeMode.Line;
+            scintilla.EdgeColumn = 120;
+            scintilla.EdgeColor = edge;
+
+            // Line numbers margin
+            scintilla.Margins[0].Type = MarginType.Number;
+            scintilla.Margins[0].Width = 40;
+            scintilla.Styles[Style.LineNumber].BackColor = marginBack;
+            scintilla.Styles[Style.LineNumber].ForeColor = marginFore;
+
+            // Marker margin (folding)
+            scintilla.Margins[2].Type = MarginType.Symbol;
+            scintilla.Margins[2].Mask = Marker.MaskFolders;
+            scintilla.Margins[2].Sensitive = true;
+            scintilla.Margins[2].Width = 16;
+            scintilla.SetFoldMarginColor(true, marginBack);
+            scintilla.SetFoldMarginHighlightColor(true, marginBack);
+
+            // Folding markers in a dark style
+            var foldFore = Color.FromArgb(220, 220, 220);
+            var foldBack = Color.FromArgb(60, 60, 60);
+
             scintilla.Markers[Marker.Folder].Symbol = MarkerSymbol.BoxPlus;
             scintilla.Markers[Marker.FolderOpen].Symbol = MarkerSymbol.BoxMinus;
             scintilla.Markers[Marker.FolderEnd].Symbol = MarkerSymbol.BoxPlusConnected;
@@ -481,71 +559,84 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             scintilla.Markers[Marker.FolderSub].Symbol = MarkerSymbol.VLine;
             scintilla.Markers[Marker.FolderTail].Symbol = MarkerSymbol.LCorner;
 
-            scintilla.BufferedDraw = false;
-
-
-            var folderColor = Color.Gray;
             for (int i = Marker.Folder; i <= Marker.FolderTail; i++)
             {
-                scintilla.Markers[i].SetForeColor(Color.White);
-                scintilla.Markers[i].SetBackColor(folderColor);
+                scintilla.Markers[i].SetForeColor(foldFore);
+                scintilla.Markers[i].SetBackColor(foldBack);
             }
 
-            // Indentation
-            scintilla.IndentWidth = 4;
-            scintilla.UseTabs = false;
-            scintilla.TabWidth = 4;
-
-            // Caret
-            scintilla.CaretLineVisible = true;
-            scintilla.CaretLineBackColor = Color.FromArgb(245, 245, 255);
+            // No wrap in code by default
             scintilla.WrapMode = WrapMode.None;
+
+            // You can also tweak caret/selection transparency if needed:
+            // scintilla.SelectionAlpha = 255; // opaque
         }
+
+
+        private const int SCI_SETLEXERLANGUAGE = 4001;
+        private void SetLexerLanguage(string lang)
+        {
+            var prop = typeof(Scintilla).GetProperty("LexerName");
+            if (prop != null && prop.CanWrite)
+            {
+                prop.SetValue(scintilla, lang ?? string.Empty);
+                return;
+            }
+            IntPtr ptr = IntPtr.Zero;
+            try
+            {
+                ptr = Marshal.StringToHGlobalAnsi(lang ?? string.Empty);
+                scintilla.DirectMessage(SCI_SETLEXERLANGUAGE, IntPtr.Zero, ptr);
+            }
+            finally
+            {
+                if (ptr != IntPtr.Zero) Marshal.FreeHGlobal(ptr);
+            }
+        }
+
 
         private void ApplyLexerForExtension(string ext)
         {
             ext = ext.ToLowerInvariant();
 
+            string lexer = "null"; // default to plain text
+
             if (IsCStyle(ext))
             {
-                scintilla.Lexer = Lexer.Cpp;
-                scintilla.SetKeywords(0, string.Join(" ",
-                    GetCKeywords())); // base keywords for C/C#/C++ style
+                lexer = "cpp";
             }
             else if (IsXml(ext))
             {
-                scintilla.Lexer = Lexer.Xml;
+                lexer = "xml";
             }
             else if (IsJson(ext))
             {
-                // Scintilla has a JSON lexer in newer Lexilla; otherwise JavaScript is acceptable
-                try { scintilla.Lexer = Lexer.Json; }
-                catch { scintilla.Lexer = Lexer.Xml; }
-                scintilla.SetProperty("lexer.json.allow.comments", "1");
+                lexer = "json";
             }
             else if (IsIni(ext))
             {
-                // Properties/Ini
-                scintilla.Lexer = Lexer.Properties;
+                // INI/.cfg uses 'props' in Lexilla
+                lexer = "props";
             }
-            //else if (IsYaml(ext))
-            //{
-            //    // Not all SciLexer builds include YAML; fallback to Null if not available
-            //    try { scintilla.Lexer = Lexer.Html; }
-            //    catch { scintilla.Lexer = Lexer.Null; }
-            //}
             else if (IsScript(ext))
             {
-                if (ext == ".py") scintilla.Lexer = Lexer.Python;
-                else if (ext == ".rb") scintilla.Lexer = Lexer.Ruby;
-                else if (ext == ".ps1") scintilla.Lexer = Lexer.Batch; // no native PowerShell in older builds
-                else if (ext == ".sh") scintilla.Lexer = Lexer.Null;   // if unavailable: try .Null
-                else scintilla.Lexer = Lexer.Batch;
+                if (ext == ".py") lexer = "python";
+                else if (ext == ".rb") lexer = "ruby";
+                else if (ext == ".ps1") lexer = "powershell"; // if not present in your build, it will just fall back to 'null'
+                else if (ext == ".sh") lexer = "bash";        // if not present, fallback applies
+                else lexer = "batch";                          // .bat/.cmd
             }
-            else
-            {
-                scintilla.Lexer = Lexer.Null; // plain text fallback
-            }
+
+            SetLexerLanguage(lexer);
+
+            // JSON: allow comments (Lexilla property)
+            if (lexer == "json")
+                scintilla.SetProperty("lexer.json.allow.comments", "1");
+
+            // Provide some base keywords for C-like languages
+            if (lexer == "cpp")
+                scintilla.SetKeywords(0, string.Join(" ", GetCKeywords()));
+
 
             // Basic coloring styles (optional fine-tuning per lexer)
             scintilla.Styles[Style.Cpp.Comment].ForeColor = Color.Green;
@@ -558,21 +649,205 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             scintilla.Styles[Style.Cpp.Operator].ForeColor = Color.Black;
             scintilla.Styles[Style.Cpp.Word].ForeColor = Color.RoyalBlue; // keywords
 
-            // Fold properties
+            // Folding settings
             scintilla.SetProperty("fold", "1");
             scintilla.SetProperty("fold.compact", "1");
             scintilla.AutomaticFold = (AutomaticFold.Show | AutomaticFold.Click | AutomaticFold.Change);
+
+
+            ApplyDarkSyntaxColorsForLexer(lexer);
         }
+
+
+        private void ApplyDarkSyntaxColorsForLexer(string lexer)
+        {
+            // VS Code–like dark colors
+            var fore = Color.FromArgb(212, 212, 212);   // default text
+            var kw = Color.FromArgb(86, 156, 214);      // keywords
+            var str = Color.FromArgb(206, 145, 120);    // strings
+            var num = Color.FromArgb(181, 206, 168);    // numbers
+            var com = Color.FromArgb(106, 153, 85);     // comments (green)
+            var pp = Color.FromArgb(197, 134, 192);     // preprocessor / directives
+            var op = Color.FromArgb(212, 212, 212);     // operators
+            var attr = Color.FromArgb(156, 220, 254);   // xml attribute / tag-ish
+            var tag = Color.FromArgb(86, 156, 214);     // xml tag
+            var propName = Color.FromArgb(156, 220, 254); // json/property name
+
+            // Start from default text for “unassigned” styles
+            // (StyleClearAll already pushed default to all, so set only those we care about)
+
+            if (lexer == "cpp")
+            {
+                scintilla.Styles[Style.Cpp.Comment].ForeColor = com;
+                scintilla.Styles[Style.Cpp.CommentLine].ForeColor = com;
+                scintilla.Styles[Style.Cpp.CommentDoc].ForeColor = com;
+
+                scintilla.Styles[Style.Cpp.Number].ForeColor = num;
+                scintilla.Styles[Style.Cpp.String].ForeColor = str;
+                scintilla.Styles[Style.Cpp.Character].ForeColor = str;
+
+                scintilla.Styles[Style.Cpp.Preprocessor].ForeColor = pp;
+                scintilla.Styles[Style.Cpp.Operator].ForeColor = op;
+                scintilla.Styles[Style.Cpp.Word].ForeColor = kw; // keywords
+                                                                 // Optional: user types/classes as Word2 if you set keywords(1)
+                                                                 // scintilla.Styles[Style.Cpp.Word2].ForeColor = Color.FromArgb(78, 201, 176); // types
+            }
+            else if (lexer == "xml")
+            {
+                scintilla.Styles[Style.Xml.Comment].ForeColor = com;
+                scintilla.Styles[Style.Xml.Tag].ForeColor = tag;
+                scintilla.Styles[Style.Xml.TagEnd].ForeColor = tag;
+                scintilla.Styles[Style.Xml.TagUnknown].ForeColor = tag;
+
+                scintilla.Styles[Style.Xml.Attribute].ForeColor = attr;
+                scintilla.Styles[Style.Xml.AttributeUnknown].ForeColor = attr;
+
+                scintilla.Styles[Style.Xml.DoubleString].ForeColor = str;
+                scintilla.Styles[Style.Xml.SingleString].ForeColor = str;
+
+                scintilla.Styles[Style.Xml.Entity].ForeColor = num;
+                scintilla.Styles[Style.Xml.Other].ForeColor = fore;
+            }
+            else if (lexer == "json")
+            {
+                // Keys (string keys often styled different from string values)
+                scintilla.Styles[Style.Json.PropertyName].ForeColor = propName; // if present
+                                                                                // Fallback commonly used:
+                scintilla.Styles[Style.Json.String].ForeColor = str;
+                scintilla.Styles[Style.Json.StringEol].ForeColor = str;
+                scintilla.Styles[Style.Json.Number].ForeColor = num;
+              //  scintilla.Styles[Style.Json.bool].ForeColor = kw;   // true/false
+            //    scintilla.Styles[Style.Json.nu].ForeColor = kw;      // null
+                scintilla.Styles[Style.Json.Default].ForeColor = fore;
+                scintilla.Styles[Style.Json.BlockComment].ForeColor = com;
+                scintilla.Styles[Style.Json.LineComment].ForeColor = com;
+                scintilla.Styles[Style.Json.Operator].ForeColor = op;
+                // Depending on your Scintilla5.NET build, style IDs may vary slightly;
+                // if a style is missing, leaving it unassigned is fine.
+            }
+            else if (lexer == "props") // ini/cfg
+            {
+                scintilla.Styles[Style.Properties.Comment].ForeColor = com;
+                scintilla.Styles[Style.Properties.Section].ForeColor = kw;     // [section]
+                scintilla.Styles[Style.Properties.Assignment].ForeColor = op;   // '='
+                scintilla.Styles[Style.Properties.Key].ForeColor = propName;    // key
+             //   scintilla.Styles[Style.Properties.Value].ForeColor = str;       // value
+            }
+            else if (lexer == "batch")
+            {
+                scintilla.Styles[Style.Batch.Comment].ForeColor = com;
+                scintilla.Styles[Style.Batch.Word].ForeColor = kw;
+                scintilla.Styles[Style.Batch.Operator].ForeColor = op;
+                scintilla.Styles[Style.Batch.Command].ForeColor = kw;
+                scintilla.Styles[Style.Batch.Label].ForeColor = pp;
+               // scintilla.Styles[Style.Batch.Variable].ForeColor = propName;
+            }
+            else if (lexer == "python")
+            {
+                scintilla.Styles[Style.Python.CommentLine].ForeColor = com;
+                scintilla.Styles[Style.Python.Number].ForeColor = num;
+                scintilla.Styles[Style.Python.String].ForeColor = str;
+                scintilla.Styles[Style.Python.Character].ForeColor = str;
+                scintilla.Styles[Style.Python.Word].ForeColor = kw;
+                scintilla.Styles[Style.Python.Operator].ForeColor = op;
+                scintilla.Styles[Style.Python.DefName].ForeColor = propName; // function/class name
+            }
+            else if (lexer == "ruby")
+            {
+                scintilla.Styles[Style.Ruby.CommentLine].ForeColor = com;
+                scintilla.Styles[Style.Ruby.Number].ForeColor = num;
+                scintilla.Styles[Style.Ruby.String].ForeColor = str;
+                scintilla.Styles[Style.Ruby.Word].ForeColor = kw;
+                scintilla.Styles[Style.Ruby.Operator].ForeColor = op;
+                scintilla.Styles[Style.Ruby.Symbol].ForeColor = propName;
+            }
+            else
+            {
+                // "null" or unknown lexers use the default colors already set
+            }
+        }
+
+
+        //private void ApplyLexerForExtension(string ext)
+        //{
+        //    ext = ext.ToLowerInvariant();
+
+        //    if (IsCStyle(ext))
+        //    {
+        //        scintilla.Lexer = Lexer.Cpp;
+        //        scintilla.SetKeywords(0, string.Join(" ",
+        //            GetCKeywords())); // base keywords for C/C#/C++ style
+        //    }
+        //    else if (IsXml(ext))
+        //    {
+        //        scintilla.Lexer = Lexer.Xml;
+        //    }
+        //    else if (IsJson(ext))
+        //    {
+        //        // Scintilla has a JSON lexer in newer Lexilla; otherwise JavaScript is acceptable
+        //        try { scintilla.Lexer = Lexer.Json; }
+        //        catch { scintilla.Lexer = Lexer.Xml; }
+        //        scintilla.SetProperty("lexer.json.allow.comments", "1");
+        //    }
+        //    else if (IsIni(ext))
+        //    {
+        //        // Properties/Ini
+        //        scintilla.Lexer = Lexer.Properties;
+        //    }
+        //    //else if (IsYaml(ext))
+        //    //{
+        //    //    // Not all SciLexer builds include YAML; fallback to Null if not available
+        //    //    try { scintilla.Lexer = Lexer.Html; }
+        //    //    catch { scintilla.Lexer = Lexer.Null; }
+        //    //}
+        //    else if (IsScript(ext))
+        //    {
+        //        if (ext == ".py") scintilla.Lexer = Lexer.Python;
+        //        else if (ext == ".rb") scintilla.Lexer = Lexer.Ruby;
+        //        else if (ext == ".ps1") scintilla.Lexer = Lexer.Batch; // no native PowerShell in older builds
+        //        else if (ext == ".sh") scintilla.Lexer = Lexer.Null;   // if unavailable: try .Null
+        //        else scintilla.Lexer = Lexer.Batch;
+        //    }
+        //    else
+        //    {
+        //        scintilla.Lexer = Lexer.Null; // plain text fallback
+        //    }
+
+        //    // Basic coloring styles (optional fine-tuning per lexer)
+        //    scintilla.Styles[Style.Cpp.Comment].ForeColor = Color.Green;
+        //    scintilla.Styles[Style.Cpp.CommentLine].ForeColor = Color.Green;
+        //    scintilla.Styles[Style.Cpp.CommentDoc].ForeColor = Color.Green;
+        //    scintilla.Styles[Style.Cpp.Number].ForeColor = Color.DarkCyan;
+        //    scintilla.Styles[Style.Cpp.String].ForeColor = Color.Brown;
+        //    scintilla.Styles[Style.Cpp.Character].ForeColor = Color.Brown;
+        //    scintilla.Styles[Style.Cpp.Preprocessor].ForeColor = Color.Gray;
+        //    scintilla.Styles[Style.Cpp.Operator].ForeColor = Color.Black;
+        //    scintilla.Styles[Style.Cpp.Word].ForeColor = Color.RoyalBlue; // keywords
+
+        //    // Fold properties
+        //    scintilla.SetProperty("fold", "1");
+        //    scintilla.SetProperty("fold.compact", "1");
+        //    scintilla.AutomaticFold = (AutomaticFold.Show | AutomaticFold.Click | AutomaticFold.Change);
+        //}
+
+
+
 
         // ========== Utilities ==========
         private void ShowOnly(Control c)
         {
             picture.Visible = false;
             txtPreview.Visible = false;
-            scintilla.Visible = false;
+
+            // Important: hide Scintilla before showing something else
+            if (scintilla.Visible)
+            {
+                scintilla.Visible = false;      // triggers VisibleChanged => SetScintillaFocus(false)
+            }
+
             lblUnsupported.Visible = false;
             webView.Visible = false;
-            hexBox.Visible = false;
+            if (hexBox != null) hexBox.Visible = false;
 
             btnPlayPause.Enabled = (_kind == PreviewKind.Media && webView.CoreWebView2 != null);
             btnStop.Enabled = (_kind == PreviewKind.Media && webView.CoreWebView2 != null);
@@ -584,7 +859,7 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
         private void ShowUnsupported()
         {
             _kind = PreviewKind.None;
-            ShowOnly(null);
+            ShowStatus("Preview cannot be shown", isError: true);
         }
 
 

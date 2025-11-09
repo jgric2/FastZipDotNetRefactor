@@ -190,7 +190,7 @@ namespace Brutal_Zip.Views
             // lblNameKey
             // 
             lblNameKey.AutoSize = true;
-            lblNameKey.ForeColor = Color.DimGray;
+            lblNameKey.ForeColor = Color.DarkGray;
             lblNameKey.Location = new Point(11, 28);
             lblNameKey.Name = "lblNameKey";
             lblNameKey.Size = new Size(42, 15);
@@ -210,7 +210,7 @@ namespace Brutal_Zip.Views
             // lblPathKey
             // 
             lblPathKey.AutoSize = true;
-            lblPathKey.ForeColor = Color.DimGray;
+            lblPathKey.ForeColor = Color.DarkGray;
             lblPathKey.Location = new Point(11, 48);
             lblPathKey.Name = "lblPathKey";
             lblPathKey.Size = new Size(88, 15);
@@ -230,7 +230,7 @@ namespace Brutal_Zip.Views
             // lblTypeKey
             // 
             lblTypeKey.AutoSize = true;
-            lblTypeKey.ForeColor = Color.DimGray;
+            lblTypeKey.ForeColor = Color.DarkGray;
             lblTypeKey.Location = new Point(11, 68);
             lblTypeKey.Name = "lblTypeKey";
             lblTypeKey.Size = new Size(35, 15);
@@ -249,7 +249,7 @@ namespace Brutal_Zip.Views
             // lblSizeKey
             // 
             lblSizeKey.AutoSize = true;
-            lblSizeKey.ForeColor = Color.DimGray;
+            lblSizeKey.ForeColor = Color.DarkGray;
             lblSizeKey.Location = new Point(11, 88);
             lblSizeKey.Name = "lblSizeKey";
             lblSizeKey.Size = new Size(30, 15);
@@ -268,7 +268,7 @@ namespace Brutal_Zip.Views
             // lblPackedKey
             // 
             lblPackedKey.AutoSize = true;
-            lblPackedKey.ForeColor = Color.DimGray;
+            lblPackedKey.ForeColor = Color.DarkGray;
             lblPackedKey.Location = new Point(11, 108);
             lblPackedKey.Name = "lblPackedKey";
             lblPackedKey.Size = new Size(48, 15);
@@ -287,7 +287,7 @@ namespace Brutal_Zip.Views
             // lblRatioKey
             // 
             lblRatioKey.AutoSize = true;
-            lblRatioKey.ForeColor = Color.DimGray;
+            lblRatioKey.ForeColor = Color.DarkGray;
             lblRatioKey.Location = new Point(11, 128);
             lblRatioKey.Name = "lblRatioKey";
             lblRatioKey.Size = new Size(37, 15);
@@ -306,7 +306,7 @@ namespace Brutal_Zip.Views
             // lblMethodKey
             // 
             lblMethodKey.AutoSize = true;
-            lblMethodKey.ForeColor = Color.DimGray;
+            lblMethodKey.ForeColor = Color.DarkGray;
             lblMethodKey.Location = new Point(11, 148);
             lblMethodKey.Name = "lblMethodKey";
             lblMethodKey.Size = new Size(52, 15);
@@ -325,7 +325,7 @@ namespace Brutal_Zip.Views
             // lblEncryptKey
             // 
             lblEncryptKey.AutoSize = true;
-            lblEncryptKey.ForeColor = Color.DimGray;
+            lblEncryptKey.ForeColor = Color.DarkGray;
             lblEncryptKey.Location = new Point(11, 168);
             lblEncryptKey.Name = "lblEncryptKey";
             lblEncryptKey.Size = new Size(67, 15);
@@ -344,7 +344,7 @@ namespace Brutal_Zip.Views
             // lblCrcKey
             // 
             lblCrcKey.AutoSize = true;
-            lblCrcKey.ForeColor = Color.DimGray;
+            lblCrcKey.ForeColor = Color.DarkGray;
             lblCrcKey.Location = new Point(11, 188);
             lblCrcKey.Name = "lblCrcKey";
             lblCrcKey.Size = new Size(45, 15);
@@ -363,7 +363,7 @@ namespace Brutal_Zip.Views
             // lblModifiedKey
             // 
             lblModifiedKey.AutoSize = true;
-            lblModifiedKey.ForeColor = Color.DimGray;
+            lblModifiedKey.ForeColor = Color.DarkGray;
             lblModifiedKey.Location = new Point(11, 208);
             lblModifiedKey.Name = "lblModifiedKey";
             lblModifiedKey.Size = new Size(58, 15);
@@ -382,7 +382,7 @@ namespace Brutal_Zip.Views
             // lblAttrsKey
             // 
             lblAttrsKey.AutoSize = true;
-            lblAttrsKey.ForeColor = Color.DimGray;
+            lblAttrsKey.ForeColor = Color.DarkGray;
             lblAttrsKey.Location = new Point(11, 228);
             lblAttrsKey.Name = "lblAttrsKey";
             lblAttrsKey.Size = new Size(62, 15);
@@ -437,7 +437,7 @@ namespace Brutal_Zip.Views
             // lblDimKey
             // 
             lblDimKey.AutoSize = true;
-            lblDimKey.ForeColor = Color.DimGray;
+            lblDimKey.ForeColor = Color.DarkGray;
             lblDimKey.Location = new Point(11, 308);
             lblDimKey.Name = "lblDimKey";
             lblDimKey.Size = new Size(72, 15);
@@ -456,7 +456,7 @@ namespace Brutal_Zip.Views
             // lblTextKey
             // 
             lblTextKey.AutoSize = true;
-            lblTextKey.ForeColor = Color.DimGray;
+            lblTextKey.ForeColor = Color.DarkGray;
             lblTextKey.Location = new Point(11, 328);
             lblTextKey.Name = "lblTextKey";
             lblTextKey.Size = new Size(31, 15);

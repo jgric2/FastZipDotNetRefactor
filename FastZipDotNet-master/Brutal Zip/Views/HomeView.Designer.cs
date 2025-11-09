@@ -6,9 +6,6 @@ namespace Brutal_Zip.Views
     partial class HomeView
     {
         private IContainer components = null;
-        private Label lblCreateDest;
-        internal TextBox txtCreateDest;
-        internal Button btnCreateBrowse;
         internal BrutalComboBox cmbCreateMethod;
         internal NumericUpDown numCreateLevel;
         internal Button btnCreate;
@@ -31,8 +28,6 @@ namespace Brutal_Zip.Views
         internal RadioButton rdoExtractToFolderName;
         internal RadioButton rdoExtractHere;
         private Label lblExtractDest;
-        internal TextBox txtExtractDest;
-        internal Button btnExtractBrowse;
         internal Button btnExtract;
 
         protected override void Dispose(bool disposing)
@@ -44,11 +39,7 @@ namespace Brutal_Zip.Views
         private void InitializeComponent()
         {
             components = new Container();
-            ComponentResourceManager resources = new ComponentResourceManager(typeof(HomeView));
             numCreateLevel = new NumericUpDown();
-            lblCreateDest = new Label();
-            txtCreateDest = new TextBox();
-            btnCreateBrowse = new Button();
             btnCreate = new Button();
             lblCreateHint = new Label();
             lblPwdStatus = new Label();
@@ -65,8 +56,6 @@ namespace Brutal_Zip.Views
             rdoExtractToFolderName = new RadioButton();
             rdoExtractHere = new RadioButton();
             lblExtractDest = new Label();
-            txtExtractDest = new TextBox();
-            btnExtractBrowse = new Button();
             btnExtract = new Button();
             pnlExtractDrop = new Panel();
             lblExtractDrop = new Label();
@@ -167,46 +156,14 @@ namespace Brutal_Zip.Views
             numCreateLevel.TabIndex = 9;
             numCreateLevel.Value = new decimal(new int[] { 6, 0, 0, 0 });
             // 
-            // lblCreateDest
-            // 
-            lblCreateDest.Location = new Point(3, 4);
-            lblCreateDest.Name = "lblCreateDest";
-            lblCreateDest.Size = new Size(80, 21);
-            lblCreateDest.TabIndex = 3;
-            lblCreateDest.Text = "Destination:";
-            // 
-            // txtCreateDest
-            // 
-            txtCreateDest.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            txtCreateDest.BackColor = Color.FromArgb(32, 32, 32);
-            txtCreateDest.BorderStyle = BorderStyle.FixedSingle;
-            txtCreateDest.ForeColor = Color.White;
-            txtCreateDest.Location = new Point(89, 2);
-            txtCreateDest.Name = "txtCreateDest";
-            txtCreateDest.Size = new Size(592, 23);
-            txtCreateDest.TabIndex = 4;
-            // 
-            // btnCreateBrowse
-            // 
-            btnCreateBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnCreateBrowse.FlatAppearance.BorderSize = 0;
-            btnCreateBrowse.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
-            btnCreateBrowse.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
-            btnCreateBrowse.FlatStyle = FlatStyle.Flat;
-            btnCreateBrowse.Location = new Point(682, 2);
-            btnCreateBrowse.Name = "btnCreateBrowse";
-            btnCreateBrowse.Size = new Size(33, 26);
-            btnCreateBrowse.TabIndex = 5;
-            btnCreateBrowse.Text = "...";
-            btnCreateBrowse.Click += btnCreateBrowse_Click;
-            // 
             // btnCreate
             // 
-            btnCreate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnCreate.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnCreate.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnCreate.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnCreate.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnCreate.FlatStyle = FlatStyle.Flat;
-            btnCreate.Location = new Point(442, 30);
+            btnCreate.Location = new Point(449, 3);
             btnCreate.Name = "btnCreate";
             btnCreate.Size = new Size(100, 28);
             btnCreate.TabIndex = 14;
@@ -215,11 +172,11 @@ namespace Brutal_Zip.Views
             // 
             // lblCreateHint
             // 
+            lblCreateHint.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             lblCreateHint.AutoEllipsis = true;
-            lblCreateHint.Dock = DockStyle.Bottom;
-            lblCreateHint.Location = new Point(0, 71);
+            lblCreateHint.Location = new Point(0, 10);
             lblCreateHint.Name = "lblCreateHint";
-            lblCreateHint.Size = new Size(715, 20);
+            lblCreateHint.Size = new Size(443, 20);
             lblCreateHint.TabIndex = 17;
             lblCreateHint.Text = "Staging: none";
             // 
@@ -243,7 +200,7 @@ namespace Brutal_Zip.Views
             lvStaging.FullRowSelect = true;
             lvStaging.Location = new Point(3, 3);
             lvStaging.Name = "lvStaging";
-            lvStaging.Size = new Size(715, 470);
+            lvStaging.Size = new Size(715, 528);
             lvStaging.TabIndex = 16;
             lvStaging.UseCompatibleStateImageBehavior = false;
             lvStaging.View = View.Details;
@@ -305,8 +262,9 @@ namespace Brutal_Zip.Views
             // 
             // rdoExtractToFolderName
             // 
+            rdoExtractToFolderName.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             rdoExtractToFolderName.Checked = true;
-            rdoExtractToFolderName.Location = new Point(97, 4);
+            rdoExtractToFolderName.Location = new Point(191, 8);
             rdoExtractToFolderName.Name = "rdoExtractToFolderName";
             rdoExtractToFolderName.Size = new Size(173, 20);
             rdoExtractToFolderName.TabIndex = 2;
@@ -315,51 +273,30 @@ namespace Brutal_Zip.Views
             // 
             // rdoExtractHere
             // 
-            rdoExtractHere.Location = new Point(3, 3);
+            rdoExtractHere.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            rdoExtractHere.Location = new Point(97, 7);
             rdoExtractHere.Name = "rdoExtractHere";
-            rdoExtractHere.Size = new Size(106, 20);
+            rdoExtractHere.Size = new Size(88, 20);
             rdoExtractHere.TabIndex = 3;
             rdoExtractHere.Text = "Extract here";
             // 
             // lblExtractDest
             // 
-            lblExtractDest.Location = new Point(11, 29);
+            lblExtractDest.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            lblExtractDest.Location = new Point(8, 8);
             lblExtractDest.Name = "lblExtractDest";
             lblExtractDest.Size = new Size(80, 20);
             lblExtractDest.TabIndex = 4;
             lblExtractDest.Text = "Destination:";
             // 
-            // txtExtractDest
-            // 
-            txtExtractDest.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            txtExtractDest.BackColor = Color.FromArgb(32, 32, 32);
-            txtExtractDest.BorderStyle = BorderStyle.FixedSingle;
-            txtExtractDest.ForeColor = Color.White;
-            txtExtractDest.Location = new Point(97, 28);
-            txtExtractDest.Name = "txtExtractDest";
-            txtExtractDest.Size = new Size(710, 23);
-            txtExtractDest.TabIndex = 5;
-            // 
-            // btnExtractBrowse
-            // 
-            btnExtractBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnExtractBrowse.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
-            btnExtractBrowse.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
-            btnExtractBrowse.FlatStyle = FlatStyle.Flat;
-            btnExtractBrowse.Location = new Point(813, 27);
-            btnExtractBrowse.Name = "btnExtractBrowse";
-            btnExtractBrowse.Size = new Size(70, 26);
-            btnExtractBrowse.TabIndex = 6;
-            btnExtractBrowse.Text = "Browse…";
-            btnExtractBrowse.Click += btnExtractBrowse_Click;
-            // 
             // btnExtract
             // 
-            btnExtract.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnExtract.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnExtract.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnExtract.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnExtract.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnExtract.FlatStyle = FlatStyle.Flat;
-            btnExtract.Location = new Point(889, 26);
+            btnExtract.Location = new Point(890, 2);
             btnExtract.Name = "btnExtract";
             btnExtract.Size = new Size(100, 28);
             btnExtract.TabIndex = 7;
@@ -374,7 +311,7 @@ namespace Brutal_Zip.Views
             pnlExtractDrop.ForeColor = Color.White;
             pnlExtractDrop.Location = new Point(3, 3);
             pnlExtractDrop.Name = "pnlExtractDrop";
-            pnlExtractDrop.Size = new Size(994, 505);
+            pnlExtractDrop.Size = new Size(994, 530);
             pnlExtractDrop.TabIndex = 0;
             // 
             // lblExtractDrop
@@ -382,7 +319,7 @@ namespace Brutal_Zip.Views
             lblExtractDrop.Dock = DockStyle.Fill;
             lblExtractDrop.Location = new Point(0, 0);
             lblExtractDrop.Name = "lblExtractDrop";
-            lblExtractDrop.Size = new Size(994, 505);
+            lblExtractDrop.Size = new Size(994, 530);
             lblExtractDrop.TabIndex = 0;
             lblExtractDrop.Text = "Drop .zip files here to extract or open\r\n(Single .zip to open in viewer, Multiple .zips for bulk extraction)";
             lblExtractDrop.TextAlign = ContentAlignment.MiddleCenter;
@@ -1093,7 +1030,7 @@ namespace Brutal_Zip.Views
             treeViewExplorer.Location = new Point(0, 0);
             treeViewExplorer.Margin = new Padding(3, 0, 3, 3);
             treeViewExplorer.Name = "treeViewExplorer";
-            treeViewExplorer.SelectedNodes = (System.Collections.ArrayList)resources.GetObject("treeViewExplorer.SelectedNodes");
+            treeViewExplorer.SelectedNodes = null;
             treeViewExplorer.Size = new Size(275, 573);
             treeViewExplorer.TabIndex = 0;
             treeViewExplorer.BeforeExpand += treeViewExplorer_BeforeExpand;
@@ -1111,31 +1048,29 @@ namespace Brutal_Zip.Views
             tableLayoutPanel5.Name = "tableLayoutPanel5";
             tableLayoutPanel5.RowCount = 2;
             tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 97F));
+            tableLayoutPanel5.RowStyles.Add(new RowStyle(SizeType.Absolute, 39F));
             tableLayoutPanel5.Size = new Size(721, 573);
             tableLayoutPanel5.TabIndex = 0;
             // 
             // panel7
             // 
             panel7.Controls.Add(lblCreateHint);
-            panel7.Controls.Add(lblCreateDest);
-            panel7.Controls.Add(btnCreateBrowse);
-            panel7.Controls.Add(txtCreateDest);
             panel7.Controls.Add(btnCreateQuick);
             panel7.Controls.Add(btnCreate);
             panel7.Dock = DockStyle.Fill;
-            panel7.Location = new Point(3, 479);
+            panel7.Location = new Point(3, 537);
             panel7.Name = "panel7";
-            panel7.Size = new Size(715, 91);
+            panel7.Size = new Size(715, 33);
             panel7.TabIndex = 17;
             // 
             // btnCreateQuick
             // 
-            btnCreateQuick.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnCreateQuick.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnCreateQuick.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnCreateQuick.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnCreateQuick.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnCreateQuick.FlatStyle = FlatStyle.Flat;
-            btnCreateQuick.Location = new Point(552, 30);
+            btnCreateQuick.Location = new Point(552, 3);
             btnCreateQuick.Name = "btnCreateQuick";
             btnCreateQuick.Size = new Size(160, 28);
             btnCreateQuick.TabIndex = 15;
@@ -1175,8 +1110,8 @@ namespace Brutal_Zip.Views
             tableLayoutPanel6.Location = new Point(0, 98);
             tableLayoutPanel6.Name = "tableLayoutPanel6";
             tableLayoutPanel6.RowCount = 2;
-            tableLayoutPanel6.RowStyles.Add(new RowStyle(SizeType.Percent, 100.000008F));
-            tableLayoutPanel6.RowStyles.Add(new RowStyle(SizeType.Absolute, 63F));
+            tableLayoutPanel6.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableLayoutPanel6.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
             tableLayoutPanel6.Size = new Size(1000, 574);
             tableLayoutPanel6.TabIndex = 8;
             // 
@@ -1185,13 +1120,11 @@ namespace Brutal_Zip.Views
             panel9.Controls.Add(rdoExtractToFolderName);
             panel9.Controls.Add(lblExtractDest);
             panel9.Controls.Add(rdoExtractHere);
-            panel9.Controls.Add(txtExtractDest);
-            panel9.Controls.Add(btnExtractBrowse);
             panel9.Controls.Add(btnExtract);
             panel9.Dock = DockStyle.Fill;
-            panel9.Location = new Point(3, 514);
+            panel9.Location = new Point(3, 539);
             panel9.Name = "panel9";
-            panel9.Size = new Size(994, 57);
+            panel9.Size = new Size(994, 32);
             panel9.TabIndex = 1;
             // 
             // HomeView
@@ -1200,8 +1133,8 @@ namespace Brutal_Zip.Views
             AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = Color.FromArgb(32, 32, 32);
             Controls.Add(brutalGradientPanel2);
-            Controls.Add(panelCreateZipTab);
             Controls.Add(panelExtractZipTab);
+            Controls.Add(panelCreateZipTab);
             ForeColor = Color.White;
             Name = "HomeView";
             Size = new Size(1000, 700);
@@ -1234,12 +1167,10 @@ namespace Brutal_Zip.Views
             splitContainerCreate.ResumeLayout(false);
             tableLayoutPanel5.ResumeLayout(false);
             panel7.ResumeLayout(false);
-            panel7.PerformLayout();
             panelCreateZipTab.ResumeLayout(false);
             panelExtractZipTab.ResumeLayout(false);
             tableLayoutPanel6.ResumeLayout(false);
             panel9.ResumeLayout(false);
-            panel9.PerformLayout();
             ResumeLayout(false);
         }
         private BrutalZip2025.BrutalControls.BrutalGradientPanel GradientPanelCreateRibbon;

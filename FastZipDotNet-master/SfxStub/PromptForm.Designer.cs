@@ -24,6 +24,7 @@ namespace SfxStub
 
         private void InitializeComponent()
         {
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(PromptForm));
             picBanner = new PictureBox();
             lblDest = new Label();
             txtFolder = new TextBox();
@@ -152,6 +153,7 @@ namespace SfxStub
             Controls.Add(btnCancel);
             Controls.Add(pnlTopAccent);
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "PromptForm";
