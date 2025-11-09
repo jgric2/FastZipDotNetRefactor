@@ -1414,7 +1414,7 @@ return await sharedTask.ConfigureAwait(false);
                 homeView.SetCreatePasswordStatus(!string.IsNullOrEmpty(_createPassword));
             }
 
-            // Build jobs: files to add and empty folders to preserve
+            // Build jobs: files to add and empty folders to preserve (single-pass enumeration)
             var jobs = new List<(string fullPath, string internalName, long size)>();
             var emptyFolderEntries = new List<string>();
 
@@ -1424,38 +1424,31 @@ return await sharedTask.ConfigureAwait(false);
                 {
                     if (s.IsFolder && Directory.Exists(s.Path))
                     {
-                        string rootName = new DirectoryInfo(s.Path).Name;
+                        string root = s.Path;
+                        string rootName = new DirectoryInfo(root).Name;
 
-                        // Enumerate all subdirectories relative to s.Path
                         var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        try
-                        {
-                            foreach (var dir in Directory.EnumerateDirectories(s.Path, "*", SearchOption.AllDirectories))
-                            {
-                                string rel = Path.GetRelativePath(s.Path, dir).Replace('\\', '/').Trim('/');
-                                if (!string.IsNullOrEmpty(rel))
-                                    allDirsRel.Add(rel);
-                            }
-                        }
-                        catch { }
-
-                        // Track directories that contain at least one file inside
                         var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                         int filesInThisRoot = 0;
 
-                        // Enumerate files
-                        try
+                        // Single pass over both files and directories
+                        foreach (var e in FDirectory.EnumerateFileSystemEntriesTyped(root, "*", SearchOption.AllDirectories, FDirectory.EntryKind.FilesAndDirectories))
                         {
-                            foreach (var file in Directory.EnumerateFiles(s.Path, "*", SearchOption.AllDirectories))
-                            {
-                                string rel = Path.GetRelativePath(s.Path, file).Replace('\\', '/').Trim('/');
-                                string internalName = (rootName + "/" + rel).Replace('\\', '/').Trim('/');
+                            string rel = Path.GetRelativePath(root, e.FullPath).Replace('\\', '/').Trim('/');
+                            if (string.IsNullOrEmpty(rel))
+                                continue;
 
-                                long size = 0; try { size = new FileInfo(file).Length; } catch { }
-                                jobs.Add((file, internalName, size));
+                            if (e.IsDirectory)
+                            {
+                                allDirsRel.Add(rel);
+                            }
+                            else
+                            {
+                                string internalName = (rootName + "/" + rel).Replace('\\', '/').Trim('/');
+                                jobs.Add((e.FullPath, internalName, e.Size));
                                 filesInThisRoot++;
 
-                                // mark ancestors of rel
+                                // Mark ancestors of the file as non-empty
                                 var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
                                 while (!string.IsNullOrEmpty(dirRel))
                                 {
@@ -1464,7 +1457,6 @@ return await sharedTask.ConfigureAwait(false);
                                 }
                             }
                         }
-                        catch { }
 
                         // Empty directories to preserve
                         foreach (var dRel in allDirsRel)
@@ -1489,7 +1481,10 @@ return await sharedTask.ConfigureAwait(false);
                         jobs.Add((s.Path, internalName, size));
                     }
                 }
-                catch { /* ignore bad path */ }
+                catch
+                {
+                    // Ignore bad path
+                }
             }
 
             if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
@@ -1514,8 +1509,8 @@ return await sharedTask.ConfigureAwait(false);
 
                 if (encOn)
                 {
-                    zip.Encryption = encAlgo;         // ZipCrypto now; AES soon
-                    zip.Password = _createPassword;   // required
+                    zip.Encryption = encAlgo;
+                    zip.Password = _createPassword;
                 }
                 else
                 {
@@ -1542,7 +1537,7 @@ return await sharedTask.ConfigureAwait(false);
                 long aggBytes = 0;
                 int aggFiles = 0;
                 string currentName = null;
-                var sw = Stopwatch.StartNew();
+                var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 using var reportCts = new CancellationTokenSource();
                 var reporter = Task.Run(async () =>
@@ -1600,8 +1595,9 @@ return await sharedTask.ConfigureAwait(false);
                 reportCts.Cancel();
                 try { await reporter; } catch { }
 
-                // Preserve empty folders (sequential)
-                foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+                // Preserve empty folders (dedup)
+                var uniqEmpty = new HashSet<string>(emptyFolderEntries, StringComparer.OrdinalIgnoreCase);
+                foreach (var folder in uniqEmpty)
                 {
                     try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
                 }
@@ -1618,6 +1614,256 @@ return await sharedTask.ConfigureAwait(false);
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
             finally { pf.Close(); }
         }
+        //private async Task DoCreateAsync()
+        //{
+        //    if (_staging == null || _staging.Count == 0)
+        //    {
+        //        MessageBox.Show(this, "Add files or folders to the staging list first.", "Nothing to do");
+        //        return;
+        //    }
+
+        //    // Destination
+        //    var dest = homeView.CreateDestination?.Trim();
+        //    if (string.IsNullOrEmpty(dest))
+        //    {
+        //        using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
+        //        if (sfd.ShowDialog(this) != DialogResult.OK) return;
+        //        dest = homeView.CreateDestination = sfd.FileName;
+        //    }
+
+        //    // Method/level
+        //    var method = homeView.CreateMethodIndex switch
+        //    {
+        //        0 => Compression.Store,
+        //        1 => Compression.Deflate,
+        //        2 => Compression.Zstd,
+        //        _ => Compression.Deflate
+        //    };
+        //    int level = homeView.CreateLevel;
+
+        //    // Encryption choices
+        //    bool encOn = homeView.CreateEncryptEnabled;
+        //    EncryptionAlgorithm encAlgo = homeView.CreateEncryptAlgorithmIndex switch
+        //    {
+        //        0 => EncryptionAlgorithm.ZipCrypto,
+        //        1 => EncryptionAlgorithm.Aes128,
+        //        2 => EncryptionAlgorithm.Aes192,
+        //        3 => EncryptionAlgorithm.Aes256,
+        //        _ => EncryptionAlgorithm.ZipCrypto
+        //    };
+
+        //    if (encOn && string.IsNullOrEmpty(_createPassword))
+        //    {
+        //        using var dlg = new PasswordDialog();
+        //        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        //        _createPassword = dlg.Password;
+        //        homeView.SetCreatePasswordStatus(!string.IsNullOrEmpty(_createPassword));
+        //    }
+
+        //    // Build jobs: files to add and empty folders to preserve
+        //    var jobs = new List<(string fullPath, string internalName, long size)>();
+        //    var emptyFolderEntries = new List<string>();
+
+        //    foreach (var s in _staging)
+        //    {
+        //        try
+        //        {
+        //            if (s.IsFolder && Directory.Exists(s.Path))
+        //            {
+        //                string rootName = new DirectoryInfo(s.Path).Name;
+
+        //                // Enumerate all subdirectories relative to s.Path
+        //                var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        //                try
+        //                {
+        //                    foreach (var dir in Directory.EnumerateDirectories(s.Path, "*", SearchOption.AllDirectories))
+        //                    {
+        //                        string rel = Path.GetRelativePath(s.Path, dir).Replace('\\', '/').Trim('/');
+        //                        if (!string.IsNullOrEmpty(rel))
+        //                            allDirsRel.Add(rel);
+        //                    }
+        //                }
+        //                catch { }
+
+        //                // Track directories that contain at least one file inside
+        //                var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        //                int filesInThisRoot = 0;
+
+        //                // Enumerate files
+        //                try
+        //                {
+        //                    foreach (var file in Directory.EnumerateFiles(s.Path, "*", SearchOption.AllDirectories))
+        //                    {
+        //                        string rel = Path.GetRelativePath(s.Path, file).Replace('\\', '/').Trim('/');
+        //                        string internalName = (rootName + "/" + rel).Replace('\\', '/').Trim('/');
+
+        //                        long size = 0; try { size = new FileInfo(file).Length; } catch { }
+        //                        jobs.Add((file, internalName, size));
+        //                        filesInThisRoot++;
+
+        //                        // mark ancestors of rel
+        //                        var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+        //                        while (!string.IsNullOrEmpty(dirRel))
+        //                        {
+        //                            nonEmptyDirsRel.Add(dirRel);
+        //                            dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+        //                        }
+        //                    }
+        //                }
+        //                catch { }
+
+        //                // Empty directories to preserve
+        //                foreach (var dRel in allDirsRel)
+        //                {
+        //                    if (!nonEmptyDirsRel.Contains(dRel))
+        //                    {
+        //                        string internalFolder = (rootName + "/" + dRel).Replace('\\', '/').Trim('/');
+        //                        emptyFolderEntries.Add(internalFolder);
+        //                    }
+        //                }
+
+        //                // If the folder is completely empty (no files, no subdirs)
+        //                if (filesInThisRoot == 0 && allDirsRel.Count == 0)
+        //                {
+        //                    emptyFolderEntries.Add(rootName);
+        //                }
+        //            }
+        //            else if (!s.IsFolder && File.Exists(s.Path))
+        //            {
+        //                string internalName = Path.GetFileName(s.Path);
+        //                long size = 0; try { size = new FileInfo(s.Path).Length; } catch { }
+        //                jobs.Add((s.Path, internalName, size));
+        //            }
+        //        }
+        //        catch { /* ignore bad path */ }
+        //    }
+
+        //    if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
+        //    {
+        //        MessageBox.Show(this, "No valid files or folders found.", "Create");
+        //        return;
+        //    }
+
+        //    long grandBytes = 0; int grandFiles = 0;
+        //    foreach (var j in jobs) { grandBytes += j.size; grandFiles++; }
+
+        //    int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+        //    int curThreads = Threads;
+
+        //    using var pf = new ProgressForm($"Creating archive… ({curThreads} threads)");
+        //    var progress = pf.CreateProgress();
+        //    pf.Show(this);
+
+        //    try
+        //    {
+        //        using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
+
+        //        if (encOn)
+        //        {
+        //            zip.Encryption = encAlgo;         // ZipCrypto now; AES soon
+        //            zip.Password = _createPassword;   // required
+        //        }
+        //        else
+        //        {
+        //            zip.Encryption = EncryptionAlgorithm.None;
+        //            zip.Password = null;
+        //        }
+
+        //        // Live thread control
+        //        pf.ConfigureThreads(maxThreads, curThreads, n =>
+        //        {
+        //            try
+        //            {
+        //                SettingsService.Current.ThreadsAuto = false;
+        //                SettingsService.Current.Threads = n;
+        //                SettingsService.Save();
+        //                zip.SetMaxConcurrency(n);
+        //                pf.Text = $"Creating archive… ({n} threads)";
+        //            }
+        //            catch { }
+        //        });
+
+        //        var sem = zip.ConcurrencyLimiter;
+
+        //        long aggBytes = 0;
+        //        int aggFiles = 0;
+        //        string currentName = null;
+        //        var sw = Stopwatch.StartNew();
+
+        //        using var reportCts = new CancellationTokenSource();
+        //        var reporter = Task.Run(async () =>
+        //        {
+        //            while (!reportCts.IsCancellationRequested)
+        //            {
+        //                long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
+        //                int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
+        //                double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+
+        //                progress.Report(new ZipProgress
+        //                {
+        //                    Operation = ZipOperation.Build,
+        //                    CurrentFile = Volatile.Read(ref currentName),
+        //                    TotalFiles = grandFiles,
+        //                    TotalBytesUncompressed = grandBytes,
+        //                    FilesProcessed = pFiles,
+        //                    BytesProcessedUncompressed = pBytes,
+        //                    Elapsed = sw.Elapsed,
+        //                    SpeedBytesPerSec = speed
+        //                });
+
+        //                try { await Task.Delay(50, reportCts.Token); } catch { break; }
+        //            }
+        //        });
+
+        //        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(pf.Token);
+        //        var tasks = new List<Task>(jobs.Count);
+
+        //        foreach (var job in jobs)
+        //        {
+        //            linkedCts.Token.ThrowIfCancellationRequested();
+
+        //            tasks.Add(Task.Run(() =>
+        //            {
+        //                sem.WaitOne(linkedCts.Token);
+        //                try
+        //                {
+        //                    Volatile.Write(ref currentName, job.internalName);
+
+        //                    void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
+        //                    void OnComp(long n) { /* compressed count not needed for UI here */ }
+
+        //                    zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
+        //                    Interlocked.Increment(ref aggFiles);
+        //                }
+        //                finally
+        //                {
+        //                    sem.Release();
+        //                }
+        //            }, linkedCts.Token));
+        //        }
+
+        //        await Task.WhenAll(tasks);
+        //        reportCts.Cancel();
+        //        try { await reporter; } catch { }
+
+        //        // Preserve empty folders (sequential)
+        //        foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+        //        {
+        //            try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
+        //        }
+
+        //        zip.Close();
+
+        //        if (SettingsService.Current.OpenExplorerAfterCreate)
+        //            TryOpenExplorerSelect(dest);
+
+        //        _staging.Clear();
+        //        RefreshStagingList();
+        //    }
+        //    catch (OperationCanceledException) { }
+        //    catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
+        //    finally { pf.Close(); }
+        //}
 
         private async Task DoExtractSmartAsync()
         {
