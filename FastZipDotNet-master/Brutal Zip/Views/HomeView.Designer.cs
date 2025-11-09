@@ -1133,8 +1133,8 @@ namespace Brutal_Zip.Views
             AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = Color.FromArgb(32, 32, 32);
             Controls.Add(brutalGradientPanel2);
-            Controls.Add(panelExtractZipTab);
             Controls.Add(panelCreateZipTab);
+            Controls.Add(panelExtractZipTab);
             ForeColor = Color.White;
             Name = "HomeView";
             Size = new Size(1000, 700);

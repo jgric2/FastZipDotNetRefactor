@@ -1,4 +1,5 @@
-﻿using BrutalZip;
+﻿using Brutal_Zip.Classes.Helpers;
+using BrutalZip;
 using BrutalZip2025.BrutalControls;
 using FastZipDotNet.Zip;
 using System.Data;
@@ -1379,7 +1380,7 @@ return await sharedTask.ConfigureAwait(false);
                 MessageBox.Show(this, "Add files or folders to the staging list first.", "Nothing to do");
                 return;
             }
-
+            await MemoryTrimmer.MinimizeFootprintMaximumAsync();
             // Destination
             var dest = homeView.CreateDestination?.Trim();
             if (string.IsNullOrEmpty(dest))
@@ -1616,7 +1617,11 @@ return await sharedTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
-            finally { pf.Close(); }
+            finally 
+            { 
+                pf.Close();
+                await MemoryTrimmer.MinimizeFootprintMaximumAsync();
+            }
         }
         //private async Task DoCreateAsync()
         //{
@@ -2779,6 +2784,7 @@ return await sharedTask.ConfigureAwait(false);
             if (viewerView.lvArchive.SelectedIndices.Count == 0) return;
             if (!EnsurePasswordForEncryptedIfNeeded(allowSkipToBrowse: false)) return;
 
+            await MemoryTrimmer.MinimizeFootprintMaximumAsync();
             var files = new List<ZipFileEntry>();
             foreach (int idx in viewerView.lvArchive.SelectedIndices)
             {
@@ -2881,7 +2887,11 @@ return await sharedTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Extract error"); }
-            finally { pf.Close(); }
+            finally 
+            {
+                pf.Close();
+                await MemoryTrimmer.MinimizeFootprintMaximumAsync();
+            }
         }
 
         // Shared helpers
