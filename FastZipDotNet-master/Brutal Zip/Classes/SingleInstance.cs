@@ -1,4 +1,5 @@
-﻿using System.IO.Pipes;
+﻿using Brutal_Zip.Classes.Helpers;
+using System.IO.Pipes;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -41,26 +42,30 @@ namespace Brutal_Zip.Classes
         }
 
         // Keep trying to forward args to a running primary for up to totalWaitMs
-        public static bool TryForwardToPrimary(string[] args, int totalWaitMs = 1500, int attemptIntervalMs = 120, int connectTimeoutMs = 200)
+        public static bool TryForwardToPrimary(string[] args, int totalWaitMs = 180, int attemptIntervalMs = 60, int connectTimeoutMs = 60)
         {
             var deadline = Environment.TickCount + totalWaitMs;
             do
             {
                 try
                 {
+                    BootTrace.Mark("Client: try connect");
                     using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
-                    client.Connect(connectTimeoutMs); // short connect
+                    client.Connect(connectTimeoutMs);
                     var json = JsonSerializer.Serialize(args ?? Array.Empty<string>());
                     var bytes = Encoding.UTF8.GetBytes(json);
                     client.Write(bytes, 0, bytes.Length);
+                    BootTrace.Mark("Client: forwarded OK");
                     return true;
                 }
                 catch
                 {
+                    BootTrace.Mark("Client: connect failed, retry");
                     Thread.Sleep(attemptIntervalMs);
                 }
             } while (Environment.TickCount < deadline);
 
+            BootTrace.Mark("Client: forward timeout");
             return false;
         }
 
@@ -145,6 +150,84 @@ namespace Brutal_Zip.Classes
                 }
             }, _cts.Token);
         }
+
+
+
+
+
+        public static void StartServer(Action<string[]> onArgs, int idleTimeoutMs = 1200)
+        {
+            BootTrace.Mark("StartServer(Action) init");
+            _idleTimeout = (idleTimeoutMs <= 0) ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(Math.Max(300, idleTimeoutMs));
+            _cts = new CancellationTokenSource();
+            _lastActivityUtc = DateTime.UtcNow;
+
+            _serverTask = Task.Run(async () =>
+            {
+                try
+                {
+                    while (!_cts.IsCancellationRequested)
+                    {
+                        using var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 8, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
+
+                        BootTrace.Mark("Server: WaitForConnectionAsync begin");
+                        var wait = server.WaitForConnectionAsync(_cts.Token);
+
+                        // Idle watchdog (disabled if infinite)
+                        if (_idleTimeout == Timeout.InfiniteTimeSpan)
+                        {
+                            await wait.ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            while (!wait.IsCompleted && !_cts.IsCancellationRequested)
+                            {
+                                await Task.Delay(50, _cts.Token).ConfigureAwait(false);
+                                if (DateTime.UtcNow - _lastActivityUtc > _idleTimeout)
+                                {
+                                    BootTrace.Mark("Server: idle timeout -> cancel");
+                                    _cts.Cancel();
+                                    break;
+                                }
+                            }
+                            if (_cts.IsCancellationRequested) break;
+                            try { await wait.ConfigureAwait(false); } catch { break; }
+                        }
+
+                        BootTrace.Mark("Server: client connected");
+
+                        try
+                        {
+                            using var ms = new MemoryStream();
+                            var buf = new byte[4096];
+                            do
+                            {
+                                int r = await server.ReadAsync(buf, 0, buf.Length, _cts.Token).ConfigureAwait(false);
+                                if (r <= 0) break;
+                                ms.Write(buf, 0, r);
+                            } while (!server.IsMessageComplete);
+
+                            var json = Encoding.UTF8.GetString(ms.ToArray());
+                            var args = JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
+                            _lastActivityUtc = DateTime.UtcNow;
+
+                            BootTrace.Mark("Server: message read -> invoke onArgs");
+                            onArgs?.Invoke(args);
+                        }
+                        catch (Exception ex) { BootTrace.Exception(ex, "Server read"); }
+                    }
+                }
+                catch (Exception ex) { BootTrace.Exception(ex, "Server loop"); }
+                finally
+                {
+                    try { _mutex?.ReleaseMutex(); } catch { }
+                    try { _mutex?.Close(); } catch { }
+                    _mutex = null;
+                    BootTrace.Mark("Server: exit");
+                }
+            }, _cts.Token);
+        }
+
 
         public static void StopServer()
         {

@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Brutal_Zip.Classes.Helpers
 {
@@ -14,6 +11,10 @@ namespace Brutal_Zip.Classes.Helpers
         // Call this early (before showing any UI that could steal foreground)
         public static List<string> TryGetSelectedFileSystemPaths(IEnumerable<string>? seedArgs = null, int settleMs = 20)
         {
+
+            BootTrace.Mark("ExplorerSelection: enter (settle " + settleMs + " ms)");
+            var sw = Stopwatch.StartNew();
+
             if (settleMs > 0)
                 Thread.Sleep(settleMs); // let the context menu close
 
@@ -24,9 +25,12 @@ namespace Brutal_Zip.Classes.Helpers
             string seedDir = GetParentDirectoryIfPath(seedFirst);
 
             IntPtr fgRoot = GetAncestor(GetForegroundWindow(), GA_ROOT);
+            BootTrace.Mark("ExplorerSelection: GetForegroundWindow");
 
             Type? shellType = Type.GetTypeFromProgID("Shell.Application");
             if (shellType == null) return result;
+
+            BootTrace.Mark("ExplorerSelection: Shell.Application created");
 
             object? shellObj = null;
             object? winsObj = null;
@@ -67,6 +71,8 @@ namespace Brutal_Zip.Classes.Helpers
                         // ignore this window and continue
                     }
                 }
+
+                BootTrace.Mark("ExplorerSelection: Enumerated Explorer windows in " + sw.ElapsedMilliseconds + " ms");
 
                 // If exactly one Explorer window matches the foreground HWND, pick it
                 if (matchingHwndWins.Count == 1)
@@ -158,6 +164,8 @@ namespace Brutal_Zip.Classes.Helpers
                     // var slow = TryGetSelectionViaDocument(chosenWin);
                     // if (slow.Count > 0) return slow;
                 }
+
+                BootTrace.Mark("ExplorerSelection: TryGetSelectionViaHDrop begin");
             }
             catch
             {
@@ -170,7 +178,7 @@ namespace Brutal_Zip.Classes.Helpers
                 TryReleaseComObject(winsObj);
                 TryReleaseComObject(shellObj);
             }
-
+            BootTrace.Mark("ExplorerSelection: leave in " + sw.ElapsedMilliseconds + " ms (count=" + result.Count + ")");
             return result;
         }
 

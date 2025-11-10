@@ -94,7 +94,10 @@ namespace Brutal_Zip
 
         public MainForm()
         {
+            Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor ENTER");
+            var sw = Stopwatch.StartNew();
             InitializeComponent();
+            Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm InitializeComponent done in " + sw.ElapsedMilliseconds + " ms");
 
 
             viewerView.RenameSelectedRequested += () => DoRenameSelected();
@@ -359,6 +362,9 @@ namespace Brutal_Zip
                 catch { }
 
             };
+
+
+            Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor EXIT");
         }
 
 
@@ -2490,102 +2496,571 @@ return await sharedTask.ConfigureAwait(false);
         }
 
 
+        private static IEnumerable<string> BuildSeeds(string[] args, Cli.Command cmd)
+        {
+            var seeds = new List<string>();
+
+            // CLI-derived seeds
+            if (!string.IsNullOrWhiteSpace(cmd?.Archive)) seeds.Add(cmd.Archive);
+            if (!string.IsNullOrWhiteSpace(cmd?.TargetDir)) seeds.Add(cmd.TargetDir);
+            if (!string.IsNullOrWhiteSpace(cmd?.OutArchive)) seeds.Add(cmd.OutArchive);
+            if (cmd?.Inputs != null) seeds.AddRange(cmd.Inputs.Where(p => !string.IsNullOrWhiteSpace(p)));
+
+            // Raw args (the registry will pass %1 here)
+            if (args != null)
+                seeds.AddRange(args.Where(IsPlausiblePath));
+
+            // Dedup and return
+            return seeds.Where(p => !string.IsNullOrWhiteSpace(p))
+                        .Distinct(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPlausiblePath(string p)
+        {
+            if (string.IsNullOrWhiteSpace(p)) return false;
+            p = p.Trim().Trim('"');
+            // drive path or UNC
+            if (p.Length >= 3 && char.IsLetter(p[0]) && p[1] == ':' && (p[2] == '\\' || p[2] == '/')) return true;
+            if (p.StartsWith(@"\", StringComparison.Ordinal)) return true;
+            // simple file name (.zip) is also useful as seed occasionally
+            if (string.Equals(Path.GetExtension(p), ".zip", StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+
         public async Task HandleCommandAsync(string[] args)
         {
             var cmd = Cli.Parse(args);
+
+
+            // Build seed list from cmd + raw args (%1)
+            var seeds = BuildSeeds(args, cmd).ToList();
+
+            // Seed-aware selection readers
+            List<string> FullSelection() =>
+                Brutal_Zip.Classes.Helpers.ExplorerSelection
+                    .TryGetSelectedFileSystemPaths(seedArgs: seeds, settleMs: 80)
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+            List<string> SelectionZips() =>
+                FullSelection()
+                    .Where(p => string.Equals(Path.GetExtension(p), ".zip", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+            // Optional debug
+            //MessageBox.Show("Args: " + string.Join(" | ", args) + "\nType: " + cmd.Type + "\nSeeds: " + string.Join(" | ", seeds));
+
             switch (cmd.Type)
             {
+                case Cli.CommandType.ExtractHere:
+                    {
+                        var zips = !string.IsNullOrWhiteSpace(cmd.Archive) ? new List<string> { cmd.Archive } : SelectionZips();
+                        if (zips.Count == 0) { MessageBox.Show("No .zip files selected."); return; }
+                        foreach (var z in zips) await ExtractOneHereAsync(z);
+                        break;
+                    }
+
+                case Cli.CommandType.ExtractSmart:
+                    {
+                        var zips = !string.IsNullOrWhiteSpace(cmd.Archive) ? new List<string> { cmd.Archive } : SelectionZips();
+                        if (zips.Count == 0) { MessageBox.Show("No .zip files selected."); return; }
+                        foreach (var z in zips) await ExtractOneSmartAsync(z);
+                        break;
+                    }
+
+                case Cli.CommandType.ExtractTo:
+                    {
+                        var zips = !string.IsNullOrWhiteSpace(cmd.Archive) ? new List<string> { cmd.Archive } : SelectionZips();
+                        if (zips.Count == 0) { MessageBox.Show("No .zip files selected."); return; }
+                        using var fbd = new FolderBrowserDialog();
+                        if (fbd.ShowDialog(this) != DialogResult.OK) return;
+                        await ExtractZipsToFolderAsync(zips, fbd.SelectedPath);
+                        break;
+                    }
+
+                case Cli.CommandType.ExtractEach:
+                    {
+                        var zips = !string.IsNullOrWhiteSpace(cmd.Archive) ? new List<string> { cmd.Archive } : SelectionZips();
+                        if (zips.Count == 0) { MessageBox.Show("No .zip files selected."); return; }
+                        foreach (var z in zips) await ExtractOneSmartAsync(z);
+                        break;
+                    }
+
+                case Cli.CommandType.CreateQuick:
+                    {
+                        var items = FullSelection();
+                        if (items.Count == 0) { MessageBox.Show("No files/folders selected."); return; }
+                        await CreateQuickFromSelectionAsync(items);
+                        break;
+                    }
+
+                case Cli.CommandType.CreateTo:
+                    {
+                        var items = FullSelection();
+                        if (items.Count == 0) { MessageBox.Show("No files/folders selected."); return; }
+                        using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip", FileName = "Archive.zip" };
+                        if (sfd.ShowDialog(this) != DialogResult.OK) return;
+                        await CreateToAsync(items, sfd.FileName);
+                        break;
+                    }
+
+                case Cli.CommandType.CreateEach:
+                    {
+                        var items = FullSelection();
+                        if (items.Count == 0) { MessageBox.Show("No files/folders selected."); return; }
+                        await CreateEachAsync(items); // single window version you asked for
+                        break;
+                    }
+
                 case Cli.CommandType.Open:
                     {
-                        if (cmd.Inputs != null && cmd.Inputs.Count > 0)
-                        {
-                            // Expand to full Explorer selection
-                            var expanded = Brutal_Zip.Classes.Helpers.ExplorerSelection.TryGetSelectedFileSystemPaths(
-                            seedArgs: cmd.Inputs, settleMs: 120);
-
-                            if (expanded != null && expanded.Count > 0)
-                            {
-                                var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                                var merged = new List<string>();
-                                foreach (var s in cmd.Inputs) if (set.Add(s)) merged.Add(s);
-                                foreach (var s in expanded) if (set.Add(s)) merged.Add(s);
-                                cmd.Inputs = merged;
-                            }
-
-                            ShowHome();
-                            StageCreateFromDrop(cmd.Inputs);
-                            // Prefill a destination .zip path (without overwriting user's edits)
-                            PrefillCreateDestinationFromStaging();
-                            this.Activate();
-                            return;
-                        }
-
-                        if (!string.IsNullOrEmpty(cmd.Archive) && System.IO.File.Exists(cmd.Archive))
+                        if (!string.IsNullOrWhiteSpace(cmd.Archive) && File.Exists(cmd.Archive))
                             OpenArchive(cmd.Archive);
                         break;
                     }
-                case Cli.CommandType.ExtractSmart:
-                case Cli.CommandType.ExtractHere:
-                case Cli.CommandType.ExtractTo:
-                    if (!System.IO.File.Exists(cmd.Archive)) return;
-                    {
-                        string zipPath = cmd.Archive;
-                        string dest = cmd.Type switch
-                        {
-                            Cli.CommandType.ExtractHere => System.IO.Path.GetDirectoryName(zipPath) ?? ".",
-                            Cli.CommandType.ExtractTo => cmd.TargetDir ?? (System.IO.Path.GetDirectoryName(zipPath) ?? "."),
-                            _ => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(zipPath) ?? ".", System.IO.Path.GetFileNameWithoutExtension(zipPath))
-                        };
-
-                        using var zip = new FastZipDotNet.Zip.FastZipDotNet(zipPath, FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate, 6, Threads);
-                        using var pf = new ProgressForm("Extracting…");
-                        var progress = pf.CreateProgress();
-                        pf.Show(this);
-                        try { await zip.ExtractArchiveAsync(dest, progress, pf.Token); }
-                        catch (OperationCanceledException) { }
-                        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Extract error"); }
-                        finally { pf.Close(); }
-                    }
-                    break;
-
-                case Cli.CommandType.Create:
-                    {
-                        using var pf = new ProgressForm("Creating archive…");
-                        var progress = pf.CreateProgress();
-                        pf.Show(this);
-                        try
-                        {
-                            var method = SettingsService.Current.DefaultMethod == "Store" ? FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Store
-                                       : SettingsService.Current.DefaultMethod == "Zstd" ? FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Zstd
-                                       : FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate;
-                            int level = SettingsService.Current.DefaultLevel;
-
-                            using var zip = new FastZipDotNet.Zip.FastZipDotNet(cmd.OutArchive, method, level, Threads);
-                            foreach (var p in cmd.Inputs)
-                            {
-                                if (pf.Token.IsCancellationRequested) break;
-                                if (System.IO.Directory.Exists(p))
-                                    await zip.ZipDataWriter.AddFilesToArchiveAsync(p, Threads, level, progress, pf.Token);
-                                else if (System.IO.File.Exists(p))
-                                {
-                                    void OnUnc(long n) { }
-                                    void OnComp(long n) { }
-                                    zip.ZipDataWriter.AddFileWithProgress(p, System.IO.Path.GetFileName(p), level, "", OnUnc, OnComp);
-                                }
-                            }
-                            zip.Close();
-                        }
-                        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
-                        finally { pf.Close(); }
-                    }
-                    break;
 
                 case Cli.CommandType.None:
                 default:
-                    // No-op: keep Home
+                    // no-op
                     break;
             }
         }
+
+
+
+        private async Task ExtractOneHereAsync(string zipPath)
+        {
+            string dest = Path.GetDirectoryName(zipPath) ?? ".";
+            await ExtractZipToAsync(zipPath, dest);
+        }
+
+        private async Task ExtractOneSmartAsync(string zipPath)
+        {
+            string dir = Path.Combine(Path.GetDirectoryName(zipPath) ?? ".", Path.GetFileNameWithoutExtension(zipPath));
+            Directory.CreateDirectory(dir);
+            await ExtractZipToAsync(zipPath, dir);
+        }
+
+        private async Task ExtractZipsToFolderAsync(List<string> zips, string dest)
+        {
+            foreach (var z in zips)
+                await ExtractZipToAsync(z, dest);
+        }
+
+        private async Task ExtractZipToAsync(string zipPath, string dest)
+        {
+            int curThreads = Threads;
+            using var pf = new ProgressForm($"Extracting… ({curThreads} threads)");
+            var progress = pf.CreateProgress();
+            pf.Show(this);
+
+            try
+            {
+                using var zip = new FastZipDotNet.Zip.FastZipDotNet(zipPath, FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate, 6, curThreads);
+                pf.ConfigureThreads(Math.Max(2, Environment.ProcessorCount * 2), curThreads, n => { try { zip.SetMaxConcurrency(n); } catch { } });
+                await zip.ExtractArchiveAsync(dest, progress, pf.Token);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Extract"); }
+            finally { pf.Close(); }
+        }
+
+
+        private async Task CreateQuickFromSelectionAsync(List<string> items)
+        {
+            if (items == null || items.Count == 0)
+            {
+                MessageBox.Show(this, "No files or folders selected.", "Create");
+                return;
+            }
+
+            // Determine base dir and base name from the first item (same logic as DoQuickCreateAsync)
+            string first = items[0];
+            string baseDir;
+            string baseName;
+
+            try
+            {
+                if (Directory.Exists(first))
+                {
+                    var di = new DirectoryInfo(first);
+                    baseDir = di.Parent?.FullName ?? di.FullName;
+                    baseName = di.Name;
+                }
+                else if (File.Exists(first))
+                {
+                    var fi = new FileInfo(first);
+                    baseDir = fi.DirectoryName ?? ".";
+                    baseName = Path.GetFileNameWithoutExtension(fi.Name);
+                }
+                else
+                {
+                    // If first is invalid, fall back to first existing item
+                    var existing = items.FirstOrDefault(p => Directory.Exists(p) || File.Exists(p));
+                    if (string.IsNullOrEmpty(existing))
+                    {
+                        MessageBox.Show(this, "No valid files or folders found.", "Create");
+                        return;
+                    }
+                    if (Directory.Exists(existing))
+                    {
+                        var di = new DirectoryInfo(existing);
+                        baseDir = di.Parent?.FullName ?? di.FullName;
+                        baseName = di.Name;
+                    }
+                    else
+                    {
+                        var fi = new FileInfo(existing);
+                        baseDir = fi.DirectoryName ?? ".";
+                        baseName = Path.GetFileNameWithoutExtension(fi.Name);
+                    }
+                }
+            }
+            catch
+            {
+                baseDir = Path.GetDirectoryName(first) ?? ".";
+                baseName = Directory.Exists(first)
+                    ? new DirectoryInfo(first).Name
+                    : Path.GetFileNameWithoutExtension(first);
+            }
+
+            string dest = Path.Combine(baseDir, baseName + ".zip");
+            dest = MakeUniquePath(dest);
+
+            await CreateToAsync(items, dest);
+        }
+
+        private async Task CreateToAsync(List<string> items, string outZip)
+        {
+            try
+            {
+                // Validate inputs
+                if (items == null || items.Count == 0)
+                {
+                    MessageBox.Show(this, "No files or folders selected.", "Create");
+                    return;
+                }
+                if (string.IsNullOrWhiteSpace(outZip))
+                {
+                    MessageBox.Show(this, "Invalid destination.", "Create");
+                    return;
+                }
+
+                // Expand inputs to jobs + empty directories
+                BuildCreateJobsFromInputs(items,
+                    out List<(string fullPath, string internalName, long size)> jobs,
+                    out List<string> emptyFolderEntries);
+
+                if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
+                {
+                    MessageBox.Show(this, "No valid files or folders found.", "Create");
+                    return;
+                }
+
+                Directory.CreateDirectory(Path.GetDirectoryName(outZip) ?? ".");
+
+                // Compression defaults
+                var method = SettingsService.Current.DefaultMethod switch
+                {
+                    "Store" => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Store,
+                    "Zstd" => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Zstd,
+                    _ => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate
+                };
+                int level = SettingsService.Current.DefaultLevel;
+
+                // Encryption defaults
+                bool encOn = SettingsService.Current.EncryptNewArchivesByDefault;
+                var encAlgo = SettingsService.Current.DefaultEncryptAlgorithm?.Trim()?.ToUpperInvariant() switch
+                {
+                    "AES128" => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.Aes128,
+                    "AES192" => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.Aes192,
+                    "AES256" => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.Aes256,
+                    _ => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.ZipCrypto
+                };
+
+                if (encOn && string.IsNullOrEmpty(_createPassword))
+                {
+                    using var dlg = new PasswordDialog();
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                    _createPassword = dlg.Password;
+                }
+
+                long grandBytes = jobs.Sum(j => j.size);
+                int grandFiles = jobs.Count;
+
+                int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+                int curThreads = Threads;
+
+                using var pf = new ProgressForm($"Creating archive… ({curThreads} threads)");
+                var progress = pf.CreateProgress();
+                pf.Show(this);
+
+                try
+                {
+                    using var zip = new FastZipDotNet.Zip.FastZipDotNet(outZip, method, level, curThreads);
+
+                    if (encOn)
+                    {
+                        zip.Encryption = encAlgo;
+                        zip.Password = _createPassword;
+                    }
+                    else
+                    {
+                        zip.Encryption = FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.None;
+                        zip.Password = null;
+                    }
+
+                    // Live thread control
+                    pf.ConfigureThreads(maxThreads, curThreads, n =>
+                    {
+                        try
+                        {
+                            SettingsService.Current.ThreadsAuto = false;
+                            SettingsService.Current.Threads = n;
+                            SettingsService.Save();
+                            zip.SetMaxConcurrency(n);
+                            pf.Text = $"Creating archive… ({n} threads)";
+                        }
+                        catch { }
+                    });
+
+                    // Concurrency + progress aggregator (same pattern as DoCreateAsync)
+                    var sem = zip.ConcurrencyLimiter;
+
+                    long aggBytes = 0;
+                    int aggFiles = 0;
+                    string currentName = null;
+                    var sw = Stopwatch.StartNew();
+
+                    using var reportCts = new CancellationTokenSource();
+                    var reporter = Task.Run(async () =>
+                    {
+                        while (!reportCts.IsCancellationRequested)
+                        {
+                            long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
+                            int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
+                            double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+
+                            progress.Report(new FastZipDotNet.Zip.ZipProgress
+                            {
+                                Operation = FastZipDotNet.Zip.ZipOperation.Build,
+                                CurrentFile = Volatile.Read(ref currentName),
+                                TotalFiles = grandFiles,
+                                TotalBytesUncompressed = grandBytes,
+                                FilesProcessed = pFiles,
+                                BytesProcessedUncompressed = pBytes,
+                                Elapsed = sw.Elapsed,
+                                SpeedBytesPerSec = speed
+                            });
+
+                            try { await Task.Delay(50, reportCts.Token).ConfigureAwait(false); }
+                            catch { break; }
+                        }
+                    });
+
+                    var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(pf.Token);
+                    var tasks = new List<Task>(jobs.Count);
+
+                    foreach (var job in jobs)
+                    {
+                        linkedCts.Token.ThrowIfCancellationRequested();
+
+                        tasks.Add(Task.Run(() =>
+                        {
+                            sem.WaitOne(linkedCts.Token);
+                            try
+                            {
+                                Volatile.Write(ref currentName, job.internalName);
+
+                                void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
+                                void OnComp(long n) { /* optional */ }
+
+                                zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
+                                Interlocked.Increment(ref aggFiles);
+                            }
+                            finally
+                            {
+                                sem.Release();
+                            }
+                        }, linkedCts.Token));
+                    }
+
+                    await Task.WhenAll(tasks);
+                    reportCts.Cancel();
+                    try { await reporter; } catch { }
+
+                    // Preserve empty folders (dedup)
+                    foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+                    {
+                        try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
+                    }
+
+                    zip.Close();
+
+                    if (SettingsService.Current.OpenExplorerAfterCreate)
+                        TryOpenExplorerSelect(outZip);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, "Create");
+                }
+                finally
+                {
+                    pf.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Create");
+            }
+        }
+
+        private async Task CreateEachAsync(List<string> items)
+        {
+            if (items == null || items.Count == 0)
+            {
+                MessageBox.Show(this, "No files or folders selected.", "Create");
+                return;
+            }
+
+            // Do them one-by-one (simple and clear). If you prefer, batch them in one PF.
+            foreach (var item in items)
+            {
+                try
+                {
+                    string full = Path.GetFullPath(item);
+
+                    string baseDir;
+                    string baseName;
+
+                    if (Directory.Exists(full))
+                    {
+                        var di = new DirectoryInfo(full);
+                        baseDir = di.Parent?.FullName ?? di.FullName;
+                        baseName = di.Name;
+                    }
+                    else if (File.Exists(full))
+                    {
+                        var fi = new FileInfo(full);
+                        baseDir = fi.DirectoryName ?? ".";
+                        baseName = Path.GetFileNameWithoutExtension(fi.Name);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    string dest = Path.Combine(baseDir, baseName + ".zip");
+                    dest = MakeUniquePath(dest);
+
+                    await CreateToAsync(new List<string> { full }, dest);
+                }
+                catch
+                {
+                    // Skip invalid item
+                }
+            }
+        }
+
+        // Expands items to (file -> job) and (folder -> multiple jobs + empty folder entries)
+        private static void BuildCreateJobsFromInputs(
+        IEnumerable<string> inputs,
+        out List<(string fullPath, string internalName, long size)> jobs,
+        out List<string> emptyFolderEntries)
+        {
+            jobs = new List<(string fullPath, string internalName, long size)>(512);
+            emptyFolderEntries = new List<string>(128);
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var raw in inputs ?? Array.Empty<string>())
+            {
+                string full;
+                try { full = Path.GetFullPath(raw); }
+                catch { continue; }
+
+                if (!seen.Add(full)) continue;
+
+                if (Directory.Exists(full))
+                {
+                    var di = new DirectoryInfo(full);
+                    string root = di.FullName;
+                    string rootName = di.Name;
+
+                    var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    int filesInRoot = 0;
+
+                    // Collect all subdirs
+                    try
+                    {
+                        foreach (var dir in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories))
+                        {
+                            string rel = Path.GetRelativePath(root, dir).Replace('\\', '/').Trim('/');
+                            if (!string.IsNullOrEmpty(rel)) allDirsRel.Add(rel);
+                        }
+                    }
+                    catch { }
+
+                    // Collect files
+                    try
+                    {
+                        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                        {
+                            string rel = Path.GetRelativePath(root, file).Replace('\\', '/').Trim('/');
+                            if (string.IsNullOrEmpty(rel)) continue;
+
+                            string internalName = (rootName + "/" + rel).Replace('\\', '/').Trim('/');
+                            long size = 0; try { size = new FileInfo(file).Length; } catch { }
+
+                            jobs.Add((file, internalName, size));
+                            filesInRoot++;
+
+                            // Mark ancestors as non-empty
+                            var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
+                            while (!string.IsNullOrEmpty(dirRel))
+                            {
+                                nonEmptyDirsRel.Add(dirRel);
+                                dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
+                            }
+                        }
+                    }
+                    catch { }
+
+                    // Empty dir preservation
+                    foreach (var dRel in allDirsRel)
+                    {
+                        if (!nonEmptyDirsRel.Contains(dRel))
+                        {
+                            string internalFolder = (rootName + "/" + dRel).Replace('\\', '/').Trim('/');
+                            emptyFolderEntries.Add(internalFolder);
+                        }
+                    }
+
+                    // Completely empty folder (no files and no subdirs)
+                    if (filesInRoot == 0 && allDirsRel.Count == 0)
+                        emptyFolderEntries.Add(rootName);
+                }
+                else if (File.Exists(full))
+                {
+                    string name = Path.GetFileName(full);
+                    long size = 0; try { size = new FileInfo(full).Length; } catch { }
+                    jobs.Add((full, name, size));
+                }
+                else
+                {
+                    // Skip non-existing
+                }
+            }
+        }
+
+
+
+
+
 
         private void OpenSelected()
         {

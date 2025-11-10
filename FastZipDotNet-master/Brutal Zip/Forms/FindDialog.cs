@@ -1,7 +1,4 @@
-﻿
-using BrutalZip2025.BrutalControls;
-using System;
-using System.Linq;
+﻿using BrutalZip2025.BrutalControls;
 using System.Text.RegularExpressions;
 namespace Brutal_Zip
 {

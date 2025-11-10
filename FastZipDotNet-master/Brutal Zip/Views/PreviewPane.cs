@@ -19,6 +19,10 @@ namespace Brutal_Zip.Views
         [DllImport("user32.dll")] 
         private static extern bool HideCaret(IntPtr hWnd);
 
+
+
+
+
         public PreviewPane()
         {
             InitializeComponent();
@@ -767,68 +771,6 @@ html,body {{ margin:0; padding:0; background:#000; height:100%; overflow:hidden;
             }
         }
 
-
-        //private void ApplyLexerForExtension(string ext)
-        //{
-        //    ext = ext.ToLowerInvariant();
-
-        //    if (IsCStyle(ext))
-        //    {
-        //        scintilla.Lexer = Lexer.Cpp;
-        //        scintilla.SetKeywords(0, string.Join(" ",
-        //            GetCKeywords())); // base keywords for C/C#/C++ style
-        //    }
-        //    else if (IsXml(ext))
-        //    {
-        //        scintilla.Lexer = Lexer.Xml;
-        //    }
-        //    else if (IsJson(ext))
-        //    {
-        //        // Scintilla has a JSON lexer in newer Lexilla; otherwise JavaScript is acceptable
-        //        try { scintilla.Lexer = Lexer.Json; }
-        //        catch { scintilla.Lexer = Lexer.Xml; }
-        //        scintilla.SetProperty("lexer.json.allow.comments", "1");
-        //    }
-        //    else if (IsIni(ext))
-        //    {
-        //        // Properties/Ini
-        //        scintilla.Lexer = Lexer.Properties;
-        //    }
-        //    //else if (IsYaml(ext))
-        //    //{
-        //    //    // Not all SciLexer builds include YAML; fallback to Null if not available
-        //    //    try { scintilla.Lexer = Lexer.Html; }
-        //    //    catch { scintilla.Lexer = Lexer.Null; }
-        //    //}
-        //    else if (IsScript(ext))
-        //    {
-        //        if (ext == ".py") scintilla.Lexer = Lexer.Python;
-        //        else if (ext == ".rb") scintilla.Lexer = Lexer.Ruby;
-        //        else if (ext == ".ps1") scintilla.Lexer = Lexer.Batch; // no native PowerShell in older builds
-        //        else if (ext == ".sh") scintilla.Lexer = Lexer.Null;   // if unavailable: try .Null
-        //        else scintilla.Lexer = Lexer.Batch;
-        //    }
-        //    else
-        //    {
-        //        scintilla.Lexer = Lexer.Null; // plain text fallback
-        //    }
-
-        //    // Basic coloring styles (optional fine-tuning per lexer)
-        //    scintilla.Styles[Style.Cpp.Comment].ForeColor = Color.Green;
-        //    scintilla.Styles[Style.Cpp.CommentLine].ForeColor = Color.Green;
-        //    scintilla.Styles[Style.Cpp.CommentDoc].ForeColor = Color.Green;
-        //    scintilla.Styles[Style.Cpp.Number].ForeColor = Color.DarkCyan;
-        //    scintilla.Styles[Style.Cpp.String].ForeColor = Color.Brown;
-        //    scintilla.Styles[Style.Cpp.Character].ForeColor = Color.Brown;
-        //    scintilla.Styles[Style.Cpp.Preprocessor].ForeColor = Color.Gray;
-        //    scintilla.Styles[Style.Cpp.Operator].ForeColor = Color.Black;
-        //    scintilla.Styles[Style.Cpp.Word].ForeColor = Color.RoyalBlue; // keywords
-
-        //    // Fold properties
-        //    scintilla.SetProperty("fold", "1");
-        //    scintilla.SetProperty("fold.compact", "1");
-        //    scintilla.AutomaticFold = (AutomaticFold.Show | AutomaticFold.Click | AutomaticFold.Change);
-        //}
 
 
 
