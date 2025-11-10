@@ -1,4 +1,5 @@
-﻿using BrutalZip2025.BrutalControls;
+﻿using Brutal_Zip.Classes;
+using BrutalZip2025.BrutalControls;
 
 namespace Brutal_Zip
 {

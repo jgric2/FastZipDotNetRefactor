@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Brutal_Zip
+namespace Brutal_Zip.Classes
 {
     internal sealed class FastFsTreeService
     {
@@ -43,8 +43,8 @@ namespace Brutal_Zip
                     bool show =
                         drive.DriveType == DriveType.Fixed ||
                         drive.DriveType == DriveType.Removable ||
-                        (drive.DriveType == DriveType.Network && drive.IsReady) ||
-                        (drive.DriveType == DriveType.CDRom && drive.IsReady);
+                        drive.DriveType == DriveType.Network && drive.IsReady ||
+                        drive.DriveType == DriveType.CDRom && drive.IsReady;
 
                     if (!show) continue;
 
@@ -171,7 +171,7 @@ namespace Brutal_Zip
                 // Also set extended style TVS_EX_DOUBLEBUFFER
                 const int TVM_SETEXTENDEDSTYLE = 0x1100 + 44;
                 const int TVS_EX_DOUBLEBUFFER = 0x0004;
-                SendMessage(tv.Handle, TVM_SETEXTENDEDSTYLE, (IntPtr)TVS_EX_DOUBLEBUFFER, (IntPtr)TVS_EX_DOUBLEBUFFER);
+                SendMessage(tv.Handle, TVM_SETEXTENDEDSTYLE, TVS_EX_DOUBLEBUFFER, TVS_EX_DOUBLEBUFFER);
             }
             catch { /* ignore */ }
         }
@@ -184,15 +184,15 @@ namespace Brutal_Zip
 
         private static string? GetKnownFolderPath(Guid knownFolderId)
         {
-            try { return SHGetKnownFolderPath(knownFolderId, 0, IntPtr.Zero); }
+            try { return SHGetKnownFolderPath(knownFolderId, 0, nint.Zero); }
             catch { return null; }
         }
 
         [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, PreserveSig = false)]
         private static extern string SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid rfid,
-                                                          uint dwFlags, IntPtr hToken);
+                                                          uint dwFlags, nint hToken);
 
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        private static extern nint SendMessage(nint hWnd, int msg, nint wParam, nint lParam);
     }
 }

@@ -1,3 +1,4 @@
+using Brutal_Zip.Classes;
 using BrutalZip;
 using System.Runtime.InteropServices;
 

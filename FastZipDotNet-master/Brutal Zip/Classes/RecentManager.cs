@@ -1,6 +1,6 @@
 ﻿using BrutalZip;
 
-namespace Brutal_Zip
+namespace Brutal_Zip.Classes
 {
     internal static class RecentManager
     {

@@ -1,4 +1,5 @@
-﻿using BrutalZip2025.BrutalControls;
+﻿using Brutal_Zip.Classes;
+using BrutalZip2025.BrutalControls;
 using static FastZipDotNet.Zip.Structure.ZipEntryEnums;
 
 namespace Brutal_Zip

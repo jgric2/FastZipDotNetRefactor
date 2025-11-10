@@ -1,4 +1,5 @@
-﻿using Brutal_Zip.Classes.Helpers;
+﻿using Brutal_Zip.Classes;
+using Brutal_Zip.Classes.Helpers;
 using BrutalZip;
 using BrutalZip2025.BrutalControls;
 using FastZipDotNet.Zip;

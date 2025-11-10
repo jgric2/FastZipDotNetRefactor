@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 
-namespace Brutal_Zip
+namespace Brutal_Zip.Classes
 {
     // Caches small shell icons by extension and by path, backed by SHGetFileInfo.
     // Caches small shell icons by extension and by path, backed by SHGetFileInfo.
@@ -128,8 +128,8 @@ namespace Brutal_Zip
 
             uint attrs = isFolder ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL;
 
-            IntPtr res = SHGetFileInfo(pathOrPattern, attrs, ref shinfo, (uint)Marshal.SizeOf(shinfo), flags);
-            if (res == IntPtr.Zero || shinfo.hIcon == IntPtr.Zero)
+            nint res = SHGetFileInfo(pathOrPattern, attrs, ref shinfo, (uint)Marshal.SizeOf(shinfo), flags);
+            if (res == nint.Zero || shinfo.hIcon == nint.Zero)
                 return SystemIcons.WinLogo;
 
             try
@@ -145,7 +145,7 @@ namespace Brutal_Zip
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         private struct SHFILEINFO
         {
-            public IntPtr hIcon;
+            public nint hIcon;
             public int iIcon;
             public uint dwAttributes;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
@@ -161,9 +161,9 @@ namespace Brutal_Zip
         private const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
 
         [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+        private static extern nint SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
 
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool DestroyIcon(IntPtr hIcon);
+        private static extern bool DestroyIcon(nint hIcon);
     }
 }

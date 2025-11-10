@@ -3,7 +3,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 
-namespace Brutal_Zip
+namespace Brutal_Zip.Classes
 {
     internal static class SingleInstance
     {

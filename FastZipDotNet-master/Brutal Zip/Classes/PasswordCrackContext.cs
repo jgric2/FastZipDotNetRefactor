@@ -1,4 +1,4 @@
-﻿namespace Brutal_Zip
+﻿namespace Brutal_Zip.Classes
 {
     using static FastZipDotNet.Zip.Structure.ZipEntryStructs;
 

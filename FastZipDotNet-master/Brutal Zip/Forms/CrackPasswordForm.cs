@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
+using Brutal_Zip.Classes;
 using BrutalZip2025.BrutalControls;
 using FastZipDotNet.Zip.Encryption;
 

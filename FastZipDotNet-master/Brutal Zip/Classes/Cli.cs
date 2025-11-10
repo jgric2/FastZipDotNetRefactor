@@ -1,4 +1,4 @@
-﻿namespace Brutal_Zip
+﻿namespace Brutal_Zip.Classes
 {
     internal static class Cli
     {
@@ -45,7 +45,7 @@
             if (string.Equals(first, "-xto", StringComparison.OrdinalIgnoreCase) && args.Length >= 3)
                 return new Command { Type = CommandType.ExtractTo, TargetDir = args[1], Archive = args[2] };
 
-            if (System.IO.Path.GetExtension(first).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            if (Path.GetExtension(first).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                 return new Command { Type = CommandType.Open, Archive = first };
 
             return new Command { Type = CommandType.None };
