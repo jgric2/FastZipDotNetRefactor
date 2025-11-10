@@ -37,6 +37,7 @@ namespace Brutal_Zip
 
         private void InitializeComponent()
         {
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(CrackPasswordForm));
             lblCustom = new Label();
             txtCustom = new TextBox();
             lblMinLen = new Label();
@@ -343,6 +344,7 @@ namespace Brutal_Zip
             buttonJob.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonJob.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonJob.FlatStyle = FlatStyle.Flat;
+            buttonJob.Image = (Image)resources.GetObject("buttonJob.Image");
             buttonJob.Location = new Point(172, 0);
             buttonJob.Name = "buttonJob";
             buttonJob.Size = new Size(85, 84);
@@ -370,6 +372,7 @@ namespace Brutal_Zip
             buttonDictionary.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonDictionary.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonDictionary.FlatStyle = FlatStyle.Flat;
+            buttonDictionary.Image = (Image)resources.GetObject("buttonDictionary.Image");
             buttonDictionary.Location = new Point(85, 0);
             buttonDictionary.Name = "buttonDictionary";
             buttonDictionary.Size = new Size(85, 84);
@@ -387,6 +390,7 @@ namespace Brutal_Zip
             buttonBruteForce.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonBruteForce.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonBruteForce.FlatStyle = FlatStyle.Flat;
+            buttonBruteForce.Image = (Image)resources.GetObject("buttonBruteForce.Image");
             buttonBruteForce.Location = new Point(0, 0);
             buttonBruteForce.Name = "buttonBruteForce";
             buttonBruteForce.Size = new Size(85, 84);

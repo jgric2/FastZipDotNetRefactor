@@ -39,6 +39,7 @@ namespace Brutal_Zip.Views
         private void InitializeComponent()
         {
             components = new Container();
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(HomeView));
             numCreateLevel = new NumericUpDown();
             btnCreate = new Button();
             lblCreateHint = new Label();
@@ -98,7 +99,6 @@ namespace Brutal_Zip.Views
             ribbonControlsExtract = new Panel();
             panel12 = new Panel();
             buttonWizardExtract = new Button();
-            buttonTestZip = new Button();
             buttonOpenZip = new Button();
             brutalGradientPanel4 = new BrutalGradientPanel();
             tableLayoutPanel1 = new TableLayoutPanel();
@@ -113,6 +113,7 @@ namespace Brutal_Zip.Views
             panelExtractZipTab = new Panel();
             tableLayoutPanel6 = new TableLayoutPanel();
             panel9 = new Panel();
+            buttonTestZip = new Button();
             ((ISupportInitialize)numCreateLevel).BeginInit();
             cmsStaging.SuspendLayout();
             pnlExtractDrop.SuspendLayout();
@@ -159,15 +160,17 @@ namespace Brutal_Zip.Views
             // btnCreate
             // 
             btnCreate.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnCreate.BackColor = Color.FromArgb(19, 90, 42);
             btnCreate.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnCreate.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnCreate.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnCreate.FlatStyle = FlatStyle.Flat;
-            btnCreate.Location = new Point(449, 3);
+            btnCreate.Location = new Point(450, 3);
             btnCreate.Name = "btnCreate";
             btnCreate.Size = new Size(100, 28);
             btnCreate.TabIndex = 14;
             btnCreate.Text = "Create";
+            btnCreate.UseVisualStyleBackColor = false;
             btnCreate.Click += btnCreate_Click;
             // 
             // lblCreateHint
@@ -292,15 +295,17 @@ namespace Brutal_Zip.Views
             // btnExtract
             // 
             btnExtract.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnExtract.BackColor = Color.FromArgb(19, 90, 42);
             btnExtract.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnExtract.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnExtract.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnExtract.FlatStyle = FlatStyle.Flat;
-            btnExtract.Location = new Point(890, 2);
+            btnExtract.Location = new Point(892, 2);
             btnExtract.Name = "btnExtract";
             btnExtract.Size = new Size(100, 28);
             btnExtract.TabIndex = 7;
             btnExtract.Text = "Extract";
+            btnExtract.UseVisualStyleBackColor = false;
             btnExtract.Click += btnExtract_Click;
             // 
             // pnlExtractDrop
@@ -317,6 +322,7 @@ namespace Brutal_Zip.Views
             // lblExtractDrop
             // 
             lblExtractDrop.Dock = DockStyle.Fill;
+            lblExtractDrop.Font = new Font("Segoe UI", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lblExtractDrop.Location = new Point(0, 0);
             lblExtractDrop.Name = "lblExtractDrop";
             lblExtractDrop.Size = new Size(994, 530);
@@ -380,6 +386,7 @@ namespace Brutal_Zip.Views
             btnCreateSetPassword.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnCreateSetPassword.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             btnCreateSetPassword.FlatStyle = FlatStyle.Flat;
+            btnCreateSetPassword.Image = (Image)resources.GetObject("btnCreateSetPassword.Image");
             btnCreateSetPassword.Location = new Point(777, 0);
             btnCreateSetPassword.Name = "btnCreateSetPassword";
             btnCreateSetPassword.Size = new Size(85, 84);
@@ -536,6 +543,7 @@ namespace Brutal_Zip.Views
             buttonWizardCreate.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonWizardCreate.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonWizardCreate.FlatStyle = FlatStyle.Flat;
+            buttonWizardCreate.Image = (Image)resources.GetObject("buttonWizardCreate.Image");
             buttonWizardCreate.Location = new Point(255, 0);
             buttonWizardCreate.Name = "buttonWizardCreate";
             buttonWizardCreate.Size = new Size(85, 84);
@@ -553,6 +561,7 @@ namespace Brutal_Zip.Views
             buttonComment.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonComment.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonComment.FlatStyle = FlatStyle.Flat;
+            buttonComment.Image = (Image)resources.GetObject("buttonComment.Image");
             buttonComment.Location = new Point(170, 0);
             buttonComment.Name = "buttonComment";
             buttonComment.Size = new Size(85, 84);
@@ -570,6 +579,7 @@ namespace Brutal_Zip.Views
             buttonAddFiles.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonAddFiles.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonAddFiles.FlatStyle = FlatStyle.Flat;
+            buttonAddFiles.Image = (Image)resources.GetObject("buttonAddFiles.Image");
             buttonAddFiles.Location = new Point(85, 0);
             buttonAddFiles.Name = "buttonAddFiles";
             buttonAddFiles.Size = new Size(85, 84);
@@ -582,11 +592,13 @@ namespace Brutal_Zip.Views
             // buttonAddFolder
             // 
             buttonAddFolder.BackColor = Color.Transparent;
+            buttonAddFolder.BackgroundImageLayout = ImageLayout.Center;
             buttonAddFolder.Dock = DockStyle.Left;
             buttonAddFolder.FlatAppearance.BorderSize = 0;
             buttonAddFolder.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonAddFolder.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonAddFolder.FlatStyle = FlatStyle.Flat;
+            buttonAddFolder.Image = (Image)resources.GetObject("buttonAddFolder.Image");
             buttonAddFolder.Location = new Point(0, 0);
             buttonAddFolder.Name = "buttonAddFolder";
             buttonAddFolder.Size = new Size(85, 84);
@@ -746,7 +758,7 @@ namespace Brutal_Zip.Views
             TabButtonExtract.Appearance = Appearance.Button;
             TabButtonExtract.Dock = DockStyle.Fill;
             TabButtonExtract.FlatAppearance.BorderSize = 0;
-            TabButtonExtract.FlatAppearance.CheckedBackColor = Color.FromArgb(32, 64, 32);
+            TabButtonExtract.FlatAppearance.CheckedBackColor = Color.FromArgb(19, 90, 42);
             TabButtonExtract.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             TabButtonExtract.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             TabButtonExtract.FlatStyle = FlatStyle.Flat;
@@ -768,7 +780,7 @@ namespace Brutal_Zip.Views
             tabButtonCreate.CheckState = CheckState.Checked;
             tabButtonCreate.Dock = DockStyle.Fill;
             tabButtonCreate.FlatAppearance.BorderSize = 0;
-            tabButtonCreate.FlatAppearance.CheckedBackColor = Color.FromArgb(32, 64, 32);
+            tabButtonCreate.FlatAppearance.CheckedBackColor = Color.FromArgb(19, 90, 42);
             tabButtonCreate.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             tabButtonCreate.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             tabButtonCreate.FlatStyle = FlatStyle.Flat;
@@ -903,6 +915,7 @@ namespace Brutal_Zip.Views
             buttonWizardExtract.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonWizardExtract.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonWizardExtract.FlatStyle = FlatStyle.Flat;
+            buttonWizardExtract.Image = (Image)resources.GetObject("buttonWizardExtract.Image");
             buttonWizardExtract.Location = new Point(170, 0);
             buttonWizardExtract.Name = "buttonWizardExtract";
             buttonWizardExtract.Size = new Size(85, 84);
@@ -912,22 +925,6 @@ namespace Brutal_Zip.Views
             buttonWizardExtract.UseVisualStyleBackColor = false;
             buttonWizardExtract.Click += buttonWizardExtract_Click;
             // 
-            // buttonTestZip
-            // 
-            buttonTestZip.BackColor = Color.Transparent;
-            buttonTestZip.Dock = DockStyle.Left;
-            buttonTestZip.FlatAppearance.BorderSize = 0;
-            buttonTestZip.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
-            buttonTestZip.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
-            buttonTestZip.FlatStyle = FlatStyle.Flat;
-            buttonTestZip.Location = new Point(85, 0);
-            buttonTestZip.Name = "buttonTestZip";
-            buttonTestZip.Size = new Size(85, 84);
-            buttonTestZip.TabIndex = 19;
-            buttonTestZip.Text = "Test Zip";
-            buttonTestZip.TextAlign = ContentAlignment.BottomCenter;
-            buttonTestZip.UseVisualStyleBackColor = false;
-            // 
             // buttonOpenZip
             // 
             buttonOpenZip.BackColor = Color.Transparent;
@@ -936,6 +933,7 @@ namespace Brutal_Zip.Views
             buttonOpenZip.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonOpenZip.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonOpenZip.FlatStyle = FlatStyle.Flat;
+            buttonOpenZip.Image = (Image)resources.GetObject("buttonOpenZip.Image");
             buttonOpenZip.Location = new Point(0, 0);
             buttonOpenZip.Name = "buttonOpenZip";
             buttonOpenZip.Size = new Size(85, 84);
@@ -969,8 +967,8 @@ namespace Brutal_Zip.Views
             // 
             tableLayoutPanel1.BackColor = Color.Transparent;
             tableLayoutPanel1.ColumnCount = 4;
-            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 255F));
-            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 177F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 254F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 178F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 49F));
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 8F));
             tableLayoutPanel1.Controls.Add(label16, 0, 0);
@@ -989,7 +987,7 @@ namespace Brutal_Zip.Views
             label16.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label16.Location = new Point(3, 0);
             label16.Name = "label16";
-            label16.Size = new Size(249, 16);
+            label16.Size = new Size(248, 16);
             label16.TabIndex = 0;
             label16.Text = "Extract";
             label16.TextAlign = ContentAlignment.MiddleCenter;
@@ -1066,6 +1064,7 @@ namespace Brutal_Zip.Views
             // btnCreateQuick
             // 
             btnCreateQuick.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnCreateQuick.BackColor = Color.FromArgb(19, 90, 42);
             btnCreateQuick.FlatAppearance.BorderColor = Color.FromArgb(64, 64, 64);
             btnCreateQuick.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             btnCreateQuick.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
@@ -1075,6 +1074,7 @@ namespace Brutal_Zip.Views
             btnCreateQuick.Size = new Size(160, 28);
             btnCreateQuick.TabIndex = 15;
             btnCreateQuick.Text = "Compress to <auto>";
+            btnCreateQuick.UseVisualStyleBackColor = false;
             btnCreateQuick.Click += btnCreateQuick_Click_1;
             // 
             // panelCreateZipTab
@@ -1127,14 +1127,32 @@ namespace Brutal_Zip.Views
             panel9.Size = new Size(994, 32);
             panel9.TabIndex = 1;
             // 
+            // buttonTestZip
+            // 
+            buttonTestZip.BackColor = Color.Transparent;
+            buttonTestZip.Dock = DockStyle.Left;
+            buttonTestZip.FlatAppearance.BorderSize = 0;
+            buttonTestZip.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            buttonTestZip.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            buttonTestZip.FlatStyle = FlatStyle.Flat;
+            buttonTestZip.Image = (Image)resources.GetObject("buttonTestZip.Image");
+            buttonTestZip.Location = new Point(85, 0);
+            buttonTestZip.Name = "buttonTestZip";
+            buttonTestZip.Size = new Size(85, 84);
+            buttonTestZip.TabIndex = 26;
+            buttonTestZip.Text = "Test Zip";
+            buttonTestZip.TextAlign = ContentAlignment.BottomCenter;
+            buttonTestZip.UseVisualStyleBackColor = false;
+            buttonTestZip.Click += buttonTestZip_Click;
+            // 
             // HomeView
             // 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = Color.FromArgb(32, 32, 32);
             Controls.Add(brutalGradientPanel2);
-            Controls.Add(panelCreateZipTab);
             Controls.Add(panelExtractZipTab);
+            Controls.Add(panelCreateZipTab);
             ForeColor = Color.White;
             Name = "HomeView";
             Size = new Size(1000, 700);
@@ -1211,7 +1229,6 @@ namespace Brutal_Zip.Views
         private Panel ribbonControlsExtract;
         private Panel panel12;
         private Button buttonWizardExtract;
-        private Button buttonTestZip;
         private Button buttonOpenZip;
         private BrutalZip2025.BrutalControls.BrutalGradientPanel brutalGradientPanel4;
         private TableLayoutPanel tableLayoutPanel1;
@@ -1226,5 +1243,6 @@ namespace Brutal_Zip.Views
         private TableLayoutPanel tableLayoutPanel6;
         private Panel panel9;
         internal Button btnCreateQuick;
+        private Button buttonTestZip;
     }
 }

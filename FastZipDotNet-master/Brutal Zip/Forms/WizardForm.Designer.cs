@@ -66,6 +66,7 @@ namespace Brutal_Zip
         private void InitializeComponent()
         {
             components = new Container();
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(WizardForm));
             lvCreate = new ListView();
             colName = new ColumnHeader();
             colType = new ColumnHeader();
@@ -107,18 +108,18 @@ namespace Brutal_Zip
             buttonExtractTab = new Button();
             buttonCreateTab = new Button();
             panelCreate = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            cmbCreateAlgo = new BrutalZip2025.BrutalControls.BrutalComboBox();
+            cmbCreateMethod = new BrutalZip2025.BrutalControls.BrutalComboBox();
+            label3 = new Label();
+            chkCreateEncrypt = new BrutalZip2025.BrutalControls.BrutalCheckBox();
             label1 = new Label();
             tbCreateThreads = new BrutalZip2025.BrutalControls.BrutalTrackBar();
             panelExtract = new BrutalZip2025.BrutalControls.BrutalGradientPanel();
+            label4 = new Label();
+            chkExtractToFolderName = new BrutalZip2025.BrutalControls.BrutalCheckBox();
             label2 = new Label();
             tbExtractThreads = new BrutalZip2025.BrutalControls.BrutalTrackBar();
             panelFooter = new Panel();
-            label3 = new Label();
-            chkCreateEncrypt = new BrutalZip2025.BrutalControls.BrutalCheckBox();
-            label4 = new Label();
-            chkExtractToFolderName = new BrutalZip2025.BrutalControls.BrutalCheckBox();
-            cmbCreateMethod = new BrutalZip2025.BrutalControls.BrutalComboBox();
-            cmbCreateAlgo = new BrutalZip2025.BrutalControls.BrutalComboBox();
             cmsCreate.SuspendLayout();
             ((ISupportInitialize)numCreateLevel).BeginInit();
             brutalGradientPanel1.SuspendLayout();
@@ -504,6 +505,7 @@ namespace Brutal_Zip
             buttonExtractTab.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonExtractTab.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonExtractTab.FlatStyle = FlatStyle.Flat;
+            buttonExtractTab.Image = (Image)resources.GetObject("buttonExtractTab.Image");
             buttonExtractTab.Location = new Point(85, 0);
             buttonExtractTab.Name = "buttonExtractTab";
             buttonExtractTab.Size = new Size(85, 84);
@@ -521,6 +523,7 @@ namespace Brutal_Zip
             buttonCreateTab.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonCreateTab.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonCreateTab.FlatStyle = FlatStyle.Flat;
+            buttonCreateTab.Image = (Image)resources.GetObject("buttonCreateTab.Image");
             buttonCreateTab.Location = new Point(0, 0);
             buttonCreateTab.Name = "buttonCreateTab";
             buttonCreateTab.Size = new Size(85, 84);
@@ -565,6 +568,62 @@ namespace Brutal_Zip
             panelCreate.Size = new Size(600, 422);
             panelCreate.StartColor = Color.FromArgb(16, 16, 16);
             panelCreate.TabIndex = 10;
+            // 
+            // cmbCreateAlgo
+            // 
+            cmbCreateAlgo.BackColor = Color.FromArgb(32, 32, 32);
+            cmbCreateAlgo.ButtonColor = Color.FromArgb(48, 48, 48);
+            cmbCreateAlgo.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCreateAlgo.ForeColor = Color.White;
+            cmbCreateAlgo.FormattingEnabled = true;
+            cmbCreateAlgo.Items.AddRange(new object[] { "ZipCrypto", "AES-128", "AES-192", "AES-256" });
+            cmbCreateAlgo.Location = new Point(135, 352);
+            cmbCreateAlgo.Name = "cmbCreateAlgo";
+            cmbCreateAlgo.Size = new Size(125, 23);
+            cmbCreateAlgo.TabIndex = 46;
+            // 
+            // cmbCreateMethod
+            // 
+            cmbCreateMethod.BackColor = Color.FromArgb(32, 32, 32);
+            cmbCreateMethod.ButtonColor = Color.FromArgb(48, 48, 48);
+            cmbCreateMethod.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCreateMethod.ForeColor = Color.White;
+            cmbCreateMethod.FormattingEnabled = true;
+            cmbCreateMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
+            cmbCreateMethod.Location = new Point(94, 318);
+            cmbCreateMethod.Name = "cmbCreateMethod";
+            cmbCreateMethod.Size = new Size(130, 23);
+            cmbCreateMethod.TabIndex = 45;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label3.Location = new Point(37, 357);
+            label3.Name = "label3";
+            label3.Size = new Size(49, 15);
+            label3.TabIndex = 44;
+            label3.Text = "Encrypt";
+            // 
+            // chkCreateEncrypt
+            // 
+            chkCreateEncrypt.BackColor = Color.Transparent;
+            chkCreateEncrypt.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkCreateEncrypt.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkCreateEncrypt.BoxGradientEnabled = true;
+            chkCreateEncrypt.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkCreateEncrypt.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkCreateEncrypt.BoxSize = 14;
+            chkCreateEncrypt.CheckBorderColor = Color.Lime;
+            chkCreateEncrypt.CheckColor = Color.LawnGreen;
+            chkCreateEncrypt.CheckGradientEnabled = true;
+            chkCreateEncrypt.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkCreateEncrypt.CheckGradientStart = Color.Lime;
+            chkCreateEncrypt.Location = new Point(16, 351);
+            chkCreateEncrypt.Name = "chkCreateEncrypt";
+            chkCreateEncrypt.Size = new Size(18, 24);
+            chkCreateEncrypt.TabIndex = 43;
+            chkCreateEncrypt.UseVisualStyleBackColor = false;
             // 
             // label1
             // 
@@ -621,6 +680,36 @@ namespace Brutal_Zip
             panelExtract.TabIndex = 11;
             panelExtract.Visible = false;
             // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label4.Location = new Point(429, 96);
+            label4.Name = "label4";
+            label4.Size = new Size(158, 15);
+            label4.TabIndex = 46;
+            label4.Text = "Extract to “ArchiveName/”";
+            // 
+            // chkExtractToFolderName
+            // 
+            chkExtractToFolderName.BackColor = Color.Transparent;
+            chkExtractToFolderName.BoxBackColor = Color.FromArgb(64, 64, 64);
+            chkExtractToFolderName.BoxBorderColor = Color.FromArgb(29, 181, 82);
+            chkExtractToFolderName.BoxGradientEnabled = true;
+            chkExtractToFolderName.BoxGradientEnd = Color.FromArgb(16, 16, 16);
+            chkExtractToFolderName.BoxGradientStart = Color.FromArgb(29, 181, 82);
+            chkExtractToFolderName.BoxSize = 14;
+            chkExtractToFolderName.CheckBorderColor = Color.Lime;
+            chkExtractToFolderName.CheckColor = Color.LawnGreen;
+            chkExtractToFolderName.CheckGradientEnabled = true;
+            chkExtractToFolderName.CheckGradientEnd = Color.FromArgb(29, 181, 82);
+            chkExtractToFolderName.CheckGradientStart = Color.Lime;
+            chkExtractToFolderName.Location = new Point(408, 90);
+            chkExtractToFolderName.Name = "chkExtractToFolderName";
+            chkExtractToFolderName.Size = new Size(18, 24);
+            chkExtractToFolderName.TabIndex = 45;
+            chkExtractToFolderName.UseVisualStyleBackColor = false;
+            // 
             // label2
             // 
             label2.AutoSize = true;
@@ -655,92 +744,6 @@ namespace Brutal_Zip
             panelFooter.Name = "panelFooter";
             panelFooter.Size = new Size(600, 45);
             panelFooter.TabIndex = 12;
-            // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label3.Location = new Point(37, 357);
-            label3.Name = "label3";
-            label3.Size = new Size(49, 15);
-            label3.TabIndex = 44;
-            label3.Text = "Encrypt";
-            // 
-            // chkCreateEncrypt
-            // 
-            chkCreateEncrypt.BackColor = Color.Transparent;
-            chkCreateEncrypt.BoxBackColor = Color.FromArgb(64, 64, 64);
-            chkCreateEncrypt.BoxBorderColor = Color.FromArgb(29, 181, 82);
-            chkCreateEncrypt.BoxGradientEnabled = true;
-            chkCreateEncrypt.BoxGradientEnd = Color.FromArgb(16, 16, 16);
-            chkCreateEncrypt.BoxGradientStart = Color.FromArgb(29, 181, 82);
-            chkCreateEncrypt.BoxSize = 14;
-            chkCreateEncrypt.CheckBorderColor = Color.Lime;
-            chkCreateEncrypt.CheckColor = Color.LawnGreen;
-            chkCreateEncrypt.CheckGradientEnabled = true;
-            chkCreateEncrypt.CheckGradientEnd = Color.FromArgb(29, 181, 82);
-            chkCreateEncrypt.CheckGradientStart = Color.Lime;
-            chkCreateEncrypt.Location = new Point(16, 351);
-            chkCreateEncrypt.Name = "chkCreateEncrypt";
-            chkCreateEncrypt.Size = new Size(18, 24);
-            chkCreateEncrypt.TabIndex = 43;
-            chkCreateEncrypt.UseVisualStyleBackColor = false;
-            // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label4.Location = new Point(429, 96);
-            label4.Name = "label4";
-            label4.Size = new Size(158, 15);
-            label4.TabIndex = 46;
-            label4.Text = "Extract to “ArchiveName/”";
-            // 
-            // chkExtractToFolderName
-            // 
-            chkExtractToFolderName.BackColor = Color.Transparent;
-            chkExtractToFolderName.BoxBackColor = Color.FromArgb(64, 64, 64);
-            chkExtractToFolderName.BoxBorderColor = Color.FromArgb(29, 181, 82);
-            chkExtractToFolderName.BoxGradientEnabled = true;
-            chkExtractToFolderName.BoxGradientEnd = Color.FromArgb(16, 16, 16);
-            chkExtractToFolderName.BoxGradientStart = Color.FromArgb(29, 181, 82);
-            chkExtractToFolderName.BoxSize = 14;
-            chkExtractToFolderName.CheckBorderColor = Color.Lime;
-            chkExtractToFolderName.CheckColor = Color.LawnGreen;
-            chkExtractToFolderName.CheckGradientEnabled = true;
-            chkExtractToFolderName.CheckGradientEnd = Color.FromArgb(29, 181, 82);
-            chkExtractToFolderName.CheckGradientStart = Color.Lime;
-            chkExtractToFolderName.Location = new Point(408, 90);
-            chkExtractToFolderName.Name = "chkExtractToFolderName";
-            chkExtractToFolderName.Size = new Size(18, 24);
-            chkExtractToFolderName.TabIndex = 45;
-            chkExtractToFolderName.UseVisualStyleBackColor = false;
-            // 
-            // cmbCreateMethod
-            // 
-            cmbCreateMethod.BackColor = Color.FromArgb(32, 32, 32);
-            cmbCreateMethod.ButtonColor = Color.FromArgb(48, 48, 48);
-            cmbCreateMethod.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbCreateMethod.ForeColor = Color.White;
-            cmbCreateMethod.FormattingEnabled = true;
-            cmbCreateMethod.Items.AddRange(new object[] { "Store", "Deflate", "Zstd" });
-            cmbCreateMethod.Location = new Point(94, 318);
-            cmbCreateMethod.Name = "cmbCreateMethod";
-            cmbCreateMethod.Size = new Size(130, 23);
-            cmbCreateMethod.TabIndex = 45;
-            // 
-            // cmbCreateAlgo
-            // 
-            cmbCreateAlgo.BackColor = Color.FromArgb(32, 32, 32);
-            cmbCreateAlgo.ButtonColor = Color.FromArgb(48, 48, 48);
-            cmbCreateAlgo.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbCreateAlgo.ForeColor = Color.White;
-            cmbCreateAlgo.FormattingEnabled = true;
-            cmbCreateAlgo.Items.AddRange(new object[] { "ZipCrypto", "AES-128", "AES-192", "AES-256" });
-            cmbCreateAlgo.Location = new Point(135, 352);
-            cmbCreateAlgo.Name = "cmbCreateAlgo";
-            cmbCreateAlgo.Size = new Size(125, 23);
-            cmbCreateAlgo.TabIndex = 46;
             // 
             // WizardForm
             // 

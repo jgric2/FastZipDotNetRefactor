@@ -77,7 +77,7 @@ namespace Brutal_Zip.Views
 
         public event Action WizardClicked;
         public event Action CommentClicked;
-
+        public event Action TestZip;
 
 
         // Events consumed by MainForm
@@ -414,6 +414,13 @@ namespace Brutal_Zip.Views
                     //LoadDirectory(nextPath);
                 }
             }
+        }
+
+        private void buttonTestZip_Click(object sender, EventArgs e)
+        {
+
+
+            TestZip?.Invoke();
         }
     }
 }

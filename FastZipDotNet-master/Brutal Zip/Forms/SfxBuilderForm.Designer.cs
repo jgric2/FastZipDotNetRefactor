@@ -54,6 +54,7 @@ namespace Brutal_Zip
 
         private void InitializeComponent()
         {
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(SfxBuilderForm));
             rdoUseCurrent = new RadioButton();
             rdoUseFile = new RadioButton();
             txtZipPath = new TextBox();
@@ -489,6 +490,7 @@ namespace Brutal_Zip
             buttonBuild.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonBuild.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonBuild.FlatStyle = FlatStyle.Flat;
+            buttonBuild.Image = (Image)resources.GetObject("buttonBuild.Image");
             buttonBuild.Location = new Point(342, 0);
             buttonBuild.Name = "buttonBuild";
             buttonBuild.Size = new Size(85, 84);
@@ -506,6 +508,7 @@ namespace Brutal_Zip
             buttonPreview.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonPreview.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonPreview.FlatStyle = FlatStyle.Flat;
+            buttonPreview.Image = (Image)resources.GetObject("buttonPreview.Image");
             buttonPreview.Location = new Point(257, 0);
             buttonPreview.Name = "buttonPreview";
             buttonPreview.Size = new Size(85, 84);
@@ -533,6 +536,7 @@ namespace Brutal_Zip
             buttonLicence.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonLicence.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonLicence.FlatStyle = FlatStyle.Flat;
+            buttonLicence.Image = (Image)resources.GetObject("buttonLicence.Image");
             buttonLicence.Location = new Point(170, 0);
             buttonLicence.Name = "buttonLicence";
             buttonLicence.Size = new Size(85, 84);
@@ -550,6 +554,7 @@ namespace Brutal_Zip
             buttonBranding.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonBranding.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonBranding.FlatStyle = FlatStyle.Flat;
+            buttonBranding.Image = (Image)resources.GetObject("buttonBranding.Image");
             buttonBranding.Location = new Point(85, 0);
             buttonBranding.Name = "buttonBranding";
             buttonBranding.Size = new Size(85, 84);
@@ -567,6 +572,7 @@ namespace Brutal_Zip
             buttonMain.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonMain.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonMain.FlatStyle = FlatStyle.Flat;
+            buttonMain.Image = (Image)resources.GetObject("buttonMain.Image");
             buttonMain.Location = new Point(0, 0);
             buttonMain.Name = "buttonMain";
             buttonMain.Size = new Size(85, 84);

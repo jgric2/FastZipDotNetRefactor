@@ -162,6 +162,10 @@ namespace Brutal_Zip
             homeView.BrowseCreateDestinationClicked += BrowseCreateDest;
             homeView.CreateClicked += async () => await DoCreateAsync();
 
+            homeView.CommentClicked += () => ShowCommentEditor();
+            homeView.WizardClicked += () => ShowWizard();
+            homeView.TestZip += async () => await TestArchiveAsync();
+
             homeView.FilesDroppedForCreate += paths => StageCreateFromDrop(paths);
             homeView.OpenArchiveClicked += OpenZipFileDialog;
             homeView.BrowseExtractDestinationClicked += BrowseExtractDest;
@@ -2664,6 +2668,10 @@ return await sharedTask.ConfigureAwait(false);
         {
             if (_zip == null)
             {
+                //using var ofd = new OpenFileDialog { Filter = "Zip files|*.zip" };
+                //if (ofd.ShowDialog(this) != DialogResult.OK) return;
+
+                //_zip.o
                 MessageBox.Show(this, "Open a zip first.", "Info");
                 return;
             }

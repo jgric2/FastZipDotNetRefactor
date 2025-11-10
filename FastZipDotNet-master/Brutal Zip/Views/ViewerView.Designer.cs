@@ -66,6 +66,7 @@ namespace Brutal_Zip.Views
         private void InitializeComponent()
         {
             components = new Container();
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(ViewerView));
             toolStrip = new ToolStrip();
             btnBackHome = new ToolStripButton();
             btnAddFiles = new ToolStripButton();
@@ -685,6 +686,7 @@ namespace Brutal_Zip.Views
             buttonComment.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonComment.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonComment.FlatStyle = FlatStyle.Flat;
+            buttonComment.Image = (Image)resources.GetObject("buttonComment.Image");
             buttonComment.Location = new Point(425, 0);
             buttonComment.Name = "buttonComment";
             buttonComment.Size = new Size(85, 84);
@@ -702,6 +704,7 @@ namespace Brutal_Zip.Views
             buttonOpenFolder.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonOpenFolder.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonOpenFolder.FlatStyle = FlatStyle.Flat;
+            buttonOpenFolder.Image = (Image)resources.GetObject("buttonOpenFolder.Image");
             buttonOpenFolder.Location = new Point(340, 0);
             buttonOpenFolder.Name = "buttonOpenFolder";
             buttonOpenFolder.Size = new Size(85, 84);
@@ -723,6 +726,7 @@ namespace Brutal_Zip.Views
             buttonExtract.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonExtract.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonExtract.FlatStyle = FlatStyle.Flat;
+            buttonExtract.Image = (Image)resources.GetObject("buttonExtract.Image");
             buttonExtract.Location = new Point(255, 0);
             buttonExtract.Mode = YourNamespace.DropDownMode.Split;
             buttonExtract.Name = "buttonExtract";
@@ -831,6 +835,7 @@ namespace Brutal_Zip.Views
             buttonAddFolder.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonAddFolder.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonAddFolder.FlatStyle = FlatStyle.Flat;
+            buttonAddFolder.Image = (Image)resources.GetObject("buttonAddFolder.Image");
             buttonAddFolder.Location = new Point(170, 0);
             buttonAddFolder.Name = "buttonAddFolder";
             buttonAddFolder.Size = new Size(85, 84);
@@ -848,6 +853,7 @@ namespace Brutal_Zip.Views
             buttonAddFiles.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonAddFiles.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonAddFiles.FlatStyle = FlatStyle.Flat;
+            buttonAddFiles.Image = (Image)resources.GetObject("buttonAddFiles.Image");
             buttonAddFiles.Location = new Point(85, 0);
             buttonAddFiles.Name = "buttonAddFiles";
             buttonAddFiles.Size = new Size(85, 84);
@@ -864,6 +870,7 @@ namespace Brutal_Zip.Views
             buttonHome.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
             buttonHome.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
             buttonHome.FlatStyle = FlatStyle.Flat;
+            buttonHome.Image = (Image)resources.GetObject("buttonHome.Image");
             buttonHome.Location = new Point(0, 0);
             buttonHome.Name = "buttonHome";
             buttonHome.Size = new Size(85, 84);
@@ -902,6 +909,8 @@ namespace Brutal_Zip.Views
             // buttonCloseSearch
             // 
             buttonCloseSearch.BackColor = Color.Transparent;
+            buttonCloseSearch.BackgroundImage = (Image)resources.GetObject("buttonCloseSearch.BackgroundImage");
+            buttonCloseSearch.BackgroundImageLayout = ImageLayout.Zoom;
             buttonCloseSearch.Dock = DockStyle.Fill;
             buttonCloseSearch.FlatAppearance.BorderSize = 0;
             buttonCloseSearch.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
@@ -911,17 +920,19 @@ namespace Brutal_Zip.Views
             buttonCloseSearch.Name = "buttonCloseSearch";
             buttonCloseSearch.Size = new Size(22, 23);
             buttonCloseSearch.TabIndex = 12;
-            buttonCloseSearch.Text = "X";
             buttonCloseSearch.TextAlign = ContentAlignment.BottomCenter;
             buttonCloseSearch.UseVisualStyleBackColor = false;
             buttonCloseSearch.Click += buttonCloseSearch_Click;
             // 
             // pictureBox2
             // 
+            pictureBox2.BackgroundImage = (Image)resources.GetObject("pictureBox2.BackgroundImage");
+            pictureBox2.BackgroundImageLayout = ImageLayout.Zoom;
             pictureBox2.Dock = DockStyle.Fill;
-            pictureBox2.Location = new Point(3, 3);
+            pictureBox2.Location = new Point(0, 0);
+            pictureBox2.Margin = new Padding(0);
             pictureBox2.Name = "pictureBox2";
-            pictureBox2.Size = new Size(21, 23);
+            pictureBox2.Size = new Size(27, 29);
             pictureBox2.TabIndex = 2;
             pictureBox2.TabStop = false;
             // 
