@@ -49,23 +49,23 @@ namespace Brutal_Zip.Classes
             {
                 try
                 {
-                    BootTrace.Mark("Client: try connect");
+                   // BootTrace.Mark("Client: try connect");
                     using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
                     client.Connect(connectTimeoutMs);
                     var json = JsonSerializer.Serialize(args ?? Array.Empty<string>());
                     var bytes = Encoding.UTF8.GetBytes(json);
                     client.Write(bytes, 0, bytes.Length);
-                    BootTrace.Mark("Client: forwarded OK");
+                  //  BootTrace.Mark("Client: forwarded OK");
                     return true;
                 }
                 catch
                 {
-                    BootTrace.Mark("Client: connect failed, retry");
+                   // BootTrace.Mark("Client: connect failed, retry");
                     Thread.Sleep(attemptIntervalMs);
                 }
             } while (Environment.TickCount < deadline);
 
-            BootTrace.Mark("Client: forward timeout");
+           // BootTrace.Mark("Client: forward timeout");
             return false;
         }
 
@@ -157,7 +157,7 @@ namespace Brutal_Zip.Classes
 
         public static void StartServer(Action<string[]> onArgs, int idleTimeoutMs = 1200)
         {
-            BootTrace.Mark("StartServer(Action) init");
+           // BootTrace.Mark("StartServer(Action) init");
             _idleTimeout = (idleTimeoutMs <= 0) ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(Math.Max(300, idleTimeoutMs));
             _cts = new CancellationTokenSource();
             _lastActivityUtc = DateTime.UtcNow;
@@ -170,7 +170,7 @@ namespace Brutal_Zip.Classes
                     {
                         using var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 8, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
 
-                        BootTrace.Mark("Server: WaitForConnectionAsync begin");
+                      //  BootTrace.Mark("Server: WaitForConnectionAsync begin");
                         var wait = server.WaitForConnectionAsync(_cts.Token);
 
                         // Idle watchdog (disabled if infinite)
@@ -185,7 +185,7 @@ namespace Brutal_Zip.Classes
                                 await Task.Delay(50, _cts.Token).ConfigureAwait(false);
                                 if (DateTime.UtcNow - _lastActivityUtc > _idleTimeout)
                                 {
-                                    BootTrace.Mark("Server: idle timeout -> cancel");
+                                  //  BootTrace.Mark("Server: idle timeout -> cancel");
                                     _cts.Cancel();
                                     break;
                                 }
@@ -194,7 +194,7 @@ namespace Brutal_Zip.Classes
                             try { await wait.ConfigureAwait(false); } catch { break; }
                         }
 
-                        BootTrace.Mark("Server: client connected");
+                       // BootTrace.Mark("Server: client connected");
 
                         try
                         {
@@ -211,19 +211,19 @@ namespace Brutal_Zip.Classes
                             var args = JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
                             _lastActivityUtc = DateTime.UtcNow;
 
-                            BootTrace.Mark("Server: message read -> invoke onArgs");
+                           // BootTrace.Mark("Server: message read -> invoke onArgs");
                             onArgs?.Invoke(args);
                         }
-                        catch (Exception ex) { BootTrace.Exception(ex, "Server read"); }
+                        catch (Exception ex) { }
                     }
                 }
-                catch (Exception ex) { BootTrace.Exception(ex, "Server loop"); }
+                catch (Exception ex) { }
                 finally
                 {
                     try { _mutex?.ReleaseMutex(); } catch { }
                     try { _mutex?.Close(); } catch { }
                     _mutex = null;
-                    BootTrace.Mark("Server: exit");
+                   // BootTrace.Mark("Server: exit");
                 }
             }, _cts.Token);
         }

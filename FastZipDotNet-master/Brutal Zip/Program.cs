@@ -26,56 +26,59 @@ namespace Brutal_Zip
             } 
         }
 
+
+        //TODO: MAKE CUSTOM DETECTOR WITHOUT SINGLE INSTANCE SERVER HAS TO BE A FASTER WAY. NVR MIND WAS JUST WINDOWS BEING STUPID
+
         [STAThread]
         static void Main(string[] args)
         {
-            Brutal_Zip.Classes.Helpers.BootTrace.Init();
-            BootTrace.Mark("Main entered. Raw args: " + string.Join(" | ", args ?? Array.Empty<string>()));
+            //Brutal_Zip.Classes.Helpers.BootTrace.Init();
+            //BootTrace.Mark("Main entered. Raw args: " + string.Join(" | ", args ?? Array.Empty<string>()));
 
-            // 1) Try to become primary first (fast)
-            BootTrace.Mark("TryBecomePrimary begin");
+            //// 1) Try to become primary first (fast)
+            //BootTrace.Mark("TryBecomePrimary begin");
             bool iAmPrimary = SingleInstance.TryBecomePrimary();
-            BootTrace.Mark("TryBecomePrimary result: " + iAmPrimary);
+            //BootTrace.Mark("TryBecomePrimary result: " + iAmPrimary);
 
             if (!iAmPrimary)
             {
                 // 2) Not primary -> forward quickly and exit
-                BootTrace.Mark("Forward attempt begin");
-                if (SingleInstance.TryForwardToPrimary(args, totalWaitMs: 180, attemptIntervalMs: 60, connectTimeoutMs: 60))
+               // BootTrace.Mark("Forward attempt begin");
+                if (SingleInstance.TryForwardToPrimary(args, totalWaitMs: 240, attemptIntervalMs: 60, connectTimeoutMs: 60))
                 {
-                    BootTrace.Mark("Forward success -> exit");
+                 //   BootTrace.Mark("Forward success -> exit");
                     return;
                 }
-                BootTrace.Mark("Forward failed (no ready primary) -> exit");
+              //  BootTrace.Mark("Forward failed (no ready primary) -> exit");
                 return;
             }
 #if NET6_0_OR_GREATER
-            BootTrace.Mark("ApplicationConfiguration.Initialize begin");
+           // BootTrace.Mark("ApplicationConfiguration.Initialize begin");
             ApplicationConfiguration.Initialize();
-            BootTrace.Mark("ApplicationConfiguration.Initialize end");
+          // BootTrace.Mark("ApplicationConfiguration.Initialize end");
 #else
 Application.EnableVisualStyles();
 Application.SetCompatibleTextRenderingDefault(false);
 #endif
 
-            BootTrace.Mark("SettingsService.Load begin");
+           // BootTrace.Mark("SettingsService.Load begin");
             SettingsService.Load();
-            BootTrace.Mark("SettingsService.Load end");
+          //  BootTrace.Mark("SettingsService.Load end");
 
             // Keep server alive for the whole app lifetime (no idle timeout)
             var dispatcher = new SingleInstanceDispatcher();
-            BootTrace.Mark("StartServer(delegate, keepAlive) begin");
+           // BootTrace.Mark("StartServer(delegate, keepAlive) begin");
             SingleInstance.StartServer(dispatcher.OnArgs, idleTimeoutMs: -1);  // -1 => no idle timeout
-            BootTrace.Mark("StartServer(delegate, keepAlive) end");
+          //  BootTrace.Mark("StartServer(delegate, keepAlive) end");
 
-            BootTrace.Mark("MainForm ctor begin");
+           // BootTrace.Mark("MainForm ctor begin");
             var form = new MainForm();
-            BootTrace.Mark("MainForm ctor end");
+          //  BootTrace.Mark("MainForm ctor end");
 
             dispatcher.Attach(form);
             form.FormClosed += (_, __) =>
             {
-                BootTrace.Mark("MainForm closed -> StopServer");
+               // BootTrace.Mark("MainForm closed -> StopServer");
                 SingleInstance.StopServer();
             };
 
@@ -83,14 +86,14 @@ Application.SetCompatibleTextRenderingDefault(false);
             {
                 form.Shown += async (_, __) =>
                 {
-                    try { BootTrace.Mark("Shown -> HandleCommandAsync begin"); await form.HandleCommandAsync(args); BootTrace.Mark("Shown -> HandleCommandAsync end"); }
-                    catch (Exception ex) { BootTrace.Exception(ex, "HandleCommandAsync initial"); }
+                    try { await form.HandleCommandAsync(args);  }
+                    catch (Exception ex) {}
                 };
             }
 
-            BootTrace.Mark("Application.Run begin");
+           // BootTrace.Mark("Application.Run begin");
             Application.Run(form);
-            BootTrace.Mark("Application.Run end");
+           // BootTrace.Mark("Application.Run end");
         }
 
 
@@ -104,7 +107,7 @@ Application.SetCompatibleTextRenderingDefault(false);
 
             public void OnArgs(string[] args)
             {
-                Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: onArgs received: " + string.Join(" | ", args ?? Array.Empty<string>()));
+               // Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: onArgs received: " + string.Join(" | ", args ?? Array.Empty<string>()));
                 lock (_gate)
                 {
                     if (_form == null)
@@ -117,11 +120,11 @@ Application.SetCompatibleTextRenderingDefault(false);
                 {
                     try
                     {
-                        Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: dispatch to form -> HandleCommandAsync begin");
+                       // Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: dispatch to form -> HandleCommandAsync begin");
                         await _form.HandleCommandAsync(args);
-                        Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: dispatch to form -> HandleCommandAsync end");
+                       // Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: dispatch to form -> HandleCommandAsync end");
                     }
-                    catch (Exception ex) { Brutal_Zip.Classes.Helpers.BootTrace.Exception(ex, "server->form"); }
+                    catch (Exception ex) {  }
                 }));
             }
 
@@ -137,11 +140,11 @@ Application.SetCompatibleTextRenderingDefault(false);
                         {
                             try
                             {
-                                Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: flush pending -> HandleCommandAsync begin");
+                               // Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: flush pending -> HandleCommandAsync begin");
                                 await _form.HandleCommandAsync(a);
-                                Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: flush pending -> HandleCommandAsync end");
+                              //  Brutal_Zip.Classes.Helpers.BootTrace.Mark("Server: flush pending -> HandleCommandAsync end");
                             }
-                            catch (Exception ex) { Brutal_Zip.Classes.Helpers.BootTrace.Exception(ex, "server->pending"); }
+                            catch (Exception ex) {  }
                         }));
                     }
                 }

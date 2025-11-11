@@ -94,10 +94,10 @@ namespace Brutal_Zip
 
         public MainForm()
         {
-            Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor ENTER");
+        //    Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor ENTER");
             var sw = Stopwatch.StartNew();
             InitializeComponent();
-            Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm InitializeComponent done in " + sw.ElapsedMilliseconds + " ms");
+          //  Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm InitializeComponent done in " + sw.ElapsedMilliseconds + " ms");
 
 
             viewerView.RenameSelectedRequested += () => DoRenameSelected();
@@ -364,7 +364,7 @@ namespace Brutal_Zip
             };
 
 
-            Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor EXIT");
+           // Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor EXIT");
         }
 
 
