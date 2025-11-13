@@ -73,6 +73,9 @@
     <Compile Update="Forms\InputDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\SfxBuilderForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -83,9 +86,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\SettingsForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="Forms\SfxBuilderForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Views\HomeView.cs">

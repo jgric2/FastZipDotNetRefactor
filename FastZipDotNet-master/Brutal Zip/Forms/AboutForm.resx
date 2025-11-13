@@ -117,4 +117,76 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+  <data name="buttonDictionary.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        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
+</value>
+  </data>
+  <data name="buttonAbout.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAL
+        EAAACxABrSO9dQAABF1JREFUaEPt2VtXE1cUwHGfbauJIDcBgUAIaG0LX6Kufg3bL1JABA1oBAWxFgrE
+        KKWIbaVeeO3qWkbwgqVCQi4D2hCQPvWhD7trnzOTOdkzkzMn8OBD9lr/998+6+TMQw4dKk1pSlOaD3I6
+        F//5qnNxT+tc3AM3dTzB3kPH4/fwBfaI9/nDXd5vu/AZtsA782CH9+sOfIr9gmXhNPZzFk5h97PQPp9J
+        t81nzlKfdDqe7KUpknYQaAMsok/d34b2eb172xC4l0lRn3QolsXAKmgd/EAH26EZ2Ipuw+YyrMBPGaA+
+        6VjQj92hz9iizauRhxbAdmjWbAZaZ/9WXyAPrYNFNAMfBHrOGd36I88/U8QCJni/6G1ntAF2QGMtd9+x
+        qE86eVejCHT7jAaB2zEIhGPQdlezomfz0X4bdMudd9CMRYpYIPdyKKCNkz4d2YCpP7Ow++9/rMnX29Ae
+        juvgjHnKEnRz5C34bvOoTzqqaONHGJjRoPuPLaDT9fsW+CNaDuwG7Qu/hSZsekt9gULoQs9dayQF06+z
+        1A/TK1lomUoqobHGKR71SYeBXaLFH6H/ziZ8/ShB/XBuYQOaw5oSumES24SGHzbVF1BB05ejeTIO3zxM
+        wNybHda5hQQ0TcQd0Y0O6JPYBI/6pKOK9gtXg12P8Cb4JjbANx4H37TG0AysgK4f13jfa+oLFIXWr0bT
+        eAwabqxAw+gKnNRrvLWujK7DbmFp9QXcoJ3uM4Lp1F9/pYyu/U7vZhEL2H0NC6HFH2H9tZfUD3XDL5TR
+        J7CxFNSMpdQXUEUbV6Nxcgvqhm0WGHohRTOwgK65waseLWIBVbRxNTA8bTq1oec5dK1LdPVoEqpHklA1
+        klRfQBVtXA2s9upz6oea0LIyuuo6r/JaQn0BFXTuaozzq3EiZF2g+vKyMpo1nICK4SIWsEMX/BEK16Pm
+        yjL1Q9XgkjK6YigBx4c2WNQnHVdo+nLo1wNPm05lcKkgmoFF9FVeORYqYgHXaOM+30zlrkfVwBL1Q8Wl
+        ZxzsBh0yikPZFR71SccVesxEi9ejMviM+uF4f9QdWgeXXeYdwwZj6gtI0QaYoZMsdjVGklBx0bpAeV/U
+        PXqQozHvAI/6pEPR9JQpWrweeNp0ynqj7tA6mBWMgSe4Dp5L6+oLOKINcA6tvxzC9Si/YF3g2PmoHM3A
+        JvoodpFHfdKxRRsvhw1avB542nS83dE8dP4pxxiYoo/0r/H61tQXsKCNNzoPzd9oeqfxtOl4up86o3Uw
+        RX+CXcDeqC9g+2EpgDaeOzxlb/8r8HRFwdP1FI5+y/P0vrRH9zujP+7VO1/EAuLXUEQbHxbxjTafO8n1
+        oOi+wuiPsJ6/WNQnHbuv4YGiGdgZfRjrNqM+6dh9DcUPy77QBrhXBzug97XAQaDNq7FmPWUX6H0t4B2M
+        p+3RHCyij7hF96ihzVbV/+DwDqyf9QRjaRGd/0Yroi0ot62mDvesfkl9pSlNaUrzYcz/je60FVmgozoA
+        AAAASUVORK5CYII=
+</value>
+  </data>
+  <data name="label1.Text" xml:space="preserve">
+    <value>Brutal Zip is an ultra fast zip creation and extraction utility designed to be as fast as possible.
+Brutal Zip is freeware, if you paid for it you should get a refund.
+Please provide feedback or consider donating.
+
+Made by James Grice 2025.</value>
+  </data>
 </root>

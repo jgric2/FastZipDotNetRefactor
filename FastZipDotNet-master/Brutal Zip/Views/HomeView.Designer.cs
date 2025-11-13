@@ -81,6 +81,7 @@ namespace Brutal_Zip.Views
             buttonAddFolder = new Button();
             brutalGradientPanel3 = new BrutalGradientPanel();
             tableLayoutPanel2 = new TableLayoutPanel();
+            label10 = new Label();
             label9 = new Label();
             label4 = new Label();
             label1 = new Label();
@@ -99,6 +100,7 @@ namespace Brutal_Zip.Views
             ribbonControlsExtract = new Panel();
             panel12 = new Panel();
             buttonWizardExtract = new Button();
+            buttonTestZip = new Button();
             buttonOpenZip = new Button();
             brutalGradientPanel4 = new BrutalGradientPanel();
             tableLayoutPanel1 = new TableLayoutPanel();
@@ -113,7 +115,7 @@ namespace Brutal_Zip.Views
             panelExtractZipTab = new Panel();
             tableLayoutPanel6 = new TableLayoutPanel();
             panel9 = new Panel();
-            buttonTestZip = new Button();
+            brutalToolTip1 = new BrutalCopy2025.Controls.BrutalControls.BrutalToolTip();
             ((ISupportInitialize)numCreateLevel).BeginInit();
             cmsStaging.SuspendLayout();
             pnlExtractDrop.SuspendLayout();
@@ -155,6 +157,7 @@ namespace Brutal_Zip.Views
             numCreateLevel.Name = "numCreateLevel";
             numCreateLevel.Size = new Size(110, 23);
             numCreateLevel.TabIndex = 9;
+            brutalToolTip1.SetToolTip(numCreateLevel, "Choose the compression level you want for the zip archive. (higher is better compression)");
             numCreateLevel.Value = new decimal(new int[] { 6, 0, 0, 0 });
             // 
             // btnCreate
@@ -170,6 +173,7 @@ namespace Brutal_Zip.Views
             btnCreate.Size = new Size(100, 28);
             btnCreate.TabIndex = 14;
             btnCreate.Text = "Create";
+            brutalToolTip1.SetToolTip(btnCreate, "Create the zip archive");
             btnCreate.UseVisualStyleBackColor = false;
             btnCreate.Click += btnCreate_Click;
             // 
@@ -305,6 +309,7 @@ namespace Brutal_Zip.Views
             btnExtract.Size = new Size(100, 28);
             btnExtract.TabIndex = 7;
             btnExtract.Text = "Extract";
+            brutalToolTip1.SetToolTip(btnExtract, "Extract a zip file");
             btnExtract.UseVisualStyleBackColor = false;
             btnExtract.Click += btnExtract_Click;
             // 
@@ -393,6 +398,7 @@ namespace Brutal_Zip.Views
             btnCreateSetPassword.TabIndex = 31;
             btnCreateSetPassword.Text = "Set Password";
             btnCreateSetPassword.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(btnCreateSetPassword, "Set a password for this zip archive.");
             btnCreateSetPassword.UseVisualStyleBackColor = false;
             btnCreateSetPassword.Click += btnCreateSetPassword_Click;
             // 
@@ -433,6 +439,7 @@ namespace Brutal_Zip.Views
             cmbEncrypt.Name = "cmbEncrypt";
             cmbEncrypt.Size = new Size(80, 23);
             cmbEncrypt.TabIndex = 32;
+            brutalToolTip1.SetToolTip(cmbEncrypt, "Choose the encryption method you want to encrypt your zip with");
             cmbEncrypt.SelectedIndexChanged += cmbEncrypt_SelectedIndexChanged;
             // 
             // chkEncrypt
@@ -455,6 +462,7 @@ namespace Brutal_Zip.Views
             chkEncrypt.Name = "chkEncrypt";
             chkEncrypt.Size = new Size(18, 24);
             chkEncrypt.TabIndex = 30;
+            brutalToolTip1.SetToolTip(chkEncrypt, "Enable Encryption on this archive.");
             chkEncrypt.UseVisualStyleBackColor = false;
             chkEncrypt.CheckedChanged += chkEncrypt_CheckedChanged;
             // 
@@ -514,6 +522,7 @@ namespace Brutal_Zip.Views
             cmbCreateMethod.Name = "cmbCreateMethod";
             cmbCreateMethod.Size = new Size(110, 23);
             cmbCreateMethod.TabIndex = 27;
+            brutalToolTip1.SetToolTip(cmbCreateMethod, "Choose what compression method you want your zip archive to be compressed with.");
             // 
             // label5
             // 
@@ -550,6 +559,7 @@ namespace Brutal_Zip.Views
             buttonWizardCreate.TabIndex = 22;
             buttonWizardCreate.Text = "Wizard";
             buttonWizardCreate.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(buttonWizardCreate, "Use the wizard to create a zip archive step by step.");
             buttonWizardCreate.UseVisualStyleBackColor = false;
             buttonWizardCreate.Click += buttonWizardCreate_Click;
             // 
@@ -568,6 +578,7 @@ namespace Brutal_Zip.Views
             buttonComment.TabIndex = 21;
             buttonComment.Text = "Comment";
             buttonComment.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(buttonComment, "Add a comment to your zip archive.");
             buttonComment.UseVisualStyleBackColor = false;
             buttonComment.Click += buttonComment_Click;
             // 
@@ -586,6 +597,7 @@ namespace Brutal_Zip.Views
             buttonAddFiles.TabIndex = 19;
             buttonAddFiles.Text = "Add Files";
             buttonAddFiles.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(buttonAddFiles, "Add files into your zip archive.");
             buttonAddFiles.UseVisualStyleBackColor = false;
             buttonAddFiles.Click += buttonAddFiles_Click;
             // 
@@ -600,11 +612,13 @@ namespace Brutal_Zip.Views
             buttonAddFolder.FlatStyle = FlatStyle.Flat;
             buttonAddFolder.Image = (Image)resources.GetObject("buttonAddFolder.Image");
             buttonAddFolder.Location = new Point(0, 0);
+            buttonAddFolder.Margin = new Padding(0);
             buttonAddFolder.Name = "buttonAddFolder";
             buttonAddFolder.Size = new Size(85, 84);
             buttonAddFolder.TabIndex = 14;
-            buttonAddFolder.Text = "Add Folder";
+            buttonAddFolder.Text = "Add Folders";
             buttonAddFolder.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(buttonAddFolder, "Add folders to your zip archive.");
             buttonAddFolder.UseVisualStyleBackColor = false;
             buttonAddFolder.Click += buttonAddFolder_Click;
             // 
@@ -636,25 +650,40 @@ namespace Brutal_Zip.Views
             tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 254F));
             tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 268F));
             tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 8F));
+            tableLayoutPanel2.Controls.Add(label10, 3, 0);
             tableLayoutPanel2.Controls.Add(label9, 2, 0);
             tableLayoutPanel2.Controls.Add(label4, 1, 0);
             tableLayoutPanel2.Controls.Add(label1, 0, 0);
             tableLayoutPanel2.Dock = DockStyle.Fill;
             tableLayoutPanel2.Location = new Point(0, 0);
+            tableLayoutPanel2.Margin = new Padding(0);
             tableLayoutPanel2.Name = "tableLayoutPanel2";
             tableLayoutPanel2.RowCount = 1;
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             tableLayoutPanel2.Size = new Size(1000, 16);
             tableLayoutPanel2.TabIndex = 0;
             // 
+            // label10
+            // 
+            label10.AutoSize = true;
+            label10.Dock = DockStyle.Fill;
+            label10.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            label10.Location = new Point(862, 0);
+            label10.Margin = new Padding(0);
+            label10.Name = "label10";
+            label10.Size = new Size(138, 16);
+            label10.TabIndex = 3;
+            label10.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // label9
             // 
             label9.AutoSize = true;
             label9.Dock = DockStyle.Fill;
             label9.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label9.Location = new Point(597, 0);
+            label9.Location = new Point(594, 0);
+            label9.Margin = new Padding(0);
             label9.Name = "label9";
-            label9.Size = new Size(262, 16);
+            label9.Size = new Size(268, 16);
             label9.TabIndex = 2;
             label9.Text = "Encryption Options";
             label9.TextAlign = ContentAlignment.MiddleCenter;
@@ -664,9 +693,10 @@ namespace Brutal_Zip.Views
             label4.AutoSize = true;
             label4.Dock = DockStyle.Fill;
             label4.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label4.Location = new Point(343, 0);
+            label4.Location = new Point(340, 0);
+            label4.Margin = new Padding(0);
             label4.Name = "label4";
-            label4.Size = new Size(248, 16);
+            label4.Size = new Size(254, 16);
             label4.TabIndex = 1;
             label4.Text = "Compression Options";
             label4.TextAlign = ContentAlignment.MiddleCenter;
@@ -676,9 +706,10 @@ namespace Brutal_Zip.Views
             label1.AutoSize = true;
             label1.Dock = DockStyle.Fill;
             label1.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label1.Location = new Point(3, 0);
+            label1.Location = new Point(0, 0);
+            label1.Margin = new Padding(0);
             label1.Name = "label1";
-            label1.Size = new Size(334, 16);
+            label1.Size = new Size(340, 16);
             label1.TabIndex = 0;
             label1.Text = "Create";
             label1.TextAlign = ContentAlignment.MiddleCenter;
@@ -696,6 +727,7 @@ namespace Brutal_Zip.Views
             tbThreads.ThumbInnerColor = Color.FromArgb(29, 181, 82);
             tbThreads.ThumbOutlineColor = Color.FromArgb(19, 90, 42);
             tbThreads.ThumbOutlineThickness = 2;
+            brutalToolTip1.SetToolTip(tbThreads, "Customize how many threads should be used by Brutal Zip.");
             tbThreads.Value = 50;
             tbThreads.Scroll += tbThreads_Scroll;
             tbThreads.ValueChanged += tbThreads_ValueChanged;
@@ -851,6 +883,7 @@ namespace Brutal_Zip.Views
             chkThreadsAutoMain.Name = "chkThreadsAutoMain";
             chkThreadsAutoMain.Size = new Size(18, 24);
             chkThreadsAutoMain.TabIndex = 9;
+            brutalToolTip1.SetToolTip(chkThreadsAutoMain, "Let Brutal Zip automatically pick the optimal amount of threads.");
             chkThreadsAutoMain.UseVisualStyleBackColor = false;
             chkThreadsAutoMain.CheckedChanged += chkThreadsAutoMain_CheckedChanged;
             // 
@@ -922,8 +955,28 @@ namespace Brutal_Zip.Views
             buttonWizardExtract.TabIndex = 22;
             buttonWizardExtract.Text = "Wizard";
             buttonWizardExtract.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(buttonWizardExtract, "Use the wizard to extract a zip archive step by step.");
             buttonWizardExtract.UseVisualStyleBackColor = false;
             buttonWizardExtract.Click += buttonWizardExtract_Click;
+            // 
+            // buttonTestZip
+            // 
+            buttonTestZip.BackColor = Color.Transparent;
+            buttonTestZip.Dock = DockStyle.Left;
+            buttonTestZip.FlatAppearance.BorderSize = 0;
+            buttonTestZip.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
+            buttonTestZip.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
+            buttonTestZip.FlatStyle = FlatStyle.Flat;
+            buttonTestZip.Image = (Image)resources.GetObject("buttonTestZip.Image");
+            buttonTestZip.Location = new Point(85, 0);
+            buttonTestZip.Name = "buttonTestZip";
+            buttonTestZip.Size = new Size(85, 84);
+            buttonTestZip.TabIndex = 26;
+            buttonTestZip.Text = "Test Zip";
+            buttonTestZip.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(buttonTestZip, "Test a zip file for errors.");
+            buttonTestZip.UseVisualStyleBackColor = false;
+            buttonTestZip.Click += buttonTestZip_Click;
             // 
             // buttonOpenZip
             // 
@@ -940,6 +993,7 @@ namespace Brutal_Zip.Views
             buttonOpenZip.TabIndex = 14;
             buttonOpenZip.Text = "Open Zip";
             buttonOpenZip.TextAlign = ContentAlignment.BottomCenter;
+            brutalToolTip1.SetToolTip(buttonOpenZip, "Open a zip archive for viewing or extraction.");
             buttonOpenZip.UseVisualStyleBackColor = false;
             buttonOpenZip.Click += buttonOpenZip_Click;
             // 
@@ -1074,6 +1128,7 @@ namespace Brutal_Zip.Views
             btnCreateQuick.Size = new Size(160, 28);
             btnCreateQuick.TabIndex = 15;
             btnCreateQuick.Text = "Compress to <auto>";
+            brutalToolTip1.SetToolTip(btnCreateQuick, "Compress zip archive using the folder / file name.");
             btnCreateQuick.UseVisualStyleBackColor = false;
             btnCreateQuick.Click += btnCreateQuick_Click_1;
             // 
@@ -1127,23 +1182,20 @@ namespace Brutal_Zip.Views
             panel9.Size = new Size(994, 32);
             panel9.TabIndex = 1;
             // 
-            // buttonTestZip
+            // brutalToolTip1
             // 
-            buttonTestZip.BackColor = Color.Transparent;
-            buttonTestZip.Dock = DockStyle.Left;
-            buttonTestZip.FlatAppearance.BorderSize = 0;
-            buttonTestZip.FlatAppearance.MouseDownBackColor = Color.FromArgb(32, 32, 32);
-            buttonTestZip.FlatAppearance.MouseOverBackColor = Color.FromArgb(25, 25, 25);
-            buttonTestZip.FlatStyle = FlatStyle.Flat;
-            buttonTestZip.Image = (Image)resources.GetObject("buttonTestZip.Image");
-            buttonTestZip.Location = new Point(85, 0);
-            buttonTestZip.Name = "buttonTestZip";
-            buttonTestZip.Size = new Size(85, 84);
-            buttonTestZip.TabIndex = 26;
-            buttonTestZip.Text = "Test Zip";
-            buttonTestZip.TextAlign = ContentAlignment.BottomCenter;
-            buttonTestZip.UseVisualStyleBackColor = false;
-            buttonTestZip.Click += buttonTestZip_Click;
+            brutalToolTip1.Active = false;
+            brutalToolTip1.BackGradientBottom = Color.FromArgb(80, 0, 0, 0);
+            brutalToolTip1.BackGradientTop = Color.FromArgb(200, 105, 105, 105);
+            brutalToolTip1.BorderColor = Color.Lime;
+            brutalToolTip1.OwnerDraw = true;
+            brutalToolTip1.PaddingX = 6;
+            brutalToolTip1.PaddingY = 4;
+            brutalToolTip1.ShowAlways = true;
+            brutalToolTip1.TextColor = Color.White;
+            brutalToolTip1.ToolTipFont = new Font("Segoe UI", 9F);
+            brutalToolTip1.UseAnimation = false;
+            brutalToolTip1.UseFading = false;
             // 
             // HomeView
             // 
@@ -1151,8 +1203,8 @@ namespace Brutal_Zip.Views
             AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = Color.FromArgb(32, 32, 32);
             Controls.Add(brutalGradientPanel2);
-            Controls.Add(panelExtractZipTab);
             Controls.Add(panelCreateZipTab);
+            Controls.Add(panelExtractZipTab);
             ForeColor = Color.White;
             Name = "HomeView";
             Size = new Size(1000, 700);
@@ -1244,5 +1296,7 @@ namespace Brutal_Zip.Views
         private Panel panel9;
         internal Button btnCreateQuick;
         private Button buttonTestZip;
+        private BrutalCopy2025.Controls.BrutalControls.BrutalToolTip brutalToolTip1;
+        private Label label10;
     }
 }

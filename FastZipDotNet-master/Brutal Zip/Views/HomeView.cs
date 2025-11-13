@@ -159,19 +159,31 @@ namespace Brutal_Zip.Views
             fe.CreateTree(this.treeViewExplorer);
         }
 
+
+        private void RemoveFocusIfPossible(Control cont)
+        {
+            if (cont.Focused)
+            {
+                cont.Parent?.Focus();
+            }
+        }
+
         private void buttonAddFolder_Click(object sender, EventArgs e)
         {
             AddFolderClicked?.Invoke();
+            RemoveFocusIfPossible(buttonAddFolder);
         }
 
         private void buttonAddFiles_Click(object sender, EventArgs e)
         {
             AddFilesClicked?.Invoke();
+            RemoveFocusIfPossible(buttonAddFiles);
         }
 
         private void buttonWizardCreate_Click(object sender, EventArgs e)
         {
             WizardClicked?.Invoke();
+            RemoveFocusIfPossible(buttonWizardCreate);
         }
 
         private void grpCreate_Enter(object sender, EventArgs e)
@@ -200,6 +212,7 @@ namespace Brutal_Zip.Views
         private void btnCreateSetPassword_Click(object sender, EventArgs e)
         {
             CreateSetPasswordClicked?.Invoke();
+            RemoveFocusIfPossible(btnCreateSetPassword);
         }
 
         private void lvStaging_DragEnter(object sender, DragEventArgs e)
@@ -371,11 +384,13 @@ namespace Brutal_Zip.Views
         private void buttonComment_Click(object sender, EventArgs e)
         {
             CommentClicked?.Invoke();
+            RemoveFocusIfPossible(buttonComment);
         }
 
         private void buttonWizardExtract_Click(object sender, EventArgs e)
         {
             WizardClicked?.Invoke();
+            RemoveFocusIfPossible(buttonWizardExtract);
         }
 
         private void treeViewExplorer_ItemDrag(object sender, ItemDragEventArgs e)

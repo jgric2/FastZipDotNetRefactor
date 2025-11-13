@@ -27,7 +27,7 @@ namespace SfxStub
         public string BannerImageBase64 { get; set; } = null;    // png/jpg; optional
 
         // Theme color as hex "#RRGGBB" or "RRGGBB"
-        public string ThemeColor { get; set; } = null;
+        public string ThemeColorStart { get; set; } = null;
         public string ThemeColorEnd { get; set; } = null;
 
         // Extra UI options

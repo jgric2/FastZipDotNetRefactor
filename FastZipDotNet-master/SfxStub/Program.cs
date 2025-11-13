@@ -90,7 +90,7 @@ namespace SfxStub
                 // Branding resources for UI
                 var icon = TryLoadIcon(cfg.IconBase64);
                 var banner = TryLoadImage(cfg.BannerImageBase64);
-                var theme = TryParseColor(cfg.ThemeColor);
+                var theme = TryParseColor(cfg.ThemeColorStart);
                 var themeEnd = TryParseColor(cfg.ThemeColorEnd);
                 // Elevation if needed
                 if (cfg.RequireElevation && !IsElevated())

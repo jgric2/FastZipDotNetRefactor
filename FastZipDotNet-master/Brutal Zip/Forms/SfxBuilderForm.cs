@@ -214,6 +214,9 @@ namespace Brutal_Zip
 
                 // 7) Append config + zip + our custom footer, then re-append bundleTail8
                 byte[] cfgBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(cfg, new System.Text.Json.JsonSerializerOptions { WriteIndented = false });
+
+  
+
                 uint cfgLen = (uint)cfgBytes.Length;
                 ulong zipLen = (ulong)new FileInfo(sourceZip).Length;
 
