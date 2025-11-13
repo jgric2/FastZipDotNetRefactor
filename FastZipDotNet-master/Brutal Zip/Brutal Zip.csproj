@@ -9,6 +9,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>BrutalZip.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>Limintel Solutions</Company>
+    <Description>Fastest Zip archiver on Windows</Description>
+    <Copyright>2025 Limintel Solutions</Copyright>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

@@ -34,7 +34,7 @@ namespace Brutal_Zip
         {
             //Brutal_Zip.Classes.Helpers.BootTrace.Init();
             //BootTrace.Mark("Main entered. Raw args: " + string.Join(" | ", args ?? Array.Empty<string>()));
-
+          //  NativeBootstrap.Initialize();
             //// 1) Try to become primary first (fast)
             //BootTrace.Mark("TryBecomePrimary begin");
             bool iAmPrimary = SingleInstance.TryBecomePrimary();

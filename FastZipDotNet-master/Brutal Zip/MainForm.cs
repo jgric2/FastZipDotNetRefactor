@@ -1560,9 +1560,11 @@ return await sharedTask.ConfigureAwait(false);
                 {
                     while (!reportCts.IsCancellationRequested)
                     {
+                        // inside the reporter loop
                         long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
                         int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
                         double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+                        double fps = sw.Elapsed.TotalSeconds > 0 ? pFiles / sw.Elapsed.TotalSeconds : 0.0;
 
                         progress.Report(new ZipProgress
                         {
@@ -1573,7 +1575,8 @@ return await sharedTask.ConfigureAwait(false);
                             FilesProcessed = pFiles,
                             BytesProcessedUncompressed = pBytes,
                             Elapsed = sw.Elapsed,
-                            SpeedBytesPerSec = speed
+                            SpeedBytesPerSec = speed,
+                            FilesPerSec = fps          // <-- re-added
                         });
 
                         try { await Task.Delay(50, reportCts.Token); } catch { break; }
@@ -2842,17 +2845,19 @@ return await sharedTask.ConfigureAwait(false);
                             long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
                             int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
                             double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+                            double fps = sw.Elapsed.TotalSeconds > 0 ? pFiles / sw.Elapsed.TotalSeconds : 0.0;
 
-                            progress.Report(new FastZipDotNet.Zip.ZipProgress
+                            progress.Report(new ZipProgress
                             {
-                                Operation = FastZipDotNet.Zip.ZipOperation.Build,
+                                Operation = ZipOperation.Build,
                                 CurrentFile = Volatile.Read(ref currentName),
                                 TotalFiles = grandFiles,
                                 TotalBytesUncompressed = grandBytes,
                                 FilesProcessed = pFiles,
                                 BytesProcessedUncompressed = pBytes,
                                 Elapsed = sw.Elapsed,
-                                SpeedBytesPerSec = speed
+                                SpeedBytesPerSec = speed,
+                                FilesPerSec = fps          // <-- re-added
                             });
 
                             try { await Task.Delay(50, reportCts.Token).ConfigureAwait(false); }
@@ -3321,6 +3326,7 @@ return await sharedTask.ConfigureAwait(false);
                         long p = Math.Min(Interlocked.Read(ref processed), totalUnc);
                         int fd = Volatile.Read(ref filesDone);
                         double speed = sw.Elapsed.TotalSeconds > 0 ? p / sw.Elapsed.TotalSeconds : 0.0;
+                        double fps = sw.Elapsed.TotalSeconds > 0 ? fd / sw.Elapsed.TotalSeconds : 0.0;
 
                         progress.Report(new ZipProgress
                         {
@@ -3329,9 +3335,10 @@ return await sharedTask.ConfigureAwait(false);
                             TotalFiles = totalFiles,
                             TotalBytesUncompressed = totalUnc,
                             BytesProcessedUncompressed = p,
-                            FilesProcessed = fd,                            // NEW
+                            FilesProcessed = fd,
                             Elapsed = sw.Elapsed,
-                            SpeedBytesPerSec = speed
+                            SpeedBytesPerSec = speed,
+                            FilesPerSec = fps          // <-- re-added
                         });
 
                         try { await Task.Delay(50, reportCts.Token); } catch { break; }
@@ -3707,6 +3714,7 @@ return await sharedTask.ConfigureAwait(false);
                         long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
                         int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
                         double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+                        double fps = sw.Elapsed.TotalSeconds > 0 ? pFiles / sw.Elapsed.TotalSeconds : 0.0;
 
                         progress.Report(new ZipProgress
                         {
@@ -3717,7 +3725,8 @@ return await sharedTask.ConfigureAwait(false);
                             FilesProcessed = pFiles,
                             BytesProcessedUncompressed = pBytes,
                             Elapsed = sw.Elapsed,
-                            SpeedBytesPerSec = speed
+                            SpeedBytesPerSec = speed,
+                            FilesPerSec = fps          // <-- re-added
                         });
 
                         try { await Task.Delay(50, reportCts.Token); } catch { break; }
