@@ -63,6 +63,60 @@ namespace Brutal_Zip
 
 
 
+        private async Task TestOneZipAsync(string zipPath)
+        {
+            int curThreads = Threads;
+            using var pf = new ProgressForm($"Testing… ({curThreads} threads)");
+            var progress = pf.CreateProgress();
+            pf.Show(this);
+            try
+            {
+                using var zip = new FastZipDotNet.Zip.FastZipDotNet(zipPath, FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate, 6, curThreads);
+                pf.ConfigureThreads(Math.Max(2, Environment.ProcessorCount * 2), curThreads, n => { try { zip.SetMaxConcurrency(n); } catch { } });
+                bool ok = await zip.ZipDataReader.TestArchiveAsync(curThreads, progress, pf.Token);
+                MessageBox.Show(this, ok ? "Test completed successfully." : "Test failed or cancelled.", "Test");
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Test error"); }
+            finally { pf.Close(); }
+        }
+
+        private async Task RepairZipCentralAsync(string zipPath)
+        {
+            using var pf = new ProgressForm("Repairing archive…");
+            var progress = pf.CreateProgress();
+            pf.Show(this);
+            try
+            {
+                bool ok = await FastZipDotNet.Zip.Recovery.ZipRepair.RepairCentralDirectoryAsync(zipPath, progress, pf.Token);
+                MessageBox.Show(this, ok ? "Repair completed." : "Repair failed.", "Repair");
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Repair error"); }
+            finally { pf.Close(); }
+        }
+
+        private async Task EditCommentOnZipAsync(string zipPath)
+        {
+            try
+            {
+                using var zip = new FastZipDotNet.Zip.FastZipDotNet(zipPath, FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate, 6, Threads);
+                using var dlg = new ArchiveCommentForm();
+                dlg.Comment = zip.ZipInfoStruct.ZipComment ?? string.Empty;
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    zip.ArchiveComment = dlg.Comment ?? string.Empty; // marks dirty
+                    zip.Close(); // writes central directory with updated comment
+                    MessageBox.Show(this, "Archive comment updated.", "Comment");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Comment");
+            }
+        }
+
+
         private static string ComputeArchiveId(string zipPath)
         {
             try
@@ -366,6 +420,83 @@ namespace Brutal_Zip
 
             // Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor EXIT");
         }
+
+
+
+        // Suggestion from an arbitrary list of filesystem paths
+        private static (string initialDir, string baseName) SuggestZipNameFromPaths(IEnumerable<string> paths)
+        {
+            if (paths == null) return ("", "Archive");
+
+            var clean = paths.Where(p => !string.IsNullOrWhiteSpace(p))
+                             .Select(p =>
+                             {
+                                 try { return Path.GetFullPath(p.Trim('"')); } catch { return p.Trim('"'); }
+                             })
+                             .Where(p => Directory.Exists(p) || File.Exists(p))
+                             .ToList();
+
+            if (clean.Count == 0)
+                return (Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Archive");
+
+            if (clean.Count == 1)
+            {
+                string p = clean[0];
+                if (Directory.Exists(p))
+                {
+                    var di = new DirectoryInfo(p);
+                    return (di.Parent?.FullName ?? di.FullName, di.Name);
+                }
+                else
+                {
+                    var fi = new FileInfo(p);
+                    return (fi.DirectoryName ?? ".", Path.GetFileNameWithoutExtension(fi.Name));
+                }
+            }
+
+            // Multiple items
+            string firstParent = null;
+            bool allSameParent = true;
+            foreach (var p in clean)
+            {
+                string parent = Directory.Exists(p)
+                    ? new DirectoryInfo(p).Parent?.FullName ?? p
+                    : new FileInfo(p).DirectoryName ?? ".";
+
+                if (firstParent == null) firstParent = parent;
+                else if (!string.Equals(firstParent, parent, StringComparison.OrdinalIgnoreCase))
+                    allSameParent = false;
+            }
+
+            if (string.IsNullOrEmpty(firstParent))
+                firstParent = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+
+            if (allSameParent)
+            {
+                // Use the parent folder name
+                string baseName;
+                try { baseName = new DirectoryInfo(firstParent).Name; }
+                catch { baseName = "Archive"; }
+                if (string.IsNullOrWhiteSpace(baseName)) baseName = "Archive";
+                return (firstParent, baseName);
+            }
+
+            // Different parents → generic
+            return (firstParent, "Archive");
+        }
+
+        // Suggestion from Home staging (_staging list)
+        private (string initialDir, string baseName) SuggestZipNameFromStaging()
+        {
+            var list = new List<string>();
+            foreach (var s in _staging)
+            {
+                if (string.IsNullOrWhiteSpace(s.Path)) continue;
+                list.Add(s.Path);
+            }
+            return SuggestZipNameFromPaths(list);
+        }
+
 
 
         private void DoRenameSelected()
@@ -1348,12 +1479,28 @@ return await sharedTask.ConfigureAwait(false);
             StageCreateFromDrop(new[] { fbd.SelectedPath });
         }
 
+
         private void BrowseCreateDest()
         {
-            using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
-            if (sfd.ShowDialog(this) != DialogResult.OK) return;
-            homeView.CreateDestination = sfd.FileName;
+            var (dir, name) = SuggestZipNameFromStaging();
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "Zip files|*.zip",
+                AddExtension = true,
+                DefaultExt = "zip",
+                OverwritePrompt = true
+            };
+            if (!string.IsNullOrEmpty(dir)) sfd.InitialDirectory = dir;
+            if (!string.IsNullOrEmpty(name)) sfd.FileName = name + ".zip";
+            if (sfd.ShowDialog(this) == DialogResult.OK)
+                homeView.CreateDestination = sfd.FileName;
         }
+        //private void BrowseCreateDest()
+        //{
+        //    using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
+        //    if (sfd.ShowDialog(this) != DialogResult.OK) return;
+        //    homeView.CreateDestination = sfd.FileName;
+        //}
 
         private async void StageCreateFromDrop(IEnumerable<string> paths)
         {
@@ -1639,13 +1786,23 @@ return await sharedTask.ConfigureAwait(false);
                 }
 
                 // Destination
-                var dest = homeView.CreateDestination?.Trim();
+                var dest = "";// homeView.CreateDestination?.Trim();
                 if (string.IsNullOrEmpty(dest))
                 {
-                    using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
+                    var (dir, name) = SuggestZipNameFromStaging();
+                    using var sfd = new SaveFileDialog
+                    {
+                        Filter = "Zip files|*.zip",
+                        AddExtension = true,
+                        DefaultExt = "zip",
+                        OverwritePrompt = true
+                    };
+                    if (!string.IsNullOrEmpty(dir)) sfd.InitialDirectory = dir;
+                    if (!string.IsNullOrEmpty(name)) sfd.FileName = name + ".zip";
                     if (sfd.ShowDialog(this) != DialogResult.OK) return;
                     dest = homeView.CreateDestination = sfd.FileName;
                 }
+
 
                 // Method/level
                 var method = homeView.CreateMethodIndex switch
@@ -2746,13 +2903,13 @@ return await sharedTask.ConfigureAwait(false);
                         break;
                     }
 
-                case Cli.CommandType.ExtractSmart:
-                    {
-                        var zips = !string.IsNullOrWhiteSpace(cmd.Archive) ? new List<string> { cmd.Archive } : SelectionZips();
-                        if (zips.Count == 0) { MessageBox.Show("No .zip files selected."); return; }
-                        foreach (var z in zips) await ExtractOneSmartAsync(z);
-                        break;
-                    }
+                //case Cli.CommandType.ExtractSmart:
+                //    {
+                //        var zips = !string.IsNullOrWhiteSpace(cmd.Archive) ? new List<string> { cmd.Archive } : SelectionZips();
+                //        if (zips.Count == 0) { MessageBox.Show("No .zip files selected."); return; }
+                //        foreach (var z in zips) await ExtractOneSmartAsync(z);
+                //        break;
+                //    }
 
                 case Cli.CommandType.ExtractTo:
                     {
@@ -2783,9 +2940,20 @@ return await sharedTask.ConfigureAwait(false);
                 case Cli.CommandType.CreateTo:
                     {
                         var items = FullSelection();
-                        if (items.Count == 0) { MessageBox.Show("No files/folders selected."); return; }
-                        using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip", FileName = "Archive.zip" };
+                        if (items.Count == 0) { MessageBox.Show(this, "No files/folders selected."); return; }
+
+                        var (dir, name) = SuggestZipNameFromPaths(items);
+                        using var sfd = new SaveFileDialog
+                        {
+                            Filter = "Zip files|*.zip",
+                            AddExtension = true,
+                            DefaultExt = "zip",
+                            OverwritePrompt = true
+                        };
+                        if (!string.IsNullOrEmpty(dir)) sfd.InitialDirectory = dir;
+                        if (!string.IsNullOrEmpty(name)) sfd.FileName = name + ".zip";
                         if (sfd.ShowDialog(this) != DialogResult.OK) return;
+
                         await CreateToAsync(items, sfd.FileName);
                         break;
                     }
@@ -2804,6 +2972,166 @@ return await sharedTask.ConfigureAwait(false);
                             OpenArchive(cmd.Archive);
                         break;
                     }
+                case Cli.CommandType.CreateToDesktop:
+                    {
+                        var items = FullSelection();
+                        if (items.Count == 0) { MessageBox.Show(this, "No files/folders selected."); return; }
+                        string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                        var (dir, name) = SuggestZipNameFromPaths(items);
+                        string dest = MakeUniquePath(Path.Combine(desktop, name + ".zip"));
+                        await CreateToAsync(items, dest);
+                        TryOpenExplorerSelect(dest);
+                        break;
+                    }
+
+                case Cli.CommandType.CreateAES:
+                    {
+                        var items = FullSelection();
+                        if (items.Count == 0) { MessageBox.Show(this, "No files/folders selected."); return; }
+
+                        var oldEncOn = SettingsService.Current.EncryptNewArchivesByDefault;
+                        var oldAlgo = SettingsService.Current.DefaultEncryptAlgorithm;
+                        SettingsService.Current.EncryptNewArchivesByDefault = true;
+                        SettingsService.Current.DefaultEncryptAlgorithm = "AES256";
+
+                        var (dir, name) = SuggestZipNameFromPaths(items);
+                        using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip", AddExtension = true, DefaultExt = "zip", OverwritePrompt = true, InitialDirectory = dir, FileName = name + ".zip" };
+                        if (sfd.ShowDialog(this) == DialogResult.OK)
+                        {
+                            _createPassword = null; // force prompt
+                            await CreateToAsync(items, sfd.FileName);
+                            TryOpenExplorerSelect(sfd.FileName);
+                        }
+
+                        SettingsService.Current.EncryptNewArchivesByDefault = oldEncOn;
+                        SettingsService.Current.DefaultEncryptAlgorithm = oldAlgo;
+                        break;
+                    }
+
+                case Cli.CommandType.CreateStore:
+                    {
+                        var items = FullSelection();
+                        if (items.Count == 0) { MessageBox.Show(this, "No files/folders selected."); return; }
+
+                        var oldMethod = SettingsService.Current.DefaultMethod;
+                        SettingsService.Current.DefaultMethod = "Store";
+
+                        var (dir, name) = SuggestZipNameFromPaths(items);
+                        using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip", AddExtension = true, DefaultExt = "zip", OverwritePrompt = true, InitialDirectory = dir, FileName = name + ".zip" };
+                        if (sfd.ShowDialog(this) == DialogResult.OK)
+                        {
+                            await CreateToAsync(items, sfd.FileName);
+                            TryOpenExplorerSelect(sfd.FileName);
+                        }
+
+                        SettingsService.Current.DefaultMethod = oldMethod;
+                        break;
+                    }
+
+                case Cli.CommandType.AddToExisting:
+                    {
+                        var items = FullSelection();
+                        if (items.Count == 0) { MessageBox.Show(this, "No files/folders selected."); return; }
+                        using var ofd = new OpenFileDialog { Filter = "Zip files|*.zip" };
+                        if (ofd.ShowDialog(this) != DialogResult.OK) return;
+
+                        // Open and append with the existing UI logic
+                        OpenArchive(ofd.FileName);
+                        await AddIntoArchiveAsync(items);
+                        break;
+                    }
+
+                case Cli.CommandType.CreateFolder:
+                case Cli.CommandType.CreateFolderAES:
+                    {
+                        string folder = cmd.Inputs.FirstOrDefault();
+                        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+                        {
+                            MessageBox.Show(this, "Select a valid folder.");
+                            return;
+                        }
+
+                        var di = new DirectoryInfo(folder);
+                        string baseDir = di.Parent?.FullName ?? di.FullName;
+                        string name = di.Name;
+                        string dest = MakeUniquePath(Path.Combine(baseDir, name + ".zip"));
+
+                        var items = new List<string> { folder };
+
+                        bool aes = (cmd.Type == Cli.CommandType.CreateFolderAES);
+                        var oldEncOn = SettingsService.Current.EncryptNewArchivesByDefault;
+                        var oldAlgo = SettingsService.Current.DefaultEncryptAlgorithm;
+                        if (aes) { SettingsService.Current.EncryptNewArchivesByDefault = true; SettingsService.Current.DefaultEncryptAlgorithm = "AES256"; _createPassword = null; }
+
+                        await CreateToAsync(items, dest);
+
+                        if (aes) { SettingsService.Current.EncryptNewArchivesByDefault = oldEncOn; SettingsService.Current.DefaultEncryptAlgorithm = oldAlgo; }
+                        TryOpenExplorerSelect(dest);
+                        break;
+                    }
+
+                case Cli.CommandType.ExtractToDesktop:
+                    {
+                        string zip = !string.IsNullOrEmpty(cmd.Archive) ? cmd.Archive : SelectionZips().FirstOrDefault();
+                        if (string.IsNullOrEmpty(zip)) { MessageBox.Show(this, "No .zip selected."); return; }
+                        string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                        await ExtractZipToAsync(zip, desktop);
+                        if (cmd.DeleteZip) { try { File.Delete(zip); } catch { } }
+                        break;
+                    }
+
+                case Cli.CommandType.ExtractSmart:
+                    {
+                        var zips = !string.IsNullOrEmpty(cmd.Archive) ? new List<string> { cmd.Archive } : SelectionZips();
+                        if (zips.Count == 0) { MessageBox.Show(this, "No .zip files selected."); return; }
+                        foreach (var z in zips)
+                        {
+                            await ExtractOneSmartAsync(z);
+                            if (cmd.DeleteZip) { try { File.Delete(z); } catch { } }
+                        }
+                        break;
+                    }
+
+                case Cli.CommandType.Test:
+                    {
+                        string zip = !string.IsNullOrEmpty(cmd.Archive) ? cmd.Archive : SelectionZips().FirstOrDefault();
+                        if (string.IsNullOrEmpty(zip)) { MessageBox.Show(this, "No .zip selected."); return; }
+                        await TestOneZipAsync(zip);
+                        break;
+                    }
+
+                case Cli.CommandType.Repair:
+                    {
+                        string zip = !string.IsNullOrEmpty(cmd.Archive) ? cmd.Archive : SelectionZips().FirstOrDefault();
+                        if (string.IsNullOrEmpty(zip)) { MessageBox.Show(this, "No .zip selected."); return; }
+                        await RepairZipCentralAsync(zip);
+                        break;
+                    }
+
+                case Cli.CommandType.Comment:
+                    {
+                        string zip = !string.IsNullOrEmpty(cmd.Archive) ? cmd.Archive : SelectionZips().FirstOrDefault();
+                        if (string.IsNullOrEmpty(zip)) { MessageBox.Show(this, "No .zip selected."); return; }
+                        await EditCommentOnZipAsync(zip);
+                        break;
+                    }
+
+                case Cli.CommandType.Sfx:
+                    {
+                        string zip = !string.IsNullOrEmpty(cmd.Archive) ? cmd.Archive : SelectionZips().FirstOrDefault();
+                        if (string.IsNullOrEmpty(zip)) { MessageBox.Show(this, "No .zip selected."); return; }
+                        using var sfx = new SfxBuilderForm(this);
+                        try
+                        {
+                            sfx.rdoUseFile.Checked = true;
+                            sfx.txtZipPath.Text = zip;
+                        }
+                        catch { }
+                        sfx.ShowDialog(this);
+                        break;
+                    }
+
+
 
                 case Cli.CommandType.None:
                 default:
@@ -3449,12 +3777,25 @@ return await sharedTask.ConfigureAwait(false);
             finally { pf.Close(); }
         }
 
-        private async System.Threading.Tasks.Task ExtractSelectedTo()
+        private async Task ExtractSelectedTo()
         {
             if (_zip == null) return;
             if (viewerView.lvArchive.SelectedIndices.Count == 0) { MessageBox.Show(this, "Select items."); return; }
+
             using var fbd = new FolderBrowserDialog();
+
+            // Suggest initial directory = current zip folder, or last used extract dir if you store one
+            string init = "";
+            try { init = Path.GetDirectoryName(_zipPath) ?? ""; } catch { }
+            if (!string.IsNullOrEmpty(init) && Directory.Exists(init))
+                fbd.SelectedPath = init;
+
             if (fbd.ShowDialog(this) != DialogResult.OK) return;
+
+            // Optional: remember user’s choice for next time
+            SettingsService.Current.LastExtractDir = fbd.SelectedPath;
+            try { SettingsService.Save(); } catch { }
+
             await ExtractSelectionAsync(fbd.SelectedPath);
         }
 
@@ -4116,7 +4457,21 @@ return await sharedTask.ConfigureAwait(false);
         private void ExportList()
         {
             if (_zip == null) return;
-            using var sfd = new SaveFileDialog { Filter = "CSV (.csv)|.csv|JSON (.json)|.json" };
+            var baseName = "Archive";
+            try
+            {
+                if (!string.IsNullOrEmpty(_zipPath))
+                    baseName = Path.GetFileNameWithoutExtension(_zipPath);
+            }
+            catch { }
+
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "CSV (.csv)|.csv|JSON (.json)|.json",
+                AddExtension = true,
+                OverwritePrompt = true,
+                FileName = baseName + ".csv" // default; user can switch filter to JSON
+            };
             if (sfd.ShowDialog(this) != DialogResult.OK) return;
 
             var entries = _zip.ZipFileEntries;

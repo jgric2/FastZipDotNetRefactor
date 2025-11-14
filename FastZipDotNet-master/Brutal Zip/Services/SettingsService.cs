@@ -66,5 +66,7 @@ namespace BrutalZip
         public bool EncryptNewArchivesByDefault { get; set; } = false;
         // Accepted values: "ZipCrypto", "AES128", "AES192", "AES256"
         public string DefaultEncryptAlgorithm { get; set; } = "ZipCrypto";
+
+        public string LastExtractDir { get; set; } = "";
     }
 }

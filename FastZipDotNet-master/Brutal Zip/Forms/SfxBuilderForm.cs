@@ -191,8 +191,17 @@ namespace Brutal_Zip
                     ThemeColorEnd = ToHexColor(pnlThemeColorEnd.BackColor)
                 };
 
+
+                string suggested = "Setup";
+                try
+                {
+                    suggested = Path.GetFileNameWithoutExtension(sourceZip);
+                }
+                catch { /* keep "Setup" */ }
+
+
                 // 3) Choose output
-                using var sfd = new SaveFileDialog { Filter = "Self-extracting exe|*.exe", FileName = "Setup.exe" };
+                using var sfd = new SaveFileDialog { Filter = "Self-extracting exe|*.exe", FileName = suggested + ".exe" };
                 if (sfd.ShowDialog(this) != DialogResult.OK) return;
                 string outExe = sfd.FileName;
 

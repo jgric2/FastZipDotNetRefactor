@@ -238,10 +238,90 @@ namespace Brutal_Zip
 
         private void BrowseCreateDest()
         {
-            using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
+            // Harvest current staging in the wizard (from lvCreate items)
+            var inputs = new List<string>();
+            foreach (ListViewItem it in lvCreate.Items)
+            {
+                if (it?.Tag is StagedItem s && !string.IsNullOrWhiteSpace(s.Path))
+                    inputs.Add(s.Path);
+            }
+
+            var (initialDir, baseName) = SuggestFromWizardInputs(inputs);
+
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "Zip files|*.zip",
+                AddExtension = true,
+                DefaultExt = "zip",
+                OverwritePrompt = true
+            };
+            if (!string.IsNullOrEmpty(initialDir)) sfd.InitialDirectory = initialDir;
+            if (!string.IsNullOrEmpty(baseName)) sfd.FileName = baseName + ".zip";
+
             if (sfd.ShowDialog(this) == DialogResult.OK)
                 txtCreateDest.Text = sfd.FileName;
+
+            // Local helper
+            (string initialDir, string baseName) SuggestFromWizardInputs(List<string> paths)
+            {
+                if (paths == null || paths.Count == 0)
+                    return (Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Archive");
+
+                // reuse MainForm logic semantics
+                string firstParent = null;
+                bool allSame = true;
+                var normalized = new List<string>();
+                foreach (var p in paths)
+                {
+                    try { normalized.Add(Path.GetFullPath(p)); } catch { normalized.Add(p); }
+                }
+
+                if (normalized.Count == 1)
+                {
+                    string p = normalized[0];
+                    if (Directory.Exists(p))
+                    {
+                        var di = new DirectoryInfo(p);
+                        return (di.Parent?.FullName ?? di.FullName, di.Name);
+                    }
+                    else
+                    {
+                        var fi = new FileInfo(p);
+                        return (fi.DirectoryName ?? ".", Path.GetFileNameWithoutExtension(fi.Name));
+                    }
+                }
+
+                foreach (var p in normalized)
+                {
+                    string parent = Directory.Exists(p)
+                        ? new DirectoryInfo(p).Parent?.FullName ?? p
+                        : new FileInfo(p).DirectoryName ?? ".";
+                    if (firstParent == null) firstParent = parent;
+                    else if (!string.Equals(firstParent, parent, StringComparison.OrdinalIgnoreCase))
+                        allSame = false;
+                }
+
+                if (string.IsNullOrEmpty(firstParent))
+                    firstParent = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+
+                if (allSame)
+                {
+                    string baseName;
+                    try { baseName = new DirectoryInfo(firstParent).Name; }
+                    catch { baseName = "Archive"; }
+                    if (string.IsNullOrWhiteSpace(baseName)) baseName = "Archive";
+                    return (firstParent, baseName);
+                }
+
+                return (firstParent, "Archive");
+            }
         }
+        //private void BrowseCreateDest()
+        //{
+        //    using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
+        //    if (sfd.ShowDialog(this) == DialogResult.OK)
+        //        txtCreateDest.Text = sfd.FileName;
+        //}
 
         private void BrowseZip()
         {

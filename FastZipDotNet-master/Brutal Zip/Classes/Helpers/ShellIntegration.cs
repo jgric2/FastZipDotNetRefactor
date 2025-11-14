@@ -6,50 +6,92 @@ using System.Runtime.InteropServices;
 
 namespace Brutal_Zip.Classes.Helpers
 {
+
     internal static class ShellIntegration
     {
-        // Single, unified parent in classic menu
-        private const string ParentKey = @"Software\Classes\AllFileSystemObjects\shell\BrutalZip";
-
-        // Optional: Windows 11 classic (Win10) context menu switch (same CLSID and technique RightClickTools uses)
-        private const string Win11ClassicContextMenuKey = @"Software\Classes\CLSID\{86CA1AA0-34AA-4E8B-A509-50C905BAE2A2}\InprocServer32";
+        private const string ParentAll = @"Software\Classes\AllFileSystemObjects\shell\BrutalZip";
+        private const string ParentDir = @"Software\Classes\Directory\shell\BrutalZip";
+        private const string ParentBg = @"Software\Classes\Directory\Background\shell\BrutalZip";
+        private const string Win11ClassicContextMenuKey = @"Software\Classes\CLSID{86CA1AA0-34AA-4E8B-A509-50C905BAE2A2}\InprocServer32";
 
         public static void Install()
         {
             string exe = GetExePath();
 
-            // Clean up previous layouts you might have created
-            SafeDeleteTree(ParentKey);
+            // Clean
+            SafeDeleteTree(ParentAll);
+            SafeDeleteTree(ParentDir);
+            SafeDeleteTree(ParentBg);
 
-            // Create parent (cascaded)
-            using (var parent = Registry.CurrentUser.CreateSubKey(ParentKey))
+            // Parent under AllFileSystemObjects
+            using (var parent = Registry.CurrentUser.CreateSubKey(ParentAll))
             {
-                // This tells Explorer it’s a cascaded item with subcommands under "shell\..."
                 parent.SetValue("SubCommands", "", RegistryValueKind.String);
                 parent.SetValue("MUIVerb", "Brutal Zip", RegistryValueKind.String);
                 parent.SetValue("Icon", exe, RegistryValueKind.String);
-                // Ensures it shows even with large multi-selection
                 parent.SetValue("MultiSelectModel", "Player", RegistryValueKind.String);
             }
 
-            // Create subcommands directly under ...\shell\
-            using (var shell = Registry.CurrentUser.CreateSubKey($@"{ParentKey}\shell"))
+            using (var shell = Registry.CurrentUser.CreateSubKey($@"{ParentAll}\shell"))
             {
-                // CREATE group (always visible)
-                // We don’t use a second-level submenu for “Create” here — RightClickTools pattern is flatter and very reliable.
-                // CREATE
-                // CREATE
+                // CREATE (existing)
                 CreateVerb(shell, "10-CreateQuick", "Compress using Brutal Zip", exe, $"\"{exe}\" --create-quick \"%1\"");
                 CreateVerb(shell, "11-CreateTo", "Compress to...", exe, $"\"{exe}\" --create-to \"%1\"");
                 CreateVerb(shell, "12-CreateEach", "Compress each selected item", exe, $"\"{exe}\" --create-each \"%1\"");
                 CreateVerb(shell, "13-OpenWith", "Open Brutal Zip with selection", exe, $"\"{exe}\" --stage \"%1\"");
 
-                // EXTRACT (only when a .zip is selected)
+                // CREATE – extras
+                CreateVerb(shell, "14-CreateToDesktop", "Compress to Desktop", exe, $"\"{exe}\" --create-to-desktop \"%1\"");
+                CreateVerb(shell, "15-CreateAES", "Compress (AES-256)…", exe, $"\"{exe}\" --create-aes \"%1\"");
+                CreateVerb(shell, "16-CreateStore", "Compress (Store)", exe, $"\"{exe}\" --create-store \"%1\"");
+                CreateVerb(shell, "17-AddToExisting", "Add to existing zip…", exe, $"\"{exe}\" --add-to \"%1\"");
+
+                // EXTRACT (only for .zip)
                 const string OnlyZip = "System.FileExtension:=.zip";
                 CreateVerb(shell, "20-ExtractHere", "Extract Here", exe, $"\"{exe}\" --extract-here \"%1\"", appliesTo: OnlyZip);
                 CreateVerb(shell, "21-ExtractSmart", "Extract (Smart)", exe, $"\"{exe}\" --extract-smart \"%1\"", appliesTo: OnlyZip);
                 CreateVerb(shell, "22-ExtractTo", "Extract to...", exe, $"\"{exe}\" --extract-to \"%1\"", appliesTo: OnlyZip);
                 CreateVerb(shell, "23-ExtractEach", "Extract each selected zip", exe, $"\"{exe}\" --extract-each \"%1\"", appliesTo: OnlyZip);
+
+                // EXTRACT – extras
+                CreateVerb(shell, "24-ExtractDesktop", "Extract to Desktop", exe, $"\"{exe}\" --extract-to-desktop \"%1\"", appliesTo: OnlyZip);
+                CreateVerb(shell, "25-ExtractDel", "Extract (Smart) and delete zip", exe, $"\"{exe}\" --extract-smart --delete-zip \"%1\"", appliesTo: OnlyZip);
+
+                // ZIP tools
+                CreateVerb(shell, "30-Test", "Test archive", exe, $"\"{exe}\" --test \"%1\"", appliesTo: OnlyZip);
+                CreateVerb(shell, "31-Repair", "Repair archive", exe, $"\"{exe}\" --repair \"%1\"", appliesTo: OnlyZip);
+                CreateVerb(shell, "32-Comment", "Edit comment…", exe, $"\"{exe}\" --comment \"%1\"", appliesTo: OnlyZip);
+                CreateVerb(shell, "33-SFX", "Build Self-Extracting (.exe)…", exe, $"\"{exe}\" --sfx \"%1\"", appliesTo: OnlyZip);
+            }
+
+            // Parent under Directory (right-click a folder name)
+            using (var parent = Registry.CurrentUser.CreateSubKey(ParentDir))
+            {
+                parent.SetValue("SubCommands", "", RegistryValueKind.String);
+                parent.SetValue("MUIVerb", "Brutal Zip", RegistryValueKind.String);
+                parent.SetValue("Icon", exe, RegistryValueKind.String);
+            }
+            using (var shell = Registry.CurrentUser.CreateSubKey($@"{ParentDir}\shell"))
+            {
+                // %1 will be the folder path
+                CreateVerb(shell, "10-CompressFolder", "Compress this folder", exe, $"\"{exe}\" --create-folder \"%1\"");
+                CreateVerb(shell, "11-CompressFolderAES", "Compress this folder (AES-256)…", exe, $"\"{exe}\" --create-folder-aes \"%1\"");
+                CreateVerb(shell, "12-OpenInApp", "Open with Brutal Zip", exe, $"\"{exe}\" --stage \"%1\"");
+            }
+
+            // Parent under Directory background (right-click inside a folder background)
+            using (var parent = Registry.CurrentUser.CreateSubKey(ParentBg))
+            {
+                parent.SetValue("SubCommands", "", RegistryValueKind.String);
+                parent.SetValue("MUIVerb", "Brutal Zip", RegistryValueKind.String);
+                parent.SetValue("Icon", exe, RegistryValueKind.String);
+            }
+            using (var shell = Registry.CurrentUser.CreateSubKey($@"{ParentBg}\shell"))
+            {
+                // For Directory\Background verbs, Explorer passes the current folder path as %V
+                CreateVerb(shell, "10-CompressHere", "Compress this folder", exe, $"\"{exe}\" --create-folder \"%V\"");
+                CreateVerb(shell, "11-CompressHereAES", "Compress this folder (AES-256)…", exe, $"\"{exe}\" --create-folder-aes \"%V\"");
+                CreateVerb(shell, "12-OpenInApp", "Open with Brutal Zip", exe, $"\"{exe}\" --stage \"%V\"");
             }
 
             RefreshExplorer();
@@ -57,40 +99,14 @@ namespace Brutal_Zip.Classes.Helpers
 
         public static void Uninstall()
         {
-            SafeDeleteTree(ParentKey);
+            SafeDeleteTree(ParentAll);
+            SafeDeleteTree(ParentDir);
+            SafeDeleteTree(ParentBg);
             RefreshExplorer();
         }
 
-        // Optional: if you want to provide a toggle in Settings to show Win10-like classic menu on Win11
-        public static void SetWin11ClassicContextMenu(bool enable)
-        {
-            // Add empty default value = enable; remove key = disable
-            if (IsWindows11())
-            {
-                if (enable)
-                {
-                    using var k = Registry.CurrentUser.CreateSubKey(Win11ClassicContextMenuKey);
-                    k.SetValue("", "", RegistryValueKind.String);
-                }
-                else
-                {
-                    SafeDeleteTree(Win11ClassicContextMenuKey);
-                }
-                RestartExplorer();
-            }
-        }
 
-        private static void CreateVerb(RegistryKey parentShell, string keyName, string title, string exe, string command, string? appliesTo = null)
-        {
-            using var verb = parentShell.CreateSubKey(keyName);
-            verb.SetValue("MUIVerb", title, RegistryValueKind.String);
-            verb.SetValue("Icon", exe, RegistryValueKind.String);
-            if (!string.IsNullOrEmpty(appliesTo))
-                verb.SetValue("AppliesTo", appliesTo, RegistryValueKind.String);
 
-            using var cmd = verb.CreateSubKey("command");
-            cmd.SetValue(null, command, RegistryValueKind.String);
-        }
 
         private static string GetExePath()
         {
@@ -150,7 +166,169 @@ namespace Brutal_Zip.Classes.Helpers
             }
             catch { }
         }
+
+
+
+        // ... keep GetExePath, SafeDeleteTree, Win11 toggle, SHChangeNotify, RestartExplorer as you have ...
+        private static void CreateVerb(RegistryKey parentShell, string keyName, string title, string exe, string command, string? appliesTo = null)
+        {
+            using var verb = parentShell.CreateSubKey(keyName);
+            verb.SetValue("MUIVerb", title, RegistryValueKind.String);
+            verb.SetValue("Icon", exe, RegistryValueKind.String);
+            if (!string.IsNullOrEmpty(appliesTo))
+                verb.SetValue("AppliesTo", appliesTo, RegistryValueKind.String);
+
+            using var cmd = verb.CreateSubKey("command");
+            cmd.SetValue(null, command, RegistryValueKind.String);
+        }
     }
+
+
+    ////////internal static class ShellIntegration
+    ////////{
+    ////////    // Single, unified parent in classic menu
+    ////////    private const string ParentKey = @"Software\Classes\AllFileSystemObjects\shell\BrutalZip";
+
+    ////////    // Optional: Windows 11 classic (Win10) context menu switch (same CLSID and technique RightClickTools uses)
+    ////////    private const string Win11ClassicContextMenuKey = @"Software\Classes\CLSID\{86CA1AA0-34AA-4E8B-A509-50C905BAE2A2}\InprocServer32";
+
+    ////////    public static void Install()
+    ////////    {
+    ////////        string exe = GetExePath();
+
+    ////////        // Clean up previous layouts you might have created
+    ////////        SafeDeleteTree(ParentKey);
+
+    ////////        // Create parent (cascaded)
+    ////////        using (var parent = Registry.CurrentUser.CreateSubKey(ParentKey))
+    ////////        {
+    ////////            // This tells Explorer it’s a cascaded item with subcommands under "shell\..."
+    ////////            parent.SetValue("SubCommands", "", RegistryValueKind.String);
+    ////////            parent.SetValue("MUIVerb", "Brutal Zip", RegistryValueKind.String);
+    ////////            parent.SetValue("Icon", exe, RegistryValueKind.String);
+    ////////            // Ensures it shows even with large multi-selection
+    ////////            parent.SetValue("MultiSelectModel", "Player", RegistryValueKind.String);
+    ////////        }
+
+    ////////        // Create subcommands directly under ...\shell\
+    ////////        using (var shell = Registry.CurrentUser.CreateSubKey($@"{ParentKey}\shell"))
+    ////////        {
+    ////////            // CREATE group (always visible)
+    ////////            // We don’t use a second-level submenu for “Create” here — RightClickTools pattern is flatter and very reliable.
+    ////////            // CREATE
+    ////////            // CREATE
+    ////////            CreateVerb(shell, "10-CreateQuick", "Compress using Brutal Zip", exe, $"\"{exe}\" --create-quick \"%1\"");
+    ////////            CreateVerb(shell, "11-CreateTo", "Compress to...", exe, $"\"{exe}\" --create-to \"%1\"");
+    ////////            CreateVerb(shell, "12-CreateEach", "Compress each selected item", exe, $"\"{exe}\" --create-each \"%1\"");
+    ////////            CreateVerb(shell, "13-OpenWith", "Open Brutal Zip with selection", exe, $"\"{exe}\" --stage \"%1\"");
+
+    ////////            // EXTRACT (only when a .zip is selected)
+    ////////            const string OnlyZip = "System.FileExtension:=.zip";
+    ////////            CreateVerb(shell, "20-ExtractHere", "Extract Here", exe, $"\"{exe}\" --extract-here \"%1\"", appliesTo: OnlyZip);
+    ////////            CreateVerb(shell, "21-ExtractSmart", "Extract (Smart)", exe, $"\"{exe}\" --extract-smart \"%1\"", appliesTo: OnlyZip);
+    ////////            CreateVerb(shell, "22-ExtractTo", "Extract to...", exe, $"\"{exe}\" --extract-to \"%1\"", appliesTo: OnlyZip);
+    ////////            CreateVerb(shell, "23-ExtractEach", "Extract each selected zip", exe, $"\"{exe}\" --extract-each \"%1\"", appliesTo: OnlyZip);
+    ////////        }
+
+    ////////        RefreshExplorer();
+    ////////    }
+
+    ////////    public static void Uninstall()
+    ////////    {
+    ////////        SafeDeleteTree(ParentKey);
+    ////////        RefreshExplorer();
+    ////////    }
+
+    ////////    // Optional: if you want to provide a toggle in Settings to show Win10-like classic menu on Win11
+    ////////    public static void SetWin11ClassicContextMenu(bool enable)
+    ////////    {
+    ////////        // Add empty default value = enable; remove key = disable
+    ////////        if (IsWindows11())
+    ////////        {
+    ////////            if (enable)
+    ////////            {
+    ////////                using var k = Registry.CurrentUser.CreateSubKey(Win11ClassicContextMenuKey);
+    ////////                k.SetValue("", "", RegistryValueKind.String);
+    ////////            }
+    ////////            else
+    ////////            {
+    ////////                SafeDeleteTree(Win11ClassicContextMenuKey);
+    ////////            }
+    ////////            RestartExplorer();
+    ////////        }
+    ////////    }
+
+    ////////    private static void CreateVerb(RegistryKey parentShell, string keyName, string title, string exe, string command, string? appliesTo = null)
+    ////////    {
+    ////////        using var verb = parentShell.CreateSubKey(keyName);
+    ////////        verb.SetValue("MUIVerb", title, RegistryValueKind.String);
+    ////////        verb.SetValue("Icon", exe, RegistryValueKind.String);
+    ////////        if (!string.IsNullOrEmpty(appliesTo))
+    ////////            verb.SetValue("AppliesTo", appliesTo, RegistryValueKind.String);
+
+    ////////        using var cmd = verb.CreateSubKey("command");
+    ////////        cmd.SetValue(null, command, RegistryValueKind.String);
+    ////////    }
+
+    ////////    private static string GetExePath()
+    ////////    {
+    ////////        try
+    ////////        {
+    ////////            string exe = Process.GetCurrentProcess().MainModule?.FileName ?? AppDomain.CurrentDomain.BaseDirectory;
+    ////////            if (!File.Exists(exe)) exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BrutalZip.exe");
+    ////////            return exe;
+    ////////        }
+    ////////        catch
+    ////////        {
+    ////////            return "BrutalZip.exe";
+    ////////        }
+    ////////    }
+
+    ////////    private static void SafeDeleteTree(string key)
+    ////////    {
+    ////////        try
+    ////////        {
+    ////////            Registry.CurrentUser.DeleteSubKeyTree(key, false);
+    ////////        }
+    ////////        catch
+    ////////        {
+    ////////            var tt = "";
+    ////////        }
+    ////////    }
+
+    ////////    private static bool IsWindows11()
+    ////////    {
+    ////////        try
+    ////////        {
+    ////////            var val = Registry.LocalMachine.OpenSubKey(@"Software\Microsoft\Windows NT\CurrentVersion")?
+    ////////                                  .GetValue("CurrentBuildNumber")?.ToString();
+    ////////            if (int.TryParse(val, out int build)) return build >= 21996;
+    ////////        }
+    ////////        catch { }
+    ////////        return false;
+    ////////    }
+
+    ////////    [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    ////////    private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+
+    ////////    private static void RefreshExplorer()
+    ////////    {
+    ////////        try { SHChangeNotify(0x08000000, 0x1000, IntPtr.Zero, IntPtr.Zero); } catch { }
+    ////////    }
+
+    ////////    private static void RestartExplorer()
+    ////////    {
+    ////////        try
+    ////////        {
+    ////////            foreach (var proc in Process.GetProcessesByName("explorer"))
+    ////////            {
+    ////////                try { proc.Kill(); proc.WaitForExit(); } catch { }
+    ////////            }
+    ////////            Process.Start("explorer.exe");
+    ////////        }
+    ////////        catch { }
+    ////////    }
+    ////////}
 }
 
 
