@@ -142,11 +142,14 @@ namespace FastZipDotNet.Zip.Writers
         {
             try
             {
-                var encoder = _zfe.EncodeUTF8 ? Encoding.UTF8 : Zip.Helpers.EncodingHelper.DefaultEncoding;
+                var encoder = _zfe.EncodeUTF8 ? Encoding.UTF8 : EncodingHelper.DefaultEncoding;
                 byte[] nameBytes = encoder.GetBytes(_zfe.FilenameInZip);
                 byte[] commentBytes = encoder.GetBytes(_zfe.Comment ?? "");
 
                 bool isDirectory = _zfe.FilenameInZip.EndsWith("/", StringComparison.Ordinal);
+
+                // Zip64 is needed if ANY central 32-bit field would overflow:
+                // sizes (for files) or local header offset (for both files and directories), or disk number
                 bool zip64Needed =
                     _zfe.FileSize >= uint.MaxValue ||
                     _zfe.CompressedSize >= uint.MaxValue ||
@@ -176,38 +179,48 @@ namespace FastZipDotNet.Zip.Writers
                 zipFileStream.Write(BitConverter.GetBytes(methodToWrite), 0, 2);
 
                 // DOS time/date
-                zipFileStream.Write(BitConverter.GetBytes(Zip.Helpers.DosHelpers.DateTimeToDosTime(_zfe.ModifyTime)), 0, 4);
+                zipFileStream.Write(BitConverter.GetBytes(DosHelpers.DateTimeToDosTime(_zfe.ModifyTime)), 0, 4);
 
-                // CRC real for files, 0 for dirs
+                // CRC in CENTRAL: 0 for directories, real for files
                 uint crcCentral = isDirectory ? 0u : _zfe.Crc32;
                 zipFileStream.Write(BitConverter.GetBytes(crcCentral), 0, 4);
 
-                // Sizes in CENTRAL
-                uint csizeCentral = (zip64Needed && !isDirectory) ? 0xFFFFFFFFu : (uint)_zfe.CompressedSize;
-                uint usizeCentral = (zip64Needed && !isDirectory) ? 0xFFFFFFFFu : (uint)_zfe.FileSize;
+                // Sizes in CENTRAL (0 for dirs; for files possibly Zip64)
+                uint csizeCentral = (!isDirectory && _zfe.CompressedSize >= uint.MaxValue) ? 0xFFFFFFFFu : (uint)_zfe.CompressedSize;
+                uint usizeCentral = (!isDirectory && _zfe.FileSize >= uint.MaxValue) ? 0xFFFFFFFFu : (uint)_zfe.FileSize;
                 zipFileStream.Write(BitConverter.GetBytes(csizeCentral), 0, 4);
                 zipFileStream.Write(BitConverter.GetBytes(usizeCentral), 0, 4);
 
                 // Name length
                 zipFileStream.Write(BitConverter.GetBytes((ushort)nameBytes.Length), 0, 2);
 
-                // CENTRAL extra
+                // CENTRAL extra: Zip64 (if needed), AES (files), timestamps (both), NTFS (files only)
                 using var msExtra = new MemoryStream();
                 using var bw = new BinaryWriter(msExtra);
 
-                if (zip64Needed && !isDirectory)
+                if (zip64Needed)
                 {
                     bw.Write((ushort)0x0001);
+
+                    // Compute which 64-bit values we must include.
+                    // Include only those whose 32-bit fields were set to 0xFFFF/0xFFFFFFFF.
                     ushort dataSize = 0;
-                    if (_zfe.FileSize >= uint.MaxValue) dataSize += 8;
-                    if (_zfe.CompressedSize >= uint.MaxValue) dataSize += 8;
-                    if (_zfe.HeaderOffset >= uint.MaxValue) dataSize += 8;
-                    if (_zfe.DiskNumberStart >= ushort.MaxValue) dataSize += 4;
+                    bool writeUnc = (!isDirectory && _zfe.FileSize >= uint.MaxValue);
+                    bool writeCmp = (!isDirectory && _zfe.CompressedSize >= uint.MaxValue);
+                    bool writeOff = (_zfe.HeaderOffset >= uint.MaxValue);
+                    bool writeDisk = (_zfe.DiskNumberStart >= ushort.MaxValue);
+
+                    if (writeUnc) dataSize += 8;
+                    if (writeCmp) dataSize += 8;
+                    if (writeOff) dataSize += 8;
+                    if (writeDisk) dataSize += 4;
+
                     bw.Write(dataSize);
-                    if (_zfe.FileSize >= uint.MaxValue) bw.Write((ulong)_zfe.FileSize);
-                    if (_zfe.CompressedSize >= uint.MaxValue) bw.Write((ulong)_zfe.CompressedSize);
-                    if (_zfe.HeaderOffset >= uint.MaxValue) bw.Write((ulong)_zfe.HeaderOffset);
-                    if (_zfe.DiskNumberStart >= ushort.MaxValue) bw.Write((uint)_zfe.DiskNumberStart);
+
+                    if (writeUnc) bw.Write((ulong)_zfe.FileSize);
+                    if (writeCmp) bw.Write((ulong)_zfe.CompressedSize);
+                    if (writeOff) bw.Write((ulong)_zfe.HeaderOffset);
+                    if (writeDisk) bw.Write((uint)_zfe.DiskNumberStart);
                 }
 
                 if (_zfe.IsAes && !isDirectory)
@@ -227,7 +240,7 @@ namespace FastZipDotNet.Zip.Writers
                 uint unixMTime = (uint)new DateTimeOffset(_zfe.ModifyTime).ToUnixTimeSeconds();
                 bw.Write(unixMTime);
 
-                // NTFS 0x000A in CENTRAL – only for files (skip for directories)
+                // NTFS 0x000A only for files (skip for directories)
                 if (!isDirectory)
                 {
                     bw.Write((ushort)0x000A);
@@ -249,18 +262,18 @@ namespace FastZipDotNet.Zip.Writers
                 // Comment len
                 zipFileStream.Write(BitConverter.GetBytes((ushort)commentBytes.Length), 0, 2);
 
-                // Disk start
-                ushort diskStart = (zip64Needed && !isDirectory) ? (ushort)0xFFFF : _zfe.DiskNumberStart;
-                zipFileStream.Write(BitConverter.GetBytes(diskStart), 0, 2);
+                // Disk start (Zip64 marker if needed)
+                ushort diskStartField = (_zfe.DiskNumberStart >= ushort.MaxValue) ? (ushort)0xFFFF : _zfe.DiskNumberStart;
+                zipFileStream.Write(BitConverter.GetBytes(diskStartField), 0, 2);
 
-                // Internal attrs (0)
+                // Internal attrs
                 zipFileStream.Write(BitConverter.GetBytes((ushort)0), 0, 2);
 
-                // External attrs – DOS 0x10 for dir, 0x20 or as passed for files
+                // External attrs – DOS 0x10 for dir, etc.
                 zipFileStream.Write(BitConverter.GetBytes(_zfe.ExternalFileAttr), 0, 4);
 
-                // Rel offset of local header
-                uint relOff = (zip64Needed && !isDirectory) ? 0xFFFFFFFFu : (uint)_zfe.HeaderOffset;
+                // Rel offset of local header – 0xFFFFFFFF if Zip64 was used for offset
+                uint relOff = (_zfe.HeaderOffset >= uint.MaxValue) ? 0xFFFFFFFFu : (uint)_zfe.HeaderOffset;
                 zipFileStream.Write(BitConverter.GetBytes(relOff), 0, 4);
 
                 // payloads
