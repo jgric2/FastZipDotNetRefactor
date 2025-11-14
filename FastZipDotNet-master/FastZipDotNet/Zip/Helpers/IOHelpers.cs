@@ -33,19 +33,39 @@
             }
         }
 
-        public static string NormalizedFilename(string _filename)
+        public static string NormalizedFilename(string p)
         {
-            try
-            {
-                string filename = _filename.Replace('\\', '/');
-                int pos = filename.IndexOf(':');
-                if (pos >= 0)
-                    filename = filename.Remove(0, pos + 1);
+            if (string.IsNullOrEmpty(p)) return "";
+            // normalize slashes
+            p = p.Replace('\\', '/');
+            
+            // remove drive prefix "C:" etc, keep rest unchanged
+            int pos = p.IndexOf(':');
+            if (pos >= 0)
+                p = p.Substring(pos + 1);
 
-                return filename.Trim('/');
-            }
-            catch (Exception ex) { throw new Exception(ex.Message + "\r\nBrutalZip error in NormalizedFilename"); }
+            // DO NOT trim trailing slash; just trim leading slashes
+            p = p.TrimStart('/');
+
+            // collapse duplicate slashes (optional)
+            // while (p.Contains("//")) p = p.Replace("//", "/");
+
+            return p;
         }
+
+        //public static string NormalizedFilename(string _filename)
+        //{
+        //    try
+        //    {
+        //        string filename = _filename.Replace('\\', '/');
+        //        int pos = filename.IndexOf(':');
+        //        if (pos >= 0)
+        //            filename = filename.Remove(0, pos + 1);
+
+        //        return filename.Trim('/');
+        //    }
+        //    catch (Exception ex) { throw new Exception(ex.Message + "\r\nBrutalZip error in NormalizedFilename"); }
+        //}
 
     }
 }

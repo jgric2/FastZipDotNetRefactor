@@ -1316,48 +1316,32 @@ namespace FastZipDotNet.Zip.Writers
         {
             try
             {
-                // Ensure directory form ends with '/'
+                // ensure one trailing slash
+                folderNameInZip = folderNameInZip.Replace('\\', '/');
                 if (!folderNameInZip.EndsWith("/"))
                     folderNameInZip += "/";
 
                 var zfe = new ZipFileEntry
                 {
-                    FilenameInZip = IOHelpers.NormalizedFilename(folderNameInZip),
+                    FilenameInZip = IOHelpers.NormalizedFilename(folderNameInZip), // now retains trailing '/'
                     Comment = "",
-                    Method = Compression.Store,        // no compression
+                    Method = Compression.Store,
                     EncodeUTF8 = FastZipDotNet.EncodeUTF8,
                     FileSize = 0,
                     CompressedSize = 0,
                     Crc32 = 0,
                     ModifyTime = DateTime.Now,
-
-                    // MS-DOS directory attribute + “directory” bit in external attributes
-                    ExternalFileAttr = (uint)((1 << 4) | 0x10),
+                    // DOS directory bit; also set the Windows FILE_ATTRIBUTE_DIRECTORY at low byte
+                    ExternalFileAttr = 0x10
                 };
 
-                // Build local header bytes (no data follows for an empty folder)
                 var localHeader = ZipWritersHeaders.BuildLocalHeaderBytes(ref zfe);
-
-                // Reserve space and get absolute offset (this advances AppendOffset atomically)
                 long start = FastZipDotNet.Reserve(localHeader.Length);
                 zfe.HeaderOffset = (ulong)start;
                 zfe.HeaderSize = (ulong)localHeader.Length;
 
-                // Random-access write at reserved offset (same pattern as WriteAt for files)
-                using (var fs = new FileStream(
-                    FastZipDotNet.ZipFileName,
-                    FileMode.OpenOrCreate,
-                    FileAccess.Write,
-                    FileShare.ReadWrite,
-                    Consts.ChunkSize,
-                    FileOptions.RandomAccess))
-                {
-                    fs.Position = start;
-                    fs.Write(localHeader, 0, localHeader.Length);
-                    fs.Flush();
-                }
+                WriteAt(localHeader, start, null);
 
-                // Record in central list
                 lock (FastZipDotNet.ZipFileEntries)
                     FastZipDotNet.ZipFileEntries.Add(zfe);
             }

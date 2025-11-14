@@ -94,10 +94,10 @@ namespace Brutal_Zip
 
         public MainForm()
         {
-        //    Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor ENTER");
+            //    Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor ENTER");
             var sw = Stopwatch.StartNew();
             InitializeComponent();
-          //  Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm InitializeComponent done in " + sw.ElapsedMilliseconds + " ms");
+            //  Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm InitializeComponent done in " + sw.ElapsedMilliseconds + " ms");
 
 
             viewerView.RenameSelectedRequested += () => DoRenameSelected();
@@ -341,7 +341,7 @@ namespace Brutal_Zip
 
 
             Load += MainForm_Load;
-            FormClosing += (s, e) => 
+            FormClosing += (s, e) =>
             {
                 try
                 {
@@ -364,7 +364,7 @@ namespace Brutal_Zip
             };
 
 
-           // Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor EXIT");
+            // Brutal_Zip.Classes.Helpers.BootTrace.Mark("MainForm ctor EXIT");
         }
 
 
@@ -1046,6 +1046,223 @@ return await sharedTask.ConfigureAwait(false);
         }
 
 
+
+        private sealed class GatherJobsResult
+        {
+            // Note: internalName matches the usage in CreateToAsync/DoCreateAsync
+            public List<(string fullPath, string internalName, long size)> Jobs { get; init; } = new();
+
+            // We keep Directories as the canonical list name, but also expose EmptyFolderEntries
+            // so existing code that refers to gather.EmptyFolderEntries keeps compiling.
+            public List<string> Directories { get; init; } = new();
+
+            // Back-compat alias for any existing call sites:
+            public List<string> EmptyFolderEntries => Directories;
+
+            public long TotalBytes { get; init; }
+            public int TotalFiles { get; init; }
+            public TimeSpan Elapsed { get; init; }
+        }
+
+
+
+        private static List<string> GetEmptyDirectories(string rootFullPath, CancellationToken ct)
+        {
+            // Enumerate both files and directories under 'root', then compute
+            // empties = allDirs – dirsThatContainAtLeastOneFile.
+            var all = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var nonEmpty = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Normalize once
+            string root = Path.GetFullPath(rootFullPath).TrimEnd('\\', '/');
+    
+            foreach (var e in FDirectory.EnumerateFileSystemEntriesTyped(
+            root,
+            "*",
+            SearchOption.AllDirectories,
+            FDirectory.EntryKind.FilesAndDirectories,
+            maxDegreeOfParallelism: 128,
+            boundedCapacity: 32768,
+            cancellationToken: ct))
+            {
+                if (ct.IsCancellationRequested) break;
+
+                string full = e.FullPath.Replace('\\', '/');
+
+                if (e.IsDirectory)
+                {
+                    all.Add(full);
+                }
+                else
+                {
+                    // mark the file's parent directory (relative to root) as non-empty
+                    string dir = Path.GetDirectoryName(full)?.Replace('\\', '/') ?? "";
+                    if (!string.IsNullOrEmpty(dir))
+                    {
+                        nonEmpty.Add(dir);
+                    }
+                }
+            }
+
+            // Translate to inside-zip paths (with trailing '/')
+            var empties = new List<string>();
+            string rootName;
+            try { rootName = new DirectoryInfo(root).Name; }
+            catch { rootName = Path.GetFileName(root); }
+
+            foreach (var ad in all)
+            {
+                if (nonEmpty.Contains(ad))
+                    continue;
+
+                // ad is a full path; convert to path relative to root
+                string rel = ad.Length > root.Length ? ad.Substring(root.Length).TrimStart('\\', '/', ' ') : "";
+                string inside = string.IsNullOrEmpty(rel) ? $"{rootName}/" : $"{rootName}/{rel.Replace('\\', '/').Trim('/')}/";
+                empties.Add(inside);
+            }
+
+            // Ensure uniqueness and normalized separators
+            return empties.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+
+        private async Task<GatherJobsResult> GatherJobsAsyncFast(
+        IReadOnlyList<StagedItem> staging,
+        BrutalZip.ProgressForm pf,
+        int dop,
+        CancellationToken ct)
+        {
+            return await Task.Run(() =>
+            {
+                var jobs = new List<(string fullPath, string internalName, long size)>(1 << 15);
+                var emptyDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                long totalBytes = 0;
+                int totalFiles = 0;
+
+                var sw = Stopwatch.StartNew();
+                int lastUi = Environment.TickCount;
+
+                void Ui(string name = null)
+                {
+                    int now = Environment.TickCount;
+                    if (now - lastUi < 50) return;
+                    lastUi = now;
+                    try
+                    {
+                        pf.BeginInvoke(new Action(() =>
+                        {
+                            if (!string.IsNullOrEmpty(name)) pf.labelName.Text = name;
+                            pf.labelFilesRemaining.Text = $"Files queued:   {totalFiles:N0}";
+                            pf.labelFilesProcessed.Text = "Files Processed:   0 / ?";
+                            pf.labelElapsed.Text = "Time Elapsed:   " + UIHelper.FormatTime(sw.Elapsed);
+                            pf.labelTimeRem.Text = "Time Remaining:   —";
+                        }));
+                    }
+                    catch { }
+                }
+
+                Ui("Gathering files…");
+
+                foreach (var s in staging)
+                {
+                    if (ct.IsCancellationRequested) break;
+
+                    if (!s.IsFolder)
+                    {
+                        try
+                        {
+                            string full = s.Path;
+                            string internalName = Path.GetFileName(full);
+                            long size = 0; try { size = new FileInfo(full).Length; } catch { }
+
+                            jobs.Add((full, internalName, size));
+                            totalBytes += size;
+                            totalFiles++;
+                        }
+                        catch { }
+                        Ui();
+                        continue;
+                    }
+
+                    // Folder: enumerate files and compute empties for THIS root
+                    string root = s.Path;
+                    string rootName;
+                    try { rootName = new DirectoryInfo(root).Name; }
+                    catch { rootName = Path.GetFileName(root.TrimEnd('\\', '/')); }
+
+                    int cut = root.Length;
+                    string prefix = rootName + "/";
+
+                    // Track "seen directories" and "non-empty directories"
+                    var allDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var nonEmptyDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var e in FDirectory.EnumerateFileSystemEntriesTyped(
+                                 root, "*", SearchOption.AllDirectories,
+                                 FDirectory.EntryKind.FilesAndDirectories,
+                                 maxDegreeOfParallelism: dop,
+                                 boundedCapacity: 32768,
+                                 cancellationToken: ct))
+                    {
+                        if (ct.IsCancellationRequested) break;
+
+                        string full = e.FullPath;
+
+                        // Relative piece
+                        ReadOnlySpan<char> rel = full.AsSpan(cut);
+                        if (!rel.IsEmpty && (rel[0] == '\\' || rel[0] == '/')) rel = rel.Slice(1);
+
+                        if (e.IsDirectory)
+                        {
+                            string dirInside = (prefix + rel.ToString().Replace('\\', '/').Trim('/')) + "/";
+                            allDirs.Add(dirInside);
+                        }
+                        else
+                        {
+                            string internalName = (prefix + rel.ToString().Replace('\\', '/')).Trim('/');
+                            jobs.Add((full, internalName, e.Size));
+                            totalBytes += e.Size;
+                            totalFiles++;
+
+                            // mark parent as non-empty
+                            string parentRel = Path.GetDirectoryName(rel.ToString())?.Replace('\\', '/') ?? "";
+                            if (!string.IsNullOrEmpty(parentRel))
+                            {
+                                string pInside = (prefix + parentRel.Trim('/')) + "/";
+                                nonEmptyDirs.Add(pInside);
+                            }
+                        }
+
+                        Ui();
+                    }
+
+                    // Compute empty dirs for this root only
+                    foreach (var d in allDirs)
+                        if (!nonEmptyDirs.Contains(d))
+                            emptyDirs.Add(d);
+
+                    // Also, if the root itself is completely empty (no subdirs, no files),
+                    // add rootName/ as empty
+                    if (allDirs.Count == 0 && nonEmptyDirs.Count == 0)
+                        emptyDirs.Add(prefix);
+                }
+
+                Ui("Gathering complete.");
+
+                return new GatherJobsResult
+                {
+                    Jobs = jobs,
+                    Directories = emptyDirs.ToList(),   // ONLY truly empty directories
+                    TotalBytes = totalBytes,
+                    TotalFiles = totalFiles,
+                    Elapsed = sw.Elapsed
+                };
+            }, ct);
+        }
+
+
+
         private void MainForm_Load(object sender, EventArgs e)
         {
             // Settings → defaults
@@ -1386,255 +1603,192 @@ return await sharedTask.ConfigureAwait(false);
 
         private async Task DoCreateAsync()
         {
-            if (_staging == null || _staging.Count == 0)
-            {
-                MessageBox.Show(this, "Add files or folders to the staging list first.", "Nothing to do");
-                return;
-            }
-            await MemoryTrimmer.MinimizeFootprintMaximumAsync();
-            // Destination
-            var dest = homeView.CreateDestination?.Trim();
-            if (string.IsNullOrEmpty(dest))
-            {
-                using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
-                if (sfd.ShowDialog(this) != DialogResult.OK) return;
-                dest = homeView.CreateDestination = sfd.FileName;
-            }
-
-            // Method/level
-            var method = homeView.CreateMethodIndex switch
-            {
-                0 => Compression.Store,
-                1 => Compression.Deflate,
-                2 => Compression.Zstd,
-                _ => Compression.Deflate
-            };
-            int level = homeView.CreateLevel;
-
-            // Encryption choices
-            bool encOn = homeView.CreateEncryptEnabled;
-            EncryptionAlgorithm encAlgo = homeView.CreateEncryptAlgorithmIndex switch
-            {
-                0 => EncryptionAlgorithm.ZipCrypto,
-                1 => EncryptionAlgorithm.Aes128,
-                2 => EncryptionAlgorithm.Aes192,
-                3 => EncryptionAlgorithm.Aes256,
-                _ => EncryptionAlgorithm.ZipCrypto
-            };
-
-            if (encOn && string.IsNullOrEmpty(_createPassword))
-            {
-                using var dlg = new PasswordDialog();
-                if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                _createPassword = dlg.Password;
-                homeView.SetCreatePasswordStatus(!string.IsNullOrEmpty(_createPassword));
-            }
-
-            // Build jobs: files to add and empty folders to preserve (single-pass enumeration)
-            var jobs = new List<(string fullPath, string internalName, long size)>();
-            var emptyFolderEntries = new List<string>();
-
-            foreach (var s in _staging)
-            {
-                try
-                {
-                    if (s.IsFolder && Directory.Exists(s.Path))
-                    {
-                        string root = s.Path;
-                        string rootName = new DirectoryInfo(root).Name;
-
-                        var allDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        var nonEmptyDirsRel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        int filesInThisRoot = 0;
-
-                        // Single pass over both files and directories
-                        foreach (var e in FDirectory.EnumerateFileSystemEntriesTyped(root, "*", SearchOption.AllDirectories, FDirectory.EntryKind.FilesAndDirectories))
-                        {
-                            string rel = Path.GetRelativePath(root, e.FullPath).Replace('\\', '/').Trim('/');
-                            if (string.IsNullOrEmpty(rel))
-                                continue;
-
-                            if (e.IsDirectory)
-                            {
-                                allDirsRel.Add(rel);
-                            }
-                            else
-                            {
-                                string internalName = (rootName + "/" + rel).Replace('\\', '/').Trim('/');
-                                jobs.Add((e.FullPath, internalName, e.Size));
-                                filesInThisRoot++;
-
-                                // Mark ancestors of the file as non-empty
-                                var dirRel = Path.GetDirectoryName(rel)?.Replace('\\', '/');
-                                while (!string.IsNullOrEmpty(dirRel))
-                                {
-                                    nonEmptyDirsRel.Add(dirRel);
-                                    dirRel = Path.GetDirectoryName(dirRel)?.Replace('\\', '/');
-                                }
-                            }
-                        }
-
-                        // Empty directories to preserve
-                        foreach (var dRel in allDirsRel)
-                        {
-                            if (!nonEmptyDirsRel.Contains(dRel))
-                            {
-                                string internalFolder = (rootName + "/" + dRel).Replace('\\', '/').Trim('/');
-                                emptyFolderEntries.Add(internalFolder);
-                            }
-                        }
-
-                        // If the folder is completely empty (no files, no subdirs)
-                        if (filesInThisRoot == 0 && allDirsRel.Count == 0)
-                        {
-                            emptyFolderEntries.Add(rootName);
-                        }
-                    }
-                    else if (!s.IsFolder && File.Exists(s.Path))
-                    {
-                        string internalName = Path.GetFileName(s.Path);
-                        long size = 0; try { size = new FileInfo(s.Path).Length; } catch { }
-                        jobs.Add((s.Path, internalName, size));
-                    }
-                }
-                catch
-                {
-                    // Ignore bad path
-                }
-            }
-
-            if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
-            {
-                MessageBox.Show(this, "No valid files or folders found.", "Create");
-                return;
-            }
-
-            long grandBytes = 0; int grandFiles = 0;
-            foreach (var j in jobs) { grandBytes += j.size; grandFiles++; }
-
-            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
-            int curThreads = Threads;
-
-            using var pf = new ProgressForm($"Creating archive… ({curThreads} threads)");
-            var progress = pf.CreateProgress();
-            pf.Show(this);
-
             try
             {
-                using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
-
-                if (encOn)
+                if (_staging == null || _staging.Count == 0)
                 {
-                    zip.Encryption = encAlgo;
-                    zip.Password = _createPassword;
-                }
-                else
-                {
-                    zip.Encryption = EncryptionAlgorithm.None;
-                    zip.Password = null;
+                    MessageBox.Show(this, "Add files or folders to the staging list first.", "Nothing to do");
+                    return;
                 }
 
-                // Live thread control
-                pf.ConfigureThreads(maxThreads, curThreads, n =>
+                // Destination
+                var dest = homeView.CreateDestination?.Trim();
+                if (string.IsNullOrEmpty(dest))
                 {
-                    try
+                    using var sfd = new SaveFileDialog { Filter = "Zip files|*.zip" };
+                    if (sfd.ShowDialog(this) != DialogResult.OK) return;
+                    dest = homeView.CreateDestination = sfd.FileName;
+                }
+
+                // Method/level
+                var method = homeView.CreateMethodIndex switch
+                {
+                    0 => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Store,
+                    1 => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate,
+                    2 => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Zstd,
+                    _ => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate
+                };
+                int level = homeView.CreateLevel;
+
+                // Encryption choices from Home UI
+                bool encOn = homeView.CreateEncryptEnabled;
+                var encAlgo = homeView.CreateEncryptAlgorithmIndex switch
+                {
+                    1 => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.Aes128,
+                    2 => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.Aes192,
+                    3 => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.Aes256,
+                    _ => FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.ZipCrypto
+                };
+
+                if (encOn && string.IsNullOrEmpty(_createPassword))
+                {
+                    using var dlg = new PasswordDialog();
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                    _createPassword = dlg.Password;
+                    homeView.SetCreatePasswordStatus(!string.IsNullOrEmpty(_createPassword));
+                }
+
+                int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+                int curThreads = Threads;
+
+                using var pf = new ProgressForm($"Creating archive… ({curThreads} threads)");
+                var progress = pf.CreateProgress();
+                pf.Show(this);
+
+                // 1) Gathering (files + ONLY empty directories)
+                var gather = await GatherJobsAsyncFast(_staging, pf, dop: 128, pf.Token);
+                var jobs = gather.Jobs;
+                var emptyFolderEntries = gather.Directories; // only the truly empty dirs now
+                long grandBytes = gather.TotalBytes;
+                int grandFiles = gather.TotalFiles;
+                TimeSpan gatherElapsed = gather.Elapsed;
+
+                if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
+                {
+                    pf.Close();
+                    MessageBox.Show(this, "No valid files or folders found.", "Create");
+                    return;
+                }
+
+                try
+                {
+                    using var zip = new FastZipDotNet.Zip.FastZipDotNet(dest, method, level, curThreads);
+
+                    if (encOn)
                     {
-                        SettingsService.Current.ThreadsAuto = false;
-                        SettingsService.Current.Threads = n;
-                        SettingsService.Save();
-                        zip.SetMaxConcurrency(n);
-                        pf.Text = $"Creating archive… ({n} threads)";
+                        zip.Encryption = encAlgo;
+                        zip.Password = _createPassword;
                     }
-                    catch { }
-                });
-
-                var sem = zip.ConcurrencyLimiter;
-
-                long aggBytes = 0;
-                int aggFiles = 0;
-                string currentName = null;
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-
-                using var reportCts = new CancellationTokenSource();
-                var reporter = Task.Run(async () =>
-                {
-                    while (!reportCts.IsCancellationRequested)
+                    else
                     {
-                        // inside the reporter loop
-                        long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
-                        int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
-                        double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
-                        double fps = sw.Elapsed.TotalSeconds > 0 ? pFiles / sw.Elapsed.TotalSeconds : 0.0;
-
-                        progress.Report(new ZipProgress
-                        {
-                            Operation = ZipOperation.Build,
-                            CurrentFile = Volatile.Read(ref currentName),
-                            TotalFiles = grandFiles,
-                            TotalBytesUncompressed = grandBytes,
-                            FilesProcessed = pFiles,
-                            BytesProcessedUncompressed = pBytes,
-                            Elapsed = sw.Elapsed,
-                            SpeedBytesPerSec = speed,
-                            FilesPerSec = fps          // <-- re-added
-                        });
-
-                        try { await Task.Delay(50, reportCts.Token); } catch { break; }
+                        zip.Encryption = FastZipDotNet.Zip.Structure.ZipEntryEnums.EncryptionAlgorithm.None;
+                        zip.Password = null;
                     }
-                });
 
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(pf.Token);
-                var tasks = new List<Task>(jobs.Count);
-
-                foreach (var job in jobs)
-                {
-                    linkedCts.Token.ThrowIfCancellationRequested();
-
-                    tasks.Add(Task.Run(() =>
+                    // Live thread control
+                    pf.ConfigureThreads(maxThreads, curThreads, n =>
                     {
-                        sem.WaitOne(linkedCts.Token);
                         try
                         {
-                            Volatile.Write(ref currentName, job.internalName);
-
-                            void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
-                            void OnComp(long n) { /* compressed count not needed for UI here */ }
-
-                            zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
-                            Interlocked.Increment(ref aggFiles);
+                            SettingsService.Current.ThreadsAuto = false;
+                            SettingsService.Current.Threads = n;
+                            SettingsService.Save();
+                            zip.SetMaxConcurrency(n);
+                            pf.Text = $"Creating archive… ({n} threads)";
                         }
-                        finally
+                        catch { }
+                    });
+
+                    var sem = zip.ConcurrencyLimiter;
+
+                    long aggBytes = 0;
+                    int aggFiles = 0;
+                    string currentName = null;
+                    var sw = Stopwatch.StartNew();
+
+                    using var reportCts = new CancellationTokenSource();
+                    var reporter = Task.Run(async () =>
+                    {
+                        while (!reportCts.IsCancellationRequested)
                         {
-                            sem.Release();
+                            long pBytes = Math.Min(Interlocked.Read(ref aggBytes), grandBytes);
+                            int pFiles = Math.Min(Volatile.Read(ref aggFiles), grandFiles);
+                            double speed = sw.Elapsed.TotalSeconds > 0 ? pBytes / sw.Elapsed.TotalSeconds : 0.0;
+                            double fps = sw.Elapsed.TotalSeconds > 0 ? pFiles / sw.Elapsed.TotalSeconds : 0.0;
+
+                            progress.Report(new FastZipDotNet.Zip.ZipProgress
+                            {
+                                Operation = FastZipDotNet.Zip.ZipOperation.Build,
+                                CurrentFile = Volatile.Read(ref currentName),
+                                TotalFiles = grandFiles,
+                                TotalBytesUncompressed = grandBytes,
+                                FilesProcessed = pFiles,
+                                BytesProcessedUncompressed = pBytes,
+                                Elapsed = gatherElapsed + sw.Elapsed,
+                                SpeedBytesPerSec = speed,
+                                FilesPerSec = fps
+                            });
+
+                            try { await Task.Delay(50, reportCts.Token); } catch { break; }
                         }
-                    }, linkedCts.Token));
+                    });
+
+                    var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(pf.Token);
+                    var tasks = new List<Task>(jobs.Count);
+
+                    foreach (var job in jobs)
+                    {
+                        linkedCts.Token.ThrowIfCancellationRequested();
+
+                        tasks.Add(Task.Run(() =>
+                        {
+                            sem.WaitOne(linkedCts.Token);
+                            try
+                            {
+                                Volatile.Write(ref currentName, job.internalName);
+
+                                void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
+                                void OnComp(long n) { /* not required for %; speed uses uncompressed */ }
+
+                                zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
+                                Interlocked.Increment(ref aggFiles);
+                            }
+                            finally
+                            {
+                                sem.Release();
+                            }
+                        }, linkedCts.Token));
+                    }
+
+                    await Task.WhenAll(tasks);
+                    reportCts.Cancel();
+                    try { await reporter; } catch { }
+
+                    // Preserve only empty dirs
+                    foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+                    {
+                        try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
+                    }
+
+                    zip.Close();
+
+                    if (SettingsService.Current.OpenExplorerAfterCreate)
+                        TryOpenExplorerSelect(dest);
+
+                    _staging.Clear();
+                    RefreshStagingList();
                 }
-
-                await Task.WhenAll(tasks);
-                reportCts.Cancel();
-                try { await reporter; } catch { }
-
-                // Preserve empty folders (dedup)
-                var uniqEmpty = new HashSet<string>(emptyFolderEntries, StringComparer.OrdinalIgnoreCase);
-                foreach (var folder in uniqEmpty)
+                catch (OperationCanceledException) { }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
+                finally
                 {
-                    try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
+                    pf.Close();
+                    await Brutal_Zip.Classes.Helpers.MemoryTrimmer.MinimizeFootprintMaximumAsync();
                 }
-
-                zip.Close();
-
-                if (SettingsService.Current.OpenExplorerAfterCreate)
-                    TryOpenExplorerSelect(dest);
-
-                _staging.Clear();
-                RefreshStagingList();
             }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Create error"); }
-            finally 
-            { 
-                pf.Close();
-                await MemoryTrimmer.MinimizeFootprintMaximumAsync();
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Create");
             }
         }
         //private async Task DoCreateAsync()
@@ -1891,12 +2045,12 @@ return await sharedTask.ConfigureAwait(false);
         private async Task DoExtractSmartAsync()
         {
             // Pick archive if none
-           // if (string.IsNullOrEmpty(_zipPath))
-           // {
-                using var ofd = new OpenFileDialog { Filter = "Zip files|*.zip" };
-                if (ofd.ShowDialog(this) != DialogResult.OK) return;
-                _zipPath = ofd.FileName;
-          //  }
+            // if (string.IsNullOrEmpty(_zipPath))
+            // {
+            using var ofd = new OpenFileDialog { Filter = "Zip files|*.zip" };
+            if (ofd.ShowDialog(this) != DialogResult.OK) return;
+            _zipPath = ofd.FileName;
+            //  }
 
             // Destination policy with single-root heuristic
             string outDir;
@@ -2321,7 +2475,7 @@ return await sharedTask.ConfigureAwait(false);
             }
             nodes.Reverse();
 
-            var rootLink = new LinkLabel { Text = "Root", AutoSize = true, Margin = new Padding(0, 6, 8, 0) , LinkColor = Color.Green};
+            var rootLink = new LinkLabel { Text = "Root", AutoSize = true, Margin = new Padding(0, 6, 8, 0), LinkColor = Color.Green };
             rootLink.Click += (s, e) => NavigateTo(_root);
             viewerView.breadcrumb.Controls.Add(rootLink);
 
@@ -2739,7 +2893,6 @@ return await sharedTask.ConfigureAwait(false);
         {
             try
             {
-                // Validate inputs
                 if (items == null || items.Count == 0)
                 {
                     MessageBox.Show(this, "No files or folders selected.", "Create");
@@ -2751,20 +2904,13 @@ return await sharedTask.ConfigureAwait(false);
                     return;
                 }
 
-                // Expand inputs to jobs + empty directories
-                BuildCreateJobsFromInputs(items,
-                    out List<(string fullPath, string internalName, long size)> jobs,
-                    out List<string> emptyFolderEntries);
-
-                if (jobs.Count == 0 && emptyFolderEntries.Count == 0)
+                try { Directory.CreateDirectory(Path.GetDirectoryName(outZip) ?? "."); }
+                catch (Exception ex)
                 {
-                    MessageBox.Show(this, "No valid files or folders found.", "Create");
+                    MessageBox.Show(this, $"Cannot create destination folder:\n{ex.Message}", "Create");
                     return;
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(outZip) ?? ".");
-
-                // Compression defaults
                 var method = SettingsService.Current.DefaultMethod switch
                 {
                     "Store" => FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Store,
@@ -2773,7 +2919,6 @@ return await sharedTask.ConfigureAwait(false);
                 };
                 int level = SettingsService.Current.DefaultLevel;
 
-                // Encryption defaults
                 bool encOn = SettingsService.Current.EncryptNewArchivesByDefault;
                 var encAlgo = SettingsService.Current.DefaultEncryptAlgorithm?.Trim()?.ToUpperInvariant() switch
                 {
@@ -2790,16 +2935,50 @@ return await sharedTask.ConfigureAwait(false);
                     _createPassword = dlg.Password;
                 }
 
-                long grandBytes = jobs.Sum(j => j.size);
-                int grandFiles = jobs.Count;
-
-                int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+                int dopGather = Math.Clamp(Environment.ProcessorCount * 4, 8, 128); // aggressive gather DOP
                 int curThreads = Threads;
 
                 using var pf = new ProgressForm($"Creating archive… ({curThreads} threads)");
                 var progress = pf.CreateProgress();
                 pf.Show(this);
 
+                // Convert raw items -> staging
+                var staging = new List<StagedItem>(items.Count);
+                foreach (var raw in items)
+                {
+                    try
+                    {
+                        var full = Path.GetFullPath(raw);
+                        if (Directory.Exists(full))
+                            staging.Add(new StagedItem { Path = full, IsFolder = true });
+                        else if (File.Exists(full))
+                            staging.Add(new StagedItem { Path = full, IsFolder = false, SizeBytes = new FileInfo(full).Length, ItemsCount = 1 });
+                    }
+                    catch { }
+                }
+                if (staging.Count == 0)
+                {
+                    pf.Close();
+                    MessageBox.Show(this, "No valid files or folders found.", "Create");
+                    return;
+                }
+
+                // 1) Gathering (off UI thread, throttled label updates)
+                var gather = await GatherJobsAsyncFast(staging, pf, dopGather, pf.Token);
+                var jobs = gather.Jobs;
+                var dirEntries = gather.EmptyFolderEntries; // alias for Directories
+                long grandBytes = gather.TotalBytes;
+                int grandFiles = gather.TotalFiles;
+                TimeSpan gatherElapsed = gather.Elapsed;
+
+                if (jobs.Count == 0 && dirEntries.Count == 0)
+                {
+                    pf.Close();
+                    MessageBox.Show(this, "No valid files or folders found.", "Create");
+                    return;
+                }
+
+                // 2) Write the zip (elapsed includes gathering)
                 try
                 {
                     using var zip = new FastZipDotNet.Zip.FastZipDotNet(outZip, method, level, curThreads);
@@ -2815,8 +2994,7 @@ return await sharedTask.ConfigureAwait(false);
                         zip.Password = null;
                     }
 
-                    // Live thread control
-                    pf.ConfigureThreads(maxThreads, curThreads, n =>
+                    pf.ConfigureThreads(Math.Max(2, Environment.ProcessorCount * 2), curThreads, n =>
                     {
                         try
                         {
@@ -2829,7 +3007,6 @@ return await sharedTask.ConfigureAwait(false);
                         catch { }
                     });
 
-                    // Concurrency + progress aggregator (same pattern as DoCreateAsync)
                     var sem = zip.ConcurrencyLimiter;
 
                     long aggBytes = 0;
@@ -2855,13 +3032,12 @@ return await sharedTask.ConfigureAwait(false);
                                 TotalBytesUncompressed = grandBytes,
                                 FilesProcessed = pFiles,
                                 BytesProcessedUncompressed = pBytes,
-                                Elapsed = sw.Elapsed,
+                                Elapsed = gatherElapsed + sw.Elapsed,
                                 SpeedBytesPerSec = speed,
-                                FilesPerSec = fps          // <-- re-added
+                                FilesPerSec = fps
                             });
 
-                            try { await Task.Delay(50, reportCts.Token).ConfigureAwait(false); }
-                            catch { break; }
+                            try { await Task.Delay(50, reportCts.Token).ConfigureAwait(false); } catch { break; }
                         }
                     });
 
@@ -2874,32 +3050,35 @@ return await sharedTask.ConfigureAwait(false);
 
                         tasks.Add(Task.Run(() =>
                         {
-                            sem.WaitOne(linkedCts.Token);
+                            bool entered = false;
                             try
                             {
+                                sem.WaitOne(linkedCts.Token);
+                                entered = true;
+
                                 Volatile.Write(ref currentName, job.internalName);
 
                                 void OnUnc(long n) => Interlocked.Add(ref aggBytes, n);
-                                void OnComp(long n) { /* optional */ }
+                                void OnComp(long n) { }
 
                                 zip.ZipDataWriter.AddFileWithProgress(job.fullPath, job.internalName, level, "", OnUnc, OnComp);
                                 Interlocked.Increment(ref aggFiles);
                             }
                             finally
                             {
-                                sem.Release();
+                                if (entered) sem.Release();
                             }
                         }, linkedCts.Token));
                     }
 
-                    await Task.WhenAll(tasks);
+                    await Task.WhenAll(tasks).ConfigureAwait(false);
                     reportCts.Cancel();
-                    try { await reporter; } catch { }
+                    try { await reporter.ConfigureAwait(false); } catch { }
 
-                    // Preserve empty folders (dedup)
-                    foreach (var folder in emptyFolderEntries.Distinct(StringComparer.OrdinalIgnoreCase))
+                    // Add directory entries (safe for both empty and non-empty)
+                    foreach (var d in dirEntries.Distinct(StringComparer.OrdinalIgnoreCase))
                     {
-                        try { zip.ZipDataWriter.AddEmptyFolder(folder); } catch { }
+                        try { zip.ZipDataWriter.AddEmptyFolder(d); } catch { }
                     }
 
                     zip.Close();
@@ -2907,7 +3086,7 @@ return await sharedTask.ConfigureAwait(false);
                     if (SettingsService.Current.OpenExplorerAfterCreate)
                         TryOpenExplorerSelect(outZip);
                 }
-                catch (OperationCanceledException) { }
+                catch (OperationCanceledException) { /* user cancelled */ }
                 catch (Exception ex)
                 {
                     MessageBox.Show(this, ex.Message, "Create");
@@ -3378,7 +3557,7 @@ return await sharedTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Extract error"); }
-            finally 
+            finally
             {
                 pf.Close();
                 await MemoryTrimmer.MinimizeFootprintMaximumAsync();
@@ -3937,6 +4116,11 @@ return await sharedTask.ConfigureAwait(false);
         }
 
         private void MainForm_Load_2(object sender, EventArgs e)
+        {
+
+        }
+
+        private void homeView_Load(object sender, EventArgs e)
         {
 
         }

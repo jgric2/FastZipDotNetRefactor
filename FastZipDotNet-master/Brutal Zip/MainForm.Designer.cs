@@ -69,17 +69,16 @@
             // 
             homeView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             homeView.BackColor = Color.FromArgb(32, 32, 32);
-            homeView.CreateDestination = "";
             homeView.CreateEncryptAlgorithmIndex = 0;
             homeView.CreateEncryptEnabled = false;
             homeView.CreateLevel = 6;
             homeView.CreateMethodIndex = -1;
-            homeView.ExtractDestination = "";
             homeView.ForeColor = Color.White;
             homeView.Location = new Point(0, 24);
             homeView.Name = "homeView";
             homeView.Size = new Size(1000, 673);
             homeView.TabIndex = 1;
+            homeView.Load += homeView_Load;
             // 
             // viewerView
             // 
