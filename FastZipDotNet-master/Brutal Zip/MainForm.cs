@@ -1068,22 +1068,23 @@ return await sharedTask.ConfigureAwait(false);
 
         private static List<string> GetEmptyDirectories(string rootFullPath, CancellationToken ct)
         {
-            // Enumerate both files and directories under 'root', then compute
-            // empties = allDirs – dirsThatContainAtLeastOneFile.
-            var all = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var nonEmpty = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Enumerate everything under root; "empties" = allDirs - nonEmptyDirs (mark all ancestors of files).
+            var allDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var nonEmptyDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Normalize once
             string root = Path.GetFullPath(rootFullPath).TrimEnd('\\', '/');
-    
+            string rootName;
+            try { rootName = new DirectoryInfo(root).Name; }
+            catch { rootName = Path.GetFileName(root); }
+
             foreach (var e in FDirectory.EnumerateFileSystemEntriesTyped(
-            root,
-            "*",
-            SearchOption.AllDirectories,
-            FDirectory.EntryKind.FilesAndDirectories,
-            maxDegreeOfParallelism: 128,
-            boundedCapacity: 32768,
-            cancellationToken: ct))
+                         root,
+                         "*",
+                         SearchOption.AllDirectories,
+                         FDirectory.EntryKind.FilesAndDirectories,
+                         maxDegreeOfParallelism: 128,
+                         boundedCapacity: 32768,
+                         cancellationToken: ct))
             {
                 if (ct.IsCancellationRequested) break;
 
@@ -1091,51 +1092,59 @@ return await sharedTask.ConfigureAwait(false);
 
                 if (e.IsDirectory)
                 {
-                    all.Add(full);
+                    // add every real directory we see
+                    allDirs.Add(full);
                 }
                 else
                 {
-                    // mark the file's parent directory (relative to root) as non-empty
-                    string dir = Path.GetDirectoryName(full)?.Replace('\\', '/') ?? "";
-                    if (!string.IsNullOrEmpty(dir))
+                    // This is a file. Mark its parent and ALL ancestors up to root as non-empty.
+                    string dirFull = Path.GetDirectoryName(full)?.Replace('\\', '/') ?? "";
+                    while (!string.IsNullOrEmpty(dirFull))
                     {
-                        nonEmpty.Add(dir);
+                        nonEmptyDirs.Add(dirFull);
+                        if (dirFull.Equals(root, StringComparison.OrdinalIgnoreCase))
+                            break;
+                        dirFull = Path.GetDirectoryName(dirFull)?.Replace('\\', '/');
                     }
+                    // also consider the root itself non-empty whenever we saw at least one file
+                    nonEmptyDirs.Add(root);
                 }
             }
 
-            // Translate to inside-zip paths (with trailing '/')
+            // Translate "empties" to inside-zip paths with trailing '/'
             var empties = new List<string>();
-            string rootName;
-            try { rootName = new DirectoryInfo(root).Name; }
-            catch { rootName = Path.GetFileName(root); }
 
-            foreach (var ad in all)
+            foreach (var ad in allDirs)
             {
-                if (nonEmpty.Contains(ad))
-                    continue;
+                if (nonEmptyDirs.Contains(ad))
+                    continue; // not empty
 
-                // ad is a full path; convert to path relative to root
+                // Build path inside the zip: "<rootName>/<relative>/"
                 string rel = ad.Length > root.Length ? ad.Substring(root.Length).TrimStart('\\', '/', ' ') : "";
-                string inside = string.IsNullOrEmpty(rel) ? $"{rootName}/" : $"{rootName}/{rel.Replace('\\', '/').Trim('/')}/";
+                string inside = string.IsNullOrEmpty(rel)
+                                ? $"{rootName}/"
+                                : $"{rootName}/{rel.Replace('\\', '/').Trim('/')}/";
                 empties.Add(inside);
             }
 
-            // Ensure uniqueness and normalized separators
+            // Special case: if nothing under root at all => the root itself is empty
+            if (allDirs.Count == 0 && !nonEmptyDirs.Contains(root))
+                empties.Add($"{rootName}/");
+
             return empties.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
 
         private async Task<GatherJobsResult> GatherJobsAsyncFast(
-        IReadOnlyList<StagedItem> staging,
-        BrutalZip.ProgressForm pf,
-        int dop,
-        CancellationToken ct)
+ IReadOnlyList<StagedItem> staging,
+ BrutalZip.ProgressForm pf,
+ int dop,
+ CancellationToken ct)
         {
             return await Task.Run(() =>
             {
                 var jobs = new List<(string fullPath, string internalName, long size)>(1 << 15);
-                var emptyDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var emptyDirsGlobal = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 long totalBytes = 0;
                 int totalFiles = 0;
@@ -1155,7 +1164,7 @@ return await sharedTask.ConfigureAwait(false);
                             if (!string.IsNullOrEmpty(name)) pf.labelName.Text = name;
                             pf.labelFilesRemaining.Text = $"Files queued:   {totalFiles:N0}";
                             pf.labelFilesProcessed.Text = "Files Processed:   0 / ?";
-                            pf.labelElapsed.Text = "Time Elapsed:   " + UIHelper.FormatTime(sw.Elapsed);
+                            pf.labelElapsed.Text = "Time Elapsed:   " + Brutal_Zip.Classes.Helpers.UIHelper.FormatTime(sw.Elapsed);
                             pf.labelTimeRem.Text = "Time Remaining:   —";
                         }));
                     }
@@ -1185,7 +1194,7 @@ return await sharedTask.ConfigureAwait(false);
                         continue;
                     }
 
-                    // Folder: enumerate files and compute empties for THIS root
+                    // Folder: enumerate, compute empties for THIS root by marking all ancestors of each file
                     string root = s.Path;
                     string rootName;
                     try { rootName = new DirectoryInfo(root).Name; }
@@ -1194,9 +1203,11 @@ return await sharedTask.ConfigureAwait(false);
                     int cut = root.Length;
                     string prefix = rootName + "/";
 
-                    // Track "seen directories" and "non-empty directories"
                     var allDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var nonEmptyDirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    // Make sure the root itself is considered a directory
+                    allDirs.Add(root.Replace('\\', '/'));
 
                     foreach (var e in FDirectory.EnumerateFileSystemEntriesTyped(
                                  root, "*", SearchOption.AllDirectories,
@@ -1207,45 +1218,61 @@ return await sharedTask.ConfigureAwait(false);
                     {
                         if (ct.IsCancellationRequested) break;
 
-                        string full = e.FullPath;
+                        string full = e.FullPath.Replace('\\', '/');
 
-                        // Relative piece
+                        // Relative span
                         ReadOnlySpan<char> rel = full.AsSpan(cut);
                         if (!rel.IsEmpty && (rel[0] == '\\' || rel[0] == '/')) rel = rel.Slice(1);
 
                         if (e.IsDirectory)
                         {
-                            string dirInside = (prefix + rel.ToString().Replace('\\', '/').Trim('/')) + "/";
-                            allDirs.Add(dirInside);
+                            allDirs.Add(full); // full path of directory
                         }
                         else
                         {
+                            // Add job
                             string internalName = (prefix + rel.ToString().Replace('\\', '/')).Trim('/');
-                            jobs.Add((full, internalName, e.Size));
+                            jobs.Add((e.FullPath, internalName, e.Size));
                             totalBytes += e.Size;
                             totalFiles++;
 
-                            // mark parent as non-empty
-                            string parentRel = Path.GetDirectoryName(rel.ToString())?.Replace('\\', '/') ?? "";
-                            if (!string.IsNullOrEmpty(parentRel))
+                            // Mark the parent and ALL ancestors up to root as non-empty
+                            string dirFull = Path.GetDirectoryName(full)?.Replace('\\', '/') ?? "";
+                            while (!string.IsNullOrEmpty(dirFull))
                             {
-                                string pInside = (prefix + parentRel.Trim('/')) + "/";
-                                nonEmptyDirs.Add(pInside);
+                                nonEmptyDirs.Add(dirFull);
+                                if (dirFull.Equals(root.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase))
+                                    break;
+                                dirFull = Path.GetDirectoryName(dirFull)?.Replace('\\', '/');
                             }
+
+                            // Also mark the root non-empty if any file exists
+                            nonEmptyDirs.Add(root.Replace('\\', '/'));
                         }
 
                         Ui();
                     }
 
                     // Compute empty dirs for this root only
-                    foreach (var d in allDirs)
-                        if (!nonEmptyDirs.Contains(d))
-                            emptyDirs.Add(d);
+                    foreach (var ad in allDirs)
+                    {
+                        if (nonEmptyDirs.Contains(ad))
+                            continue;
 
-                    // Also, if the root itself is completely empty (no subdirs, no files),
-                    // add rootName/ as empty
-                    if (allDirs.Count == 0 && nonEmptyDirs.Count == 0)
-                        emptyDirs.Add(prefix);
+                        // Convert to inside-zip path "<rootName>/<relative>/"
+                        string rel = ad.Length > root.Length
+                                    ? ad.Substring(root.Length).TrimStart('\\', '/', ' ')
+                                    : "";
+                        string inside = string.IsNullOrEmpty(rel)
+                                        ? $"{rootName}/"
+                                        : $"{rootName}/{rel.Replace('\\', '/').Trim('/')}/";
+
+                        emptyDirsGlobal.Add(inside);
+                    }
+
+                    // Special case: if the folder is completely empty (no subdirs and no files),
+                    // the loop above will have added only the root to allDirs and not added it to nonEmptyDirs,
+                    // so it will already be included via the foreach allDirs loop.
                 }
 
                 Ui("Gathering complete.");
@@ -1253,7 +1280,7 @@ return await sharedTask.ConfigureAwait(false);
                 return new GatherJobsResult
                 {
                     Jobs = jobs,
-                    Directories = emptyDirs.ToList(),   // ONLY truly empty directories
+                    Directories = emptyDirsGlobal.ToList(),   // ONLY the truly empty folders
                     TotalBytes = totalBytes,
                     TotalFiles = totalFiles,
                     Elapsed = sw.Elapsed
