@@ -19,14 +19,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Native\win-x64\libdeflate.dll" />
+    <None Remove="Native\win-x86\libdeflate.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="BrutalZip.ico" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FastZipDotNet\FastZipDotNet.csproj" />
-    <EmbeddedResource Include="native\win-x64\libdeflate.dll" LogicalName="native/win-x64/libdeflate.dll" />
+    <EmbeddedResource Include="Native\win-x64\libdeflate.dll" />
     <EmbeddedResource Include="native\win-x64\libzstd.dll" LogicalName="native/win-x64/libzstd.dll" />
-    <EmbeddedResource Include="native\win-x86\libdeflate.dll" LogicalName="native/win-x86/libdeflate.dll" />
+    <EmbeddedResource Include="Native\win-x86\libdeflate.dll" />
     <EmbeddedResource Include="native\win-x86\libzstd.dll" LogicalName="native/win-x86/libzstd.dll" />
   </ItemGroup>
 
