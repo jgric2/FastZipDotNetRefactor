@@ -13,6 +13,7 @@
     <Description>Fastest Zip archiver on Windows</Description>
     <Copyright>2025 Limintel Solutions</Copyright>
     <Platforms>AnyCPU;x64</Platforms>
+  
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
