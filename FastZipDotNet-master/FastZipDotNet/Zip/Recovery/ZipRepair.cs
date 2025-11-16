@@ -206,7 +206,7 @@ namespace FastZipDotNet.Zip.Recovery
 
                 Directory.CreateDirectory(outputDir);
 
-                int maxDop = Math.Max(1, Environment.ProcessorCount - 1);
+                int maxDop = Math.Max(1, Environment.ProcessorCount * 2);
                 var sem = new SemaphoreSlim(maxDop, maxDop);
                 var tasks = new List<Task>(entries.Count);
 

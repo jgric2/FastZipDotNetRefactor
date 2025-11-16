@@ -297,7 +297,7 @@ namespace FastZipDotNet.Zip
 
             if (threads == -1)
             {
-                threads = Environment.ProcessorCount;
+                threads = Environment.ProcessorCount * 2;
                 Threads = threads;
             }
             else
@@ -306,7 +306,7 @@ namespace FastZipDotNet.Zip
             }
 
 
-            int dop = (threads == -1) ? Environment.ProcessorCount : Math.Max(1, threads);
+            int dop = (threads == -1) ? Environment.ProcessorCount * 2 : Math.Max(1, threads);
             Threads = dop;
 
             ConcurrencyLimiter = new AdjustableSemaphore(dop);
@@ -371,7 +371,7 @@ namespace FastZipDotNet.Zip
 
             if (threads == -1)
             {
-                threads = Environment.ProcessorCount;
+                threads = Environment.ProcessorCount * 2;
                 Threads = threads;
             }
             else
@@ -379,7 +379,7 @@ namespace FastZipDotNet.Zip
                 Threads = threads;
             }
 
-            int dop = (threads == -1) ? Environment.ProcessorCount : Math.Max(1, threads);
+            int dop = (threads == -1) ? Environment.ProcessorCount * 2 : Math.Max(1, threads);
             Threads = dop;
 
             ConcurrencyLimiter = new AdjustableSemaphore(dop);
@@ -414,11 +414,11 @@ namespace FastZipDotNet.Zip
             {
                 CurrentCompression = CompressionLevel.NoCompression;
             }
-            else if (CompressionLevelValue > 0 && CompressionLevelValue < 7)
+            else if (CompressionLevelValue > 0 && CompressionLevelValue < 4)
             {
                 CurrentCompression = CompressionLevel.Fastest;
             }
-            else if (CompressionLevelValue >= 7 && CompressionLevelValue < 11)
+            else if (CompressionLevelValue >= 4 && CompressionLevelValue < 8)
             {
                 CurrentCompression = CompressionLevel.Optimal;
             }

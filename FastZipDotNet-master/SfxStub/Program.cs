@@ -153,7 +153,7 @@ namespace SfxStub
                 }
 
                 // Extract with progress
-                using (var zip = new FastZipDotNet.Zip.FastZipDotNet(tmpZip, Compression.Deflate, 6, Math.Max(1, Environment.ProcessorCount - 1)))
+                using (var zip = new FastZipDotNet.Zip.FastZipDotNet(tmpZip, Compression.Deflate, 6, Math.Max(1, Environment.ProcessorCount * 2)))
                 {
                     if (!string.IsNullOrEmpty(passwordToUse))
                         zip.Password = passwordToUse;
@@ -161,7 +161,7 @@ namespace SfxStub
                     if (!cfg.Overwrite && Directory.Exists(extractDir) && Directory.EnumerateFileSystemEntries(extractDir).Any())
                         throw new IOException("Destination exists and overwrite is disabled.");
 
-                    zip.SetMaxConcurrency(Math.Max(1, Environment.ProcessorCount - 1));
+                    zip.SetMaxConcurrency(Math.Max(1, Environment.ProcessorCount * 2));
 
                     if (!cfg.Silent)
                     {

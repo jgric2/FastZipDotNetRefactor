@@ -50,7 +50,7 @@ namespace BrutalZip
         public int DefaultLevel { get; set; } = 6;
 
         public bool ThreadsAuto { get; set; } = true;
-        public int Threads { get; set; } = Math.Max(1, Environment.ProcessorCount - 1);
+        public int Threads { get; set; } = Math.Max(1, Environment.ProcessorCount * 2);
 
         public string ExtractDefault { get; set; } = "Smart";
         public bool OpenExplorerAfterCreate { get; set; } = true;

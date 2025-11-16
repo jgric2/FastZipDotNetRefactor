@@ -35,7 +35,7 @@ namespace FastZipDotNet.Zip.Readers
                 foreach (var e in FastZipDotNet.ZipFileEntries)
                     totalUncompressed += (long)e.FileSize;
 
-                FastZipDotNet.SetMaxConcurrency(Math.Max(1, threads <= 0 ? Environment.ProcessorCount : threads));
+                FastZipDotNet.SetMaxConcurrency(Math.Max(1, threads <= 0 ? Environment.ProcessorCount * 2 : threads));
                 var sem = FastZipDotNet.ConcurrencyLimiter;
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var tasks = new List<Task>(totalFiles);
@@ -148,7 +148,7 @@ namespace FastZipDotNet.Zip.Readers
             try
             {
                 var cts = new CancellationTokenSource();
-                FastZipDotNet.SetMaxConcurrency(Math.Max(1, threads <= 0 ? Environment.ProcessorCount : threads));
+                FastZipDotNet.SetMaxConcurrency(Math.Max(1, threads <= 0 ? Environment.ProcessorCount * 2 : threads));
                 var semaphore = FastZipDotNet.ConcurrencyLimiter;
                 //var semaphore = new AdjustableSemaphore(threads);
                 var tasks = new List<Task>();
@@ -238,7 +238,7 @@ namespace FastZipDotNet.Zip.Readers
                 // Name of last file that reported progress
                 string lastFileName = null;
 
-                FastZipDotNet.SetMaxConcurrency(Math.Max(1, threads <= 0 ? Environment.ProcessorCount : threads));
+                FastZipDotNet.SetMaxConcurrency(Math.Max(1, threads <= 0 ? Environment.ProcessorCount * 2 : threads));
                 var semaphore = FastZipDotNet.ConcurrencyLimiter;
 
                 var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);

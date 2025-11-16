@@ -42,7 +42,7 @@ namespace BrutalZip
             lblThreadsCur.Text = tbThreads.Value.ToString();
         }
 
-       
+
 
         public IProgress<ZipProgress> CreateProgress()
         {
@@ -57,11 +57,25 @@ namespace BrutalZip
                 //overall = Math.Max(0, Math.Min(100, overall));
                 //progressOverall.Value = overall;
 
-               // finalBarBrutal1.Progress = p.Percent;
+                // finalBarBrutal1.Progress = p.Percent;
+
 
 
                 finalBarBrutal1.CurrentSpeed = (long)p.SpeedBytesPerSec;
-                finalBarBrutal1.FilesPerSecond = (long)p.FilesPerSec;
+
+                var fpsDouble = p.FilesPerSec;
+                long fpsDisplay =
+                p.FilesProcessed == 0
+                ? 0                          // before any file completes
+                : (fpsDouble < 1.0 && fpsDouble > 0.0)
+                ? 1                      // show 1 Files/s instead of 0 when rate < 1
+                : (long)Math.Round(fpsDouble);
+
+                finalBarBrutal1.FilesPerSecond = fpsDisplay;
+
+
+                //finalBarBrutal1.CurrentSpeed = (long)p.SpeedBytesPerSec;
+                //finalBarBrutal1.FilesPerSecond = (long)p.FilesPerSec;
 
                 finalBarBrutal1.Maximum = p.TotalBytesUncompressed;
                 finalBarBrutal1.Value = p.BytesProcessedUncompressed;
@@ -74,9 +88,9 @@ namespace BrutalZip
 
                 labelName.Text = p.CurrentFile;
                 labelElapsed.Text = "Time Elapsed:   " + UIHelper.FormatTime(p.Elapsed);
-                labelFilesRemaining.Text = $"Files Remaining:   {(p.TotalFiles - p.FilesProcessed).ToString("N0")} / {p.TotalFiles.ToString("N0")}";
+                labelFilesRemaining.Text = $"Files Remaining:   {(p.TotalFiles - p.FilesProcessed).ToString("N0")}";
                 labelFilesProcessed.Text = $"Files Processed:   {p.FilesProcessed.ToString("N0")} / {p.TotalFiles.ToString("N0")}";
-                
+
 
                 //lblMetrics.Text =
                 //    $"{p.Operation}: {p.Percent:F1}%   " +
@@ -98,7 +112,7 @@ namespace BrutalZip
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            _cts.Cancel();
+            this.Close();
         }
 
         private void ProgressForm_Load(object sender, EventArgs e)
@@ -115,6 +129,11 @@ namespace BrutalZip
         {
             lblThreadsCur.Text = tbThreads.Value.ToString();
             _onThreadsChanged?.Invoke(tbThreads.Value);
+        }
+
+        private void ProgressForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _cts.Cancel();
         }
     }
 }

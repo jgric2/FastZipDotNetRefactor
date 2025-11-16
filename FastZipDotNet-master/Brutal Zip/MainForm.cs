@@ -3680,101 +3680,181 @@ return await sharedTask.ConfigureAwait(false);
 
         private async Task TestArchiveAsync()
         {
-            if (_zip == null)
-            {
-                //using var ofd = new OpenFileDialog { Filter = "Zip files|*.zip" };
-                //if (ofd.ShowDialog(this) != DialogResult.OK) return;
-
-                //_zip.o
-                MessageBox.Show(this, "Open a zip first.", "Info");
-                return;
-            }
-
-            if (!EnsurePasswordForEncryptedIfNeeded(allowSkipToBrowse: false)) return;
-
-            int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
-            int curThreads = Threads;
-
-            // Precompute totals for stable progress
-            int totalFiles = 0;
-            long totalBytes = 0;
-            try
-            {
-                totalFiles = _zip.ZipFileEntries?.Count ?? 0;
-                totalBytes = _zip.ZipFileEntries?.Sum(e => (long)e.FileSize) ?? 0;
-            }
-            catch
-            {
-                // Totals optional; engine will still report
-            }
-
-            using var pf = new ProgressForm($"Testing archive… ({curThreads} threads)");
-            var progressUI = pf.CreateProgress();
-            pf.Show(this);
+            FastZipDotNet.Zip.FastZipDotNet zipRef = null;
+            bool own = false;         // whether we created a temporary instance
+            string chosenPath = null;
 
             try
             {
-                // Live thread control
-                pf.ConfigureThreads(maxThreads, curThreads, n =>
+                if (_zip == null)
                 {
+                    using var ofd = new OpenFileDialog
+                    {
+                        Filter = "Zip files|*.zip",
+                        Title = "Select archive to test"
+                    };
                     try
                     {
-                        SettingsService.Current.ThreadsAuto = false;
-                        SettingsService.Current.Threads = n;
-                        SettingsService.Save();
-
-                        // Engine uses AdjustableSemaphore; SetMaxConcurrency takes effect mid-run
-                        _zip.SetMaxConcurrency(n);
-
-                        pf.Text = $"Testing archive… ({n} threads)";
+                        string init = Path.GetDirectoryName(_zipPath) ?? Environment.CurrentDirectory;
+                        if (!string.IsNullOrEmpty(init) && Directory.Exists(init))
+                            ofd.InitialDirectory = init;
                     }
                     catch { }
-                });
 
-                // Aggregator that forwards engine progress to the UI,
-                // filling in totals and smoothing elapsed/speed if needed.
-                var sw = Stopwatch.StartNew();
-                long lastBytes = 0;
-                int lastFiles = 0;
+                    if (ofd.ShowDialog(this) != DialogResult.OK)
+                        return;
 
-                var aggregator = new Progress<ZipProgress>(p =>
-                {
-                    // Compose a UI-friendly progress payload.
-                    // Use engine values when present; fall back to our precomputed totals if needed.
-                    long bytesProcessed = Math.Max(p.BytesProcessedUncompressed, lastBytes);
-                    int filesProcessed = Math.Max(p.FilesProcessed, lastFiles);
+                    chosenPath = ofd.FileName;
 
-                    var ui = new ZipProgress
+                    try
                     {
-                        Operation = ZipOperation.Test,
-                        CurrentFile = p.CurrentFile,
-                        TotalFiles = (totalFiles > 0) ? totalFiles : p.TotalFiles,
-                        TotalBytesUncompressed = (totalBytes > 0) ? totalBytes : p.TotalBytesUncompressed,
-                        FilesProcessed = filesProcessed,
-                        BytesProcessedUncompressed = bytesProcessed,
-                        // Use engine elapsed if available; else use our stopwatch
-                        Elapsed = (p.Elapsed != TimeSpan.Zero) ? p.Elapsed : sw.Elapsed,
-                        // Use engine speed if provided, else derive it
-                        SpeedBytesPerSec = (p.SpeedBytesPerSec > 0)
-                            ? p.SpeedBytesPerSec
-                            : (sw.Elapsed.TotalSeconds > 0 ? bytesProcessed / sw.Elapsed.TotalSeconds : 0.0)
-                    };
+                        zipRef = new FastZipDotNet.Zip.FastZipDotNet(
+                            chosenPath,
+                            FastZipDotNet.Zip.Structure.ZipEntryEnums.Compression.Deflate,
+                            6,
+                            Threads);
+                        own = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, "Unable to open archive:\n" + ex.Message, "Open error",
+                                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
 
-                    // Persist last values to ensure non-decreasing UI counters
-                    lastBytes = ui.BytesProcessedUncompressed;
-                    lastFiles = ui.FilesProcessed;
+                    // If encrypted, prompt for password for this temporary test
+                    try
+                    {
+                        if (zipRef.ZipFileEntries.Any(e => e.IsEncrypted))
+                        {
+                            using var dlg = new PasswordDialog();
+                            var firstEnc = zipRef.ZipFileEntries.First(e => e.IsEncrypted);
+                            dlg.SetCrackContext(new PasswordCrackContext(zipRef.ZipFileName, firstEnc));
+                            if (dlg.ShowDialog(this) != DialogResult.OK)
+                            {
+                                zipRef.Dispose();
+                                return;
+                            }
+                            zipRef.Password = dlg.Password;
+                        }
+                    }
+                    catch { /* best effort; test will fail fast if wrong */ }
+                }
+                else
+                {
+                    // Use currently open archive
+                    zipRef = _zip;
 
-                    progressUI.Report(ui);
-                });
+                    // ensure we have a good password if needed
+                    if (!EnsurePasswordForEncryptedIfNeeded(allowSkipToBrowse: false))
+                        return;
+                }
 
-                // Call the engine test; engine will do its own multi-threaded decompression/CRC.
-                bool ok = await _zip.ZipDataReader.TestArchiveAsync(Threads, aggregator, pf.Token);
+                // Totals for stable % (optional)
+                int maxThreads = Math.Max(1, Environment.ProcessorCount * 2);
+                int curThreads = Threads;
 
-                MessageBox.Show(this, ok ? "Test completed successfully." : "Test failed or cancelled.", "Test");
+                int totalFiles = 0;
+                long totalBytes = 0;
+                try
+                {
+                    totalFiles = zipRef.ZipFileEntries?.Count ?? 0;
+                    totalBytes = zipRef.ZipFileEntries?.Sum(e => (long)e.FileSize) ?? 0;
+                }
+                catch { }
+
+                using var pf = new ProgressForm($"Testing archive… ({curThreads} threads)");
+                var progressUI = pf.CreateProgress();
+                pf.Show(this);
+
+                try
+                {
+                    // Live thread control
+                    pf.ConfigureThreads(maxThreads, curThreads, n =>
+                    {
+                        try
+                        {
+                            SettingsService.Current.ThreadsAuto = false;
+                            SettingsService.Current.Threads = n;
+                            SettingsService.Save();
+
+                            zipRef.SetMaxConcurrency(n);
+                            pf.Text = $"Testing archive… ({n} threads)";
+                        }
+                        catch { }
+                    });
+
+                    // Smoothing and proper FilesPerSec forward
+                    var sw = Stopwatch.StartNew();
+                    long lastBytes = 0;
+                    int lastFiles = 0;
+
+                    var aggregator = new Progress<ZipProgress>(p =>
+                    {
+                        long bytesProcessed = Math.Max(p.BytesProcessedUncompressed, lastBytes);
+                        int filesProcessed = Math.Max(p.FilesProcessed, lastFiles);
+
+                        // Build the progress object for the UI, copying FilesPerSec correctly
+                        var ui = new ZipProgress
+                        {
+                            Operation = ZipOperation.Test,
+                            CurrentFile = p.CurrentFile,
+
+                            TotalFiles = (totalFiles > 0) ? totalFiles : p.TotalFiles,
+                            TotalBytesUncompressed = (totalBytes > 0) ? totalBytes : p.TotalBytesUncompressed,
+
+                            FilesProcessed = filesProcessed,
+                            BytesProcessedUncompressed = bytesProcessed,
+
+                            Elapsed = (p.Elapsed != TimeSpan.Zero) ? p.Elapsed : sw.Elapsed,
+
+                            // Speed fallback if engine didn't supply
+                            SpeedBytesPerSec = (p.SpeedBytesPerSec > 0)
+                                ? p.SpeedBytesPerSec
+                                : (sw.Elapsed.TotalSeconds > 0 ? bytesProcessed / sw.Elapsed.TotalSeconds : 0.0),
+
+                            // FPS: copy engine value; fallback if needed
+                            FilesPerSec = (p.FilesPerSec > 0)
+                                ? p.FilesPerSec
+                                : (sw.Elapsed.TotalSeconds > 0 ? filesProcessed / sw.Elapsed.TotalSeconds : 0.0)
+                        };
+
+                        lastBytes = ui.BytesProcessedUncompressed;
+                        lastFiles = ui.FilesProcessed;
+
+                        progressUI.Report(ui);
+                    });
+
+                    bool ok = await zipRef.ZipDataReader.TestArchiveAsync(Threads, aggregator, pf.Token);
+
+                    MessageBox.Show(this,
+                        ok ? "Test completed successfully." : "Test failed or cancelled.",
+                        "Test",
+                        MessageBoxButtons.OK,
+                        ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, ex.Message, "Test error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    pf.Close();
+                }
             }
-            catch (OperationCanceledException) { } // user pressed Cancel
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Test error"); }
-            finally { pf.Close(); }
+            finally
+            {
+                // If we created a temporary zip, dispose it and leave _zip/_zipPath unchanged
+                if (own && zipRef != null)
+                {
+                    try 
+                    { 
+                        zipRef.Dispose();
+                        await Brutal_Zip.Classes.Helpers.MemoryTrimmer.MinimizeFootprintMaximumAsync();
+                    } catch { }
+                }
+            }
         }
 
         private async Task ExtractSelectedTo()

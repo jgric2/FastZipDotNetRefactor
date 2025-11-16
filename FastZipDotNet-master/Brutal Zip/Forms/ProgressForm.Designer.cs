@@ -66,7 +66,7 @@ namespace BrutalZip
             // lblThreads
             // 
             lblThreads.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblThreads.Location = new Point(230, 47);
+            lblThreads.Location = new Point(226, 40);
             lblThreads.Name = "lblThreads";
             lblThreads.Size = new Size(60, 20);
             lblThreads.TabIndex = 0;
@@ -76,7 +76,7 @@ namespace BrutalZip
             // lblThreadsCur
             // 
             lblThreadsCur.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblThreadsCur.Location = new Point(390, 49);
+            lblThreadsCur.Location = new Point(391, 42);
             lblThreadsCur.Name = "lblThreadsCur";
             lblThreadsCur.Size = new Size(40, 20);
             lblThreadsCur.TabIndex = 2;
@@ -101,7 +101,7 @@ namespace BrutalZip
             // tbThreads
             // 
             tbThreads.LeftBarColor = Color.FromArgb(29, 181, 82);
-            tbThreads.Location = new Point(290, 34);
+            tbThreads.Location = new Point(282, 27);
             tbThreads.Maximum = 100;
             tbThreads.Name = "tbThreads";
             tbThreads.RightBarColor = Color.FromArgb(22, 132, 99);
@@ -134,7 +134,7 @@ namespace BrutalZip
             labelName.Location = new Point(3, 3);
             labelName.Margin = new Padding(4, 0, 4, 0);
             labelName.Name = "labelName";
-            labelName.Size = new Size(426, 48);
+            labelName.Size = new Size(426, 61);
             labelName.TabIndex = 67;
             labelName.Text = "Name:";
             // 
@@ -143,7 +143,7 @@ namespace BrutalZip
             labelElapsed.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             labelElapsed.BackColor = Color.Transparent;
             labelElapsed.Font = new Font("Segoe UI", 9.75F);
-            labelElapsed.Location = new Point(11, 85);
+            labelElapsed.Location = new Point(11, 93);
             labelElapsed.Margin = new Padding(4, 0, 4, 0);
             labelElapsed.Name = "labelElapsed";
             labelElapsed.Size = new Size(319, 22);
@@ -155,7 +155,7 @@ namespace BrutalZip
             labelTimeRem.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             labelTimeRem.BackColor = Color.Transparent;
             labelTimeRem.Font = new Font("Segoe UI", 9.75F);
-            labelTimeRem.Location = new Point(11, 64);
+            labelTimeRem.Location = new Point(11, 72);
             labelTimeRem.Margin = new Padding(4, 0, 4, 0);
             labelTimeRem.Name = "labelTimeRem";
             labelTimeRem.Size = new Size(319, 22);
@@ -167,7 +167,7 @@ namespace BrutalZip
             labelFilesRemaining.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             labelFilesRemaining.BackColor = Color.Transparent;
             labelFilesRemaining.Font = new Font("Segoe UI", 9.75F);
-            labelFilesRemaining.Location = new Point(11, 106);
+            labelFilesRemaining.Location = new Point(11, 114);
             labelFilesRemaining.Margin = new Padding(4, 0, 4, 0);
             labelFilesRemaining.Name = "labelFilesRemaining";
             labelFilesRemaining.Size = new Size(319, 22);
@@ -179,7 +179,7 @@ namespace BrutalZip
             labelFilesProcessed.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             labelFilesProcessed.BackColor = Color.Transparent;
             labelFilesProcessed.Font = new Font("Segoe UI", 9.75F);
-            labelFilesProcessed.Location = new Point(11, 128);
+            labelFilesProcessed.Location = new Point(11, 136);
             labelFilesProcessed.Margin = new Padding(4, 0, 4, 0);
             labelFilesProcessed.Name = "labelFilesProcessed";
             labelFilesProcessed.Size = new Size(319, 22);
@@ -241,6 +241,7 @@ namespace BrutalZip
             Name = "ProgressForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "Progress";
+            FormClosing += ProgressForm_FormClosing;
             Load += ProgressForm_Load;
             ((System.ComponentModel.ISupportInitialize)tbThreads).EndInit();
             brutalGradientPanel1.ResumeLayout(false);
